@@ -11,7 +11,7 @@ COPY index.html tsconfig.json vite.config.ts ./
 COPY src ./src
 RUN pnpm build
 
-FROM nginx:1.27-alpine
+FROM nginx:1.31-alpine
 
 RUN rm -f /etc/nginx/conf.d/default.conf \
     && chown -R nginx:nginx /etc/nginx/conf.d /var/cache/nginx /var/run
