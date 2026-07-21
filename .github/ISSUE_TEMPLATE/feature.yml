@@ -1,0 +1,18 @@
+name: Feature request
+description: Propose a scoped improvement.
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Operational or research need
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Required data and validation
+      description: Explain the real source, licensing, safety, and test evidence needed.
+    validations:
+      required: true

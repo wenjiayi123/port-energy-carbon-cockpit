@@ -1,0 +1,8 @@
+ports:
+  - id: port_la_public_benchmark
+    name: Port of Los Angeles public aggregate benchmark
+    timezone: America/Los_Angeles
+    dataset_id: port_la_2025_monthly
+    live_tos_connected: false
+    live_ems_connected: false
+    note: Berths and equipment in the environment are abstract control resources, not terminal telemetry.

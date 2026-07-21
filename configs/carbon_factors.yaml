@@ -1,0 +1,13 @@
+grid_power:
+  unit: kWh
+  source: dataset.grid_carbon_kg_per_kwh
+  note: Never substitute this example config for the active dataset value.
+shore_power:
+  unit: kWh
+  source: dataset.grid_carbon_kg_per_kwh
+diesel:
+  unit: liter
+  kg_co2e_per_unit: 2.68
+marine_fuel:
+  unit: ton
+  kg_co2e_per_unit: 3114.0
