@@ -8,8 +8,8 @@
 
 ## Port Energy-Carbon RL Cockpit
 
-**面向港口能源、碳排与资源协同调度的可审计离线实验系统**<br>
-**An auditable offline experimentation system for coordinated port energy, carbon, and resource dispatch**
+<strong>面向港口能源、碳排与资源协同调度的可审计离线实验系统</strong><br>
+<strong>An auditable offline experimentation system for coordinated port energy, carbon, and resource dispatch</strong>
 
 [![CI](https://github.com/wenjiayi123/port-energy-carbon-cockpit/actions/workflows/ci.yml/badge.svg)](https://github.com/wenjiayi123/port-energy-carbon-cockpit/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/wenjiayi123/port-energy-carbon-cockpit/actions/workflows/codeql.yml/badge.svg)](https://github.com/wenjiayi123/port-energy-carbon-cockpit/actions/workflows/codeql.yml)
@@ -201,17 +201,17 @@ The default benchmark combines four public-source families:
 月度 TEU 通过公开的确定性曲线分配到小时；LADWP 商业分时电价时段只用于形成日内形状，并归一回 EIA 月均电价。该价格仍是情景代理而非港口账单，设备容量、负荷、储能与延误成本是元数据中声明的模型参数。完整来源、单位、插补、转换与哈希见 [数据卡](docs/DATA_CARD.md) 和 [dataset metadata](backend/app/data/datasets/port_la_2020_2025_hourly.metadata.json)。<br>
 Monthly TEU is allocated to hours through a disclosed deterministic profile. LADWP commercial time-of-use periods provide only the intraday shape, rescaled to each EIA monthly mean. Prices remain scenario proxies rather than terminal bills; equipment, storage and delay parameters are declared model assumptions. See the [data card](docs/DATA_CARD.md) and [dataset metadata](backend/app/data/datasets/port_la_2020_2025_hourly.metadata.json).
 
-在覆盖 2025 全年的 48 个确定性留出窗口、共 1,152 个小时仿真步上，四步约束 MPC 相对“全岸电+固定满配装卸资源”强基线降低能耗 **8.4%**、碳排 **8.7%**、情景成本 **7.9%**、峰值负荷 **3.2%**，设备平均启用比例降低 **28.8%**，吞吐保持率 **99.97%**、约束满足率 **100%**；三组预声明目标权重下碳排改善区间为 **8.69%–8.74%**。这是公开数据离线情景结果，不是港口实测 KPI，也不证明 RL 优于 MPC；完整分母、采样索引、限制和哈希见 [benchmark report](reports/offline_benchmark_v3.md)。
+在覆盖 2025 全年的 48 个确定性留出窗口、共 1,152 个小时仿真步上，四步约束 MPC 相对“全岸电+固定满配装卸资源”强基线降低能耗 <strong>8.4%</strong>、碳排 <strong>8.7%</strong>、情景成本 <strong>7.9%</strong>、峰值负荷 <strong>3.2%</strong>，设备平均启用比例降低 <strong>28.8%</strong>，吞吐保持率 <strong>99.97%</strong>、约束满足率 <strong>100%</strong>；三组预声明目标权重下碳排改善区间为 <strong>8.69%–8.74%</strong>。这是公开数据离线情景结果，不是港口实测 KPI，也不证明 RL 优于 MPC；完整分母、采样索引、限制和哈希见 [benchmark report](reports/offline_benchmark_v3.md)。
 
-Across 48 deterministic held-out windows spanning 2025—1,152 simulated hourly steps—the four-step constrained MPC reduces energy by **8.4%**, carbon by **8.7%**, scenario cost by **7.9%**, and peak load by **3.2%** against the strong “full shore power + fixed fully staffed cargo resources” baseline. Mean equipment activation falls **28.8%**, throughput retention is **99.97%**, and constraint satisfaction is **100%**. Three predeclared objective-weight settings yield a carbon-improvement range of **8.69%–8.74%**. These are public-data offline scenario results, not measured terminal KPIs, and they do not show RL superiority over MPC. See the [benchmark report](reports/offline_benchmark_v3.md) for denominators, sample indices, limits, and hashes.
+Across 48 deterministic held-out windows spanning 2025—1,152 simulated hourly steps—the four-step constrained MPC reduces energy by <strong>8.4%</strong>, carbon by <strong>8.7%</strong>, scenario cost by <strong>7.9%</strong>, and peak load by <strong>3.2%</strong> against the strong “full shore power + fixed fully staffed cargo resources” baseline. Mean equipment activation falls <strong>28.8%</strong>, throughput retention is <strong>99.97%</strong>, and constraint satisfaction is <strong>100%</strong>. Three predeclared objective-weight settings yield a carbon-improvement range of <strong>8.69%–8.74%</strong>. These are public-data offline scenario results, not measured terminal KPIs, and they do not show RL superiority over MPC. See the [benchmark report](reports/offline_benchmark_v3.md) for denominators, sample indices, limits, and hashes.
 
 报告同时给出更严格的对照：仅用 2024 验证集从 9 个静态资源配置中选择
 80%/80% 岸桥与场内车辆比例，冻结后在 2025 测试。MPC 相对该基线仍降低
-碳排 **2.84%**、能耗 **2.52%**、成本 **2.08%**，吞吐提高 **0.85%**，
-但峰值负荷增加 **3.38%**。这组结果用于披露算法边际收益与多目标代价，不替代
+碳排 <strong>2.84%</strong>、能耗 <strong>2.52%</strong>、成本 <strong>2.08%</strong>，吞吐提高 <strong>0.85%</strong>，
+但峰值负荷增加 <strong>3.38%</strong>。这组结果用于披露算法边际收益与多目标代价，不替代
 上方“减少固定满配冗余”的场景口径。
 
-The report also publishes a harder comparator: select an 80%/80% crane/yard-vehicle static configuration from nine candidates using only 2024 validation data, freeze it, and test in 2025. Against that comparator, MPC still reduces carbon by **2.84%**, energy by **2.52%**, and cost by **2.08%**, while increasing throughput by **0.85%**—but peak load rises **3.38%**. This result discloses marginal algorithm benefit and the multi-objective trade-off; it does not replace the full-resource redundancy scenario above.
+The report also publishes a harder comparator: select an 80%/80% crane/yard-vehicle static configuration from nine candidates using only 2024 validation data, freeze it, and test in 2025. Against that comparator, MPC still reduces carbon by <strong>2.84%</strong>, energy by <strong>2.52%</strong>, and cost by <strong>2.08%</strong>, while increasing throughput by <strong>0.85%</strong>—but peak load rises <strong>3.38%</strong>. This result discloses marginal algorithm benefit and the multi-objective trade-off; it does not replace the full-resource redundancy scenario above.
 
 ## 快速开始 / Quick start
 
@@ -420,7 +420,7 @@ Code is licensed under the [MIT License](LICENSE). Data attribution and AI-assis
 
 <div align="center">
 
-**Research-grade evidence, operator-grade visibility, production authority kept closed by design.**<br>
-**研究级证据、操作级可视化，生产权限默认关闭。**
+<strong>Research-grade evidence, operator-grade visibility, production authority kept closed by design.</strong><br>
+<strong>研究级证据、操作级可视化，生产权限默认关闭。</strong>
 
 </div>
