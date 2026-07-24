@@ -1,0 +1,323 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-07-24T09:32:01.832325Z",
+  "evidence_label": "OFFLINE_RL_EXPERIMENT_NOT_FIELD_KPI",
+  "dataset_id": "port_la_2020_2025_hourly",
+  "dataset_package_sha256": "c26b38eaa39a428bee24ca0e8fbd829de895cd84233c9f10310e16e64dd925e6",
+  "search_space_path": "configs/rl_search_space.json",
+  "search_space_sha256": "e9718c1de61eae8c4346a8cbc361f3341626a87c8d6bb72dacfe2ec0243ce6a6",
+  "code_sha256": {
+    "backend/app/rl/environment.py": "e63bc29b93eadf86bec74407ac3377485501c3b4ebbaff305bb525c127a3e938",
+    "backend/app/rl/training.py": "c4f3b89e447c4c3205992469f234cee47873c73cf643043764f1b5617aece6fa",
+    "backend/app/rl/tuning.py": "251b3f6d228da4db153449319feb39ec5513a2ff9ee742a66cb4937729960414"
+  },
+  "runtime": {
+    "available": true,
+    "python": "3.12.13",
+    "python_implementation": "CPython",
+    "platform": "darwin",
+    "machine": "x86_64",
+    "numpy": "1.26.4",
+    "torch": "2.2.2",
+    "gymnasium": "1.0.0",
+    "stable_baselines3": "2.4.1",
+    "device": "cpu"
+  },
+  "total_steps_per_fit": 10000,
+  "selection_protocol": {
+    "fit_split": "train",
+    "selection_split": "validation",
+    "final_report_split": "test",
+    "primary_score": "validation_return",
+    "hard_gate": "validation_safety_violations == 0",
+    "seed_policy": "select on 20260724; final evaluation uses 11, 29, 47",
+    "render_during_fit_or_selection": false
+  },
+  "test_accessed": true,
+  "algorithms": [
+    {
+      "algorithm": "ppo",
+      "selection_seed": 20260724,
+      "selected_candidate_index": 0,
+      "selected_hyperparameters": {
+        "learning_rate": 0.0003,
+        "batch_size": 64,
+        "gamma": 0.99,
+        "entropy_coef": 0.0
+      },
+      "selection_reason": "highest validation return among zero-violation candidates; test split remained inaccessible during selection",
+      "trials": [
+        {
+          "candidate_index": 0,
+          "hyperparameters": {
+            "learning_rate": 0.0003,
+            "batch_size": 64,
+            "gamma": 0.99,
+            "entropy_coef": 0.0
+          },
+          "duration_sec": 31.371,
+          "actual_timesteps": 10240,
+          "resolved_hyperparameters": {
+            "policy": "MlpPolicy",
+            "learning_rate": 0.0003,
+            "batch_size": 64,
+            "gamma": 0.99,
+            "tau": 0.005,
+            "entropy_coef": 0.0,
+            "exploration_fraction": 0.25,
+            "episode_hours": 24
+          },
+          "fit_split": "train",
+          "selection_split": "validation",
+          "test_accessed": false,
+          "render_during_fit_or_selection": false,
+          "validation": {
+            "split": "validation",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": -1.27957,
+              "energy_kwh": 323378.149716,
+              "carbon_kg": 109629.014435,
+              "cost": 597996.339546,
+              "delay_minutes": 0.0,
+              "processed_teu": 28134.281893,
+              "safety_violations": 0.583333,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.0,
+              "peak_kw": 13023.52892
+            },
+            "selection_score": -1.27957
+          }
+        },
+        {
+          "candidate_index": 1,
+          "hyperparameters": {
+            "learning_rate": 0.0001,
+            "batch_size": 128,
+            "gamma": 0.995,
+            "entropy_coef": 0.01
+          },
+          "duration_sec": 28.778,
+          "actual_timesteps": 10240,
+          "resolved_hyperparameters": {
+            "policy": "MlpPolicy",
+            "learning_rate": 0.0001,
+            "batch_size": 128,
+            "gamma": 0.995,
+            "tau": 0.005,
+            "entropy_coef": 0.01,
+            "exploration_fraction": 0.25,
+            "episode_hours": 24
+          },
+          "fit_split": "train",
+          "selection_split": "validation",
+          "test_accessed": false,
+          "render_during_fit_or_selection": false,
+          "validation": {
+            "split": "validation",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": -3.174052,
+              "energy_kwh": 322278.310845,
+              "carbon_kg": 112111.758554,
+              "cost": 600683.260982,
+              "delay_minutes": 0.001774,
+              "processed_teu": 28134.229475,
+              "safety_violations": 1.0,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.0,
+              "peak_kw": 12610.60884
+            },
+            "selection_score": -1000001.0
+          }
+        }
+      ],
+      "final_seed_results": [
+        {
+          "seed": 11,
+          "training": {
+            "duration_sec": 31.274,
+            "actual_timesteps": 10240,
+            "resolved_hyperparameters": {
+              "policy": "MlpPolicy",
+              "learning_rate": 0.0003,
+              "batch_size": 64,
+              "gamma": 0.99,
+              "tau": 0.005,
+              "entropy_coef": 0.0,
+              "exploration_fraction": 0.25,
+              "episode_hours": 24
+            },
+            "fit_split": "train",
+            "selection_split": "validation",
+            "test_accessed": false,
+            "render_during_fit_or_selection": false,
+            "validation": {
+              "split": "validation",
+              "episodes": 48,
+              "steps": 1152,
+              "mean": {
+                "reward": -0.209403,
+                "energy_kwh": 323195.400511,
+                "carbon_kg": 116352.304545,
+                "cost": 603076.601983,
+                "delay_minutes": 0.0,
+                "processed_teu": 28134.281893,
+                "safety_violations": 0.333333,
+                "peak_violation_steps": 0.0,
+                "delay_violation_steps": 0.0,
+                "peak_kw": 12269.221204
+              },
+              "selection_score": -0.209403
+            }
+          },
+          "test": {
+            "split": "test",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": -0.228475,
+              "energy_kwh": 323370.142576,
+              "carbon_kg": 109544.043841,
+              "cost": 617938.848153,
+              "delay_minutes": 0.0,
+              "processed_teu": 28060.613965,
+              "safety_violations": 0.3125,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.0,
+              "peak_kw": 12242.111061
+            },
+            "selection_score": -0.228475
+          },
+          "artifact_path": "reports/rl_tuning_ppo_10k_artifacts/ppo-seed-11.zip",
+          "artifact_sha256": "48696da7c8ec033d22461f894b9d93fb9e19c6cb6a7ab94cfb1fc420696cbbc8"
+        },
+        {
+          "seed": 29,
+          "training": {
+            "duration_sec": 31.282,
+            "actual_timesteps": 10240,
+            "resolved_hyperparameters": {
+              "policy": "MlpPolicy",
+              "learning_rate": 0.0003,
+              "batch_size": 64,
+              "gamma": 0.99,
+              "tau": 0.005,
+              "entropy_coef": 0.0,
+              "exploration_fraction": 0.25,
+              "episode_hours": 24
+            },
+            "fit_split": "train",
+            "selection_split": "validation",
+            "test_accessed": false,
+            "render_during_fit_or_selection": false,
+            "validation": {
+              "split": "validation",
+              "episodes": 48,
+              "steps": 1152,
+              "mean": {
+                "reward": -0.446869,
+                "energy_kwh": 320084.14448,
+                "carbon_kg": 101543.692395,
+                "cost": 591252.136411,
+                "delay_minutes": 0.400987,
+                "processed_teu": 28134.281893,
+                "safety_violations": 0.729167,
+                "peak_violation_steps": 0.0,
+                "delay_violation_steps": 0.0,
+                "peak_kw": 14363.465228
+              },
+              "selection_score": -0.446869
+            }
+          },
+          "test": {
+            "split": "test",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": -0.505535,
+              "energy_kwh": 320382.045456,
+              "carbon_kg": 94037.107723,
+              "cost": 607883.646319,
+              "delay_minutes": 1.08781,
+              "processed_teu": 28059.339238,
+              "safety_violations": 0.729167,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.0,
+              "peak_kw": 14305.320695
+            },
+            "selection_score": -0.505535
+          },
+          "artifact_path": "reports/rl_tuning_ppo_10k_artifacts/ppo-seed-29.zip",
+          "artifact_sha256": "7d72314394d50e94bf2f1a946e54b8a0d28a2aa802e5f1b286d0eba7bef72692"
+        },
+        {
+          "seed": 47,
+          "training": {
+            "duration_sec": 31.278,
+            "actual_timesteps": 10240,
+            "resolved_hyperparameters": {
+              "policy": "MlpPolicy",
+              "learning_rate": 0.0003,
+              "batch_size": 64,
+              "gamma": 0.99,
+              "tau": 0.005,
+              "entropy_coef": 0.0,
+              "exploration_fraction": 0.25,
+              "episode_hours": 24
+            },
+            "fit_split": "train",
+            "selection_split": "validation",
+            "test_accessed": false,
+            "render_during_fit_or_selection": false,
+            "validation": {
+              "split": "validation",
+              "episodes": 48,
+              "steps": 1152,
+              "mean": {
+                "reward": -0.826381,
+                "energy_kwh": 325963.761043,
+                "carbon_kg": 113361.348582,
+                "cost": 601957.039816,
+                "delay_minutes": 0.0,
+                "processed_teu": 28134.281893,
+                "safety_violations": 0.625,
+                "peak_violation_steps": 0.0,
+                "delay_violation_steps": 0.0,
+                "peak_kw": 12736.150865
+              },
+              "selection_score": -0.826381
+            }
+          },
+          "test": {
+            "split": "test",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": -1.0397,
+              "energy_kwh": 326071.02542,
+              "carbon_kg": 106590.335564,
+              "cost": 617410.499762,
+              "delay_minutes": 0.0,
+              "processed_teu": 28060.613965,
+              "safety_violations": 0.645833,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.0,
+              "peak_kw": 12716.929647
+            },
+            "selection_score": -1.0397
+          },
+          "artifact_path": "reports/rl_tuning_ppo_10k_artifacts/ppo-seed-47.zip",
+          "artifact_sha256": "ce7f39e3e06ee800226da6cc461abb8f15329f43f60b7ebba305e4a9da995a2e"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "A smoke-labelled run validates wiring only and must not be cited as convergence.",
+    "Offline test results are scenario outputs, not field or production KPIs.",
+    "At least three final seeds and a sufficient training budget are required for resume metrics."
+  ]
+}

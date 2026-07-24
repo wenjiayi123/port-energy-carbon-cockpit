@@ -1,0 +1,56 @@
+{
+  "id": "port_la_2025_monthly",
+  "name": "Port of Los Angeles 2025 monthly container throughput + EPA eGRID CAMX",
+  "version": "2025.1",
+  "license": "Port of Los Angeles statistics are provided free of charge with source credit requested. U.S. EPA eGRID data is public domain and available for commercial and non-commercial use. Repository MIT terms do not replace publisher attribution and disclaimers.",
+  "source_urls": [
+    "https://portoflosangeles.org/business/statistics/container-statistics/historical-teu-statistics-2025",
+    "https://www.epa.gov/egrid/summary-data"
+  ],
+  "attribution": "Container counts: Port of Los Angeles. Grid CO2e factor: U.S. EPA eGRID 2023 CAMX total output rate, converted from 429.983 lb/MWh to 0.19504 kg/kWh.",
+  "scope_note": "Public aggregate benchmark, not live terminal telemetry. Hourly episodes are deterministically constructed from each monthly observation for reproducible algorithm comparison.",
+  "intended_use": "Offline algorithm benchmarking, reproducible training, and held-out evaluation. Not approved for autonomous production dispatch.",
+  "temporal_mode": "profiled_period",
+  "carbon_factor_quality": {
+    "method": "location_based",
+    "scope": "scope_2_purchased_electricity",
+    "geography": "eGRID CAMX subregion",
+    "factor_vintage": "2023",
+    "publisher": "U.S. EPA eGRID",
+    "factor_type": "total output emission rate",
+    "market_based_factor": null,
+    "assurance_status": "publisher_attribution_only",
+    "uncertainty": "The aggregate subregion factor does not represent a terminal-specific supplier contract or hourly marginal emissions."
+  },
+  "environment_parameters": {
+    "crane_capacity_teu_per_hour": 1520.0,
+    "yard_capacity_teu_per_hour": 1650.0,
+    "shore_demand_kw": 6800.0,
+    "base_load_kw": 2200.0,
+    "load_kw_per_teu": 0.62,
+    "crane_load_kw": 2900.0,
+    "yard_load_kw": 1250.0,
+    "grid_capacity_kw": 17000.0,
+    "fuel_kwh_per_liter": 3.8,
+    "fuel_carbon_kg_per_liter": 2.68,
+    "delay_cost_cny_per_minute": 18.0,
+    "delay_limit_minutes": 120.0
+  },
+  "units": {
+    "loaded_import_teu": "TEU/month",
+    "loaded_export_teu": "TEU/month",
+    "total_teu": "TEU/month",
+    "grid_carbon_kg_per_kwh": "kgCO2e/kWh",
+    "electricity_price_per_kwh": "CNY/kWh",
+    "fuel_price_per_liter": "CNY/liter"
+  },
+  "assumptions": {
+    "electricity_price_per_kwh": "Scenario assumption fixed at 0.72 CNY/kWh; not published by the Port of Los Angeles source.",
+    "fuel_price_per_liter": "Scenario assumption fixed at 7.85 CNY/liter; not published by the Port of Los Angeles source.",
+    "hourly_profile": "Monthly TEU is expanded by the deterministic normalized profile in environment.py; it is not observed hourly terminal telemetry.",
+    "environment_parameters": "Capacity, equipment load, auxiliary-fuel conversion, delay cost, and safety-limit values are reproducible benchmark assumptions, not measurements published by the Port of Los Angeles. Replace them with verified terminal values in a port dataset or its adjacent metadata."
+  },
+  "train_split": "2025-01 through 2025-07",
+  "validation_split": "2025-08 through 2025-09; hyperparameter/model selection only",
+  "test_split": "2025-10 through 2025-12"
+}

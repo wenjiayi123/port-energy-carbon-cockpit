@@ -1,0 +1,110 @@
+{
+  "id": "port_la_2020_2025_monthly",
+  "name": "Port of Los Angeles 2020-2025 official monthly container throughput + EIA California commercial electricity price + EPA eGRID 2023 CAMX",
+  "version": "2020-2025.1",
+  "license": "Port of Los Angeles statistics are provided free of charge with source credit requested. U.S. EIA and EPA data are U.S. federal public data. Repository MIT terms do not replace publisher attribution and disclaimers.",
+  "source_urls": [
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2020",
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2021",
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2022",
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2023",
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2024",
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2025",
+    "https://www.eia.gov/opendata/documentation.php",
+    "https://www.epa.gov/egrid/summary-data"
+  ],
+  "source_snapshots": [
+    {
+      "year": 2020,
+      "url": "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2020",
+      "sha256": "660ccfb6ec9b487a1b1d404018558bea66cd1b46244bc863e8314c10cc6369a2",
+      "derived_rows": 12
+    },
+    {
+      "year": 2021,
+      "url": "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2021",
+      "sha256": "cf46679c7cfd8bc07993c42db661b0572e9e40d06f97a4b98caf0533bf02c463",
+      "derived_rows": 12
+    },
+    {
+      "year": 2022,
+      "url": "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2022",
+      "sha256": "fac9e259d2aa5a0e9cbaf5ef009698dfabb8a6166f7220d1a1400d23a2cd695e",
+      "derived_rows": 12
+    },
+    {
+      "year": 2023,
+      "url": "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2023",
+      "sha256": "99de5ed8d9fb5718d10a0cb652f2170460e6d96a05594e74ab817507f39554e8",
+      "derived_rows": 12
+    },
+    {
+      "year": 2024,
+      "url": "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2024",
+      "sha256": "f88e1d02c759cd27bdbe1d4d03403f1a8dafff43a26a3b6fe6108271a4706840",
+      "derived_rows": 12
+    },
+    {
+      "year": 2025,
+      "url": "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2025",
+      "sha256": "3dcf4b168a7baa50dfb92563b5b16e63729541d37834723f966fc94eb841b895",
+      "derived_rows": 12
+    },
+    {
+      "publisher": "U.S. EIA",
+      "series": "California commercial monthly average retail electricity price",
+      "url": "https://api.eia.gov/v2/electricity/retail-sales/data/?api_key=DEMO_KEY&frequency=monthly&data%5B0%5D=price&facets%5Bstateid%5D%5B%5D=CA&facets%5Bsectorid%5D%5B%5D=COM&start=2020-01&end=2025-12&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&length=100",
+      "sha256": "6a01b8cceaee410f6dd534db9cef72ba399ae016af0ab27641bba52db640ceaa",
+      "derived_rows": 72
+    }
+  ],
+  "fetched_at": "2026-07-24T01:21:48.973925Z",
+  "attribution": "Monthly container counts: Port of Los Angeles official 2020-2025 pages. Monthly electricity-price proxy: U.S. EIA California commercial-sector average retail price. Grid CO2e factor: U.S. EPA eGRID 2023 CAMX total output rate, converted from 429.983 lb/MWh to 0.19504 kg/kWh.",
+  "scope_note": "72 first-party Port throughput observations joined by month to 72 U.S. EIA California commercial-price observations. The EIA series is a public state/sector proxy, not the terminal tariff. Hourly episodes are deterministic model expansions, not terminal meter telemetry.",
+  "intended_use": "Offline algorithm benchmarking, temporal validation, and held-out evaluation. Not approved for autonomous production dispatch.",
+  "temporal_mode": "profiled_period",
+  "carbon_factor_quality": {
+    "method": "location_based",
+    "scope": "scope_2_purchased_electricity",
+    "geography": "eGRID CAMX subregion",
+    "factor_vintage": "2023",
+    "publisher": "U.S. EPA eGRID",
+    "factor_type": "total output emission rate",
+    "market_based_factor": null,
+    "uncertainty": "One regional annual factor is applied across 2020-2025 and does not represent terminal-specific or hourly marginal emissions."
+  },
+  "environment_parameters": {
+    "crane_capacity_teu_per_hour": 1520.0,
+    "yard_capacity_teu_per_hour": 1650.0,
+    "shore_demand_kw": 6800.0,
+    "base_load_kw": 2200.0,
+    "load_kw_per_teu": 0.62,
+    "crane_load_kw": 2900.0,
+    "yard_load_kw": 1250.0,
+    "grid_capacity_kw": 17000.0,
+    "fuel_kwh_per_liter": 3.8,
+    "fuel_carbon_kg_per_liter": 2.68,
+    "delay_cost_cny_per_minute": 18.0,
+    "delay_limit_minutes": 120.0
+  },
+  "units": {
+    "loaded_import_teu": "TEU/month",
+    "loaded_export_teu": "TEU/month",
+    "total_teu": "TEU/month",
+    "grid_carbon_kg_per_kwh": "kgCO2e/kWh",
+    "electricity_price_per_kwh": "CNY/kWh",
+    "fuel_price_per_liter": "CNY/liter",
+    "eia_commercial_price_usd_per_kwh": "USD/kWh"
+  },
+  "assumptions": {
+    "total_teu_transformation": "Derived as official Total Imports + official Total Exports for every month. This avoids a documented punctuation anomaly in the displayed November 2020 total while preserving first-party row values.",
+    "electricity_price_per_kwh": "U.S. EIA California commercial monthly average retail price, converted from USD to CNY at a fixed 7.20 CNY/USD benchmark rate. It is a public regional proxy, not a Port of Los Angeles tariff or invoice.",
+    "fuel_price_per_liter": "Fixed 7.85 CNY/liter scenario assumption; not published by the port.",
+    "hourly_profile": "Each official monthly TEU observation is expanded by the disclosed normalized profile in environment.py.",
+    "environment_parameters": "Capacity, load, fuel conversion, delay cost, and safety limits are benchmark assumptions requiring terminal calibration."
+  },
+  "split_policy": "chronological_by_calendar_year",
+  "train_split": "2020-01 through 2023-12 (48 official monthly rows)",
+  "validation_split": "2024-01 through 2024-12 (12 official monthly rows)",
+  "test_split": "2025-01 through 2025-12 (12 official monthly rows)"
+}

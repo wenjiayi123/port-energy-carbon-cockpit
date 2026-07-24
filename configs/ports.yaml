@@ -1,0 +1,8 @@
+ports:
+  - id: port_la_public_benchmark
+    name: Port of Los Angeles and EIA public hourly dispatch benchmark
+    timezone: America/Los_Angeles
+    dataset_id: port_la_2020_2025_hourly
+    live_tos_connected: false
+    live_ems_connected: false
+    note: Berths and equipment in the environment are abstract control resources, not terminal telemetry.

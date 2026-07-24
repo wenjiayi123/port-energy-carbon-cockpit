@@ -1,0 +1,106 @@
+{
+  "id": "port_la_2020_2025_hourly",
+  "name": "Port of Los Angeles 2020-2025 hourly dispatch benchmark: official monthly throughput and retail-price anchors, EIA-930 LADWP hourly generation mix, EPA eGRID CAMX calibration, and optional CAISO SP15 DAM LMP",
+  "version": "2020-2025.3",
+  "license": "Port of Los Angeles statistics are provided free of charge with source credit requested. U.S. EIA and EPA data are U.S. federal public data. Repository MIT terms do not replace publisher attribution and disclaimers.",
+  "source_urls": [
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2020",
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2021",
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2022",
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2023",
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2024",
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2025",
+    "https://www.eia.gov/opendata/documentation.php",
+    "https://www.epa.gov/egrid/summary-data",
+    "https://api.eia.gov/v2/electricity/rto/fuel-type-data/",
+    "https://www.eia.gov/electricity/gridmonitor/about",
+    "https://www.ladwp.com/account/understanding-your-rates/commercial-electric-rates"
+  ],
+  "attribution": "Port of Los Angeles; U.S. EIA; U.S. EPA. See fetch evidence and transformation notes.",
+  "scope_note": "Offline public-data benchmark. Throughput is observed monthly and allocated to hours by a disclosed profile; hourly retail price and carbon are calibrated proxies, not terminal invoices, marginal-emission signals, or TOS/EMS telemetry.",
+  "temporal_mode": "sequential_rows",
+  "time_column": "timestamp_utc",
+  "evaluation_episode_limit": 48,
+  "evaluation_sampling": "48 deterministic, uniformly spaced 24-hour episodes spanning each validation/test year; start indices are persisted in benchmark evidence",
+  "units": {
+    "loaded_import_teu": "TEU/hour modeled allocation",
+    "loaded_export_teu": "TEU/hour modeled allocation",
+    "total_teu": "TEU/hour modeled allocation",
+    "grid_carbon_kg_per_kwh": "kgCO2e/kWh calibrated hourly proxy",
+    "electricity_price_per_kwh": "CNY/kWh calibrated hourly proxy",
+    "fuel_price_per_liter": "CNY/liter scenario",
+    "wholesale_lmp_usd_per_mwh": "USD/MWh official CAISO DAM LMP",
+    "eia930_demand_mw": "MW official EIA-930 adjusted/reported demand",
+    "eia930_consumed_electricity_mwh": "MWh official EIA-930 consumed electricity",
+    "eia930_consumed_carbon_lb_per_kwh": "lbCO2/kWh official EIA estimated consumed intensity",
+    "eia930_quality_code": "reported or declared calendar-hour median imputation",
+    "monthly_eia_price_cny_per_kwh": "CNY/kWh EIA monthly anchor",
+    "monthly_total_teu": "TEU/month official Port total",
+    "observation_hours": "hour"
+  },
+  "assumptions": [
+    "Port monthly TEU is allocated across hours by a deterministic normalized profile.",
+    "LADWP published commercial time-of-use bands supply the intraday price periods; relative multipliers are disclosed assumptions.",
+    "Each hourly price shape is rescaled to the official EIA California commercial monthly mean.",
+    "EIA-930 LADWP published hourly consumed-electricity CO2 intensity supplies the carbon signal.",
+    "EPA eGRID CAMX remains an annual cross-check; the hourly signal is not rescaled to it.",
+    "Missing EIA-930 hours are explicitly quality-coded and filled with the observed month-hour median.",
+    "Storage and terminal physical parameters remain declared benchmark assumptions in metadata."
+  ],
+  "intended_use": "Chronological train/validation/test benchmarking of constrained energy-carbon dispatch, storage, shore power, and equipment-resource policies.",
+  "environment_parameters": {
+    "crane_capacity_teu_per_hour": 1850.0,
+    "yard_capacity_teu_per_hour": 2050.0,
+    "shore_demand_kw": 6800.0,
+    "base_load_kw": 2200.0,
+    "load_kw_per_teu": 0.62,
+    "crane_load_kw": 2900.0,
+    "yard_load_kw": 1250.0,
+    "grid_capacity_kw": 17000.0,
+    "fuel_kwh_per_liter": 3.8,
+    "fuel_carbon_kg_per_liter": 2.68,
+    "delay_cost_cny_per_minute": 18.0,
+    "delay_limit_minutes": 120.0,
+    "battery_capacity_kwh": 18000.0,
+    "battery_power_kw": 5000.0,
+    "battery_initial_soc": 0.5,
+    "battery_min_soc": 0.1,
+    "battery_max_soc": 0.9,
+    "battery_charge_efficiency": 0.95,
+    "battery_discharge_efficiency": 0.95,
+    "battery_degradation_cny_per_kwh": 0.18,
+    "terminal_soc_tolerance": 0.05
+  },
+  "transformation": {
+    "price": "monthly_eia_price * normalized clipped LADWP commercial time-of-use band shape using disclosed base/low/high multipliers 0.75/1.15/1.45 before monthly mean rescaling",
+    "carbon": "official EIA-930 hourly consumed-electricity intensity converted from lbCO2/kWh to kgCO2/kWh; EPA eGRID CAMX retained as annual cross-check",
+    "throughput": "official monthly total * normalized disclosed local-hour demand profile"
+  },
+  "public_source_evidence": {
+    "monthly_package_sha256": "553d8cfecf6c5ecdcceb1d4fcaa1a10a39c4bb0363eff724f36243f42cbdb002",
+    "caiso_response_count": 0,
+    "caiso_responses": [],
+    "eia930_response_count": 1,
+    "eia930_responses": [
+      {
+        "url": "https://www.eia.gov/electricity/gridmonitor/knownissues/xls/LDWP.xlsx",
+        "cache_path": "/tmp/LDWP.xlsx",
+        "response_sha256": "3641b435a4b8acc06bfc0105214b1dbcaaf2295bc9f490926fae325ce7debdc2",
+        "source_rows": 96984,
+        "reported_rows": 51726,
+        "imputed_rows": 882,
+        "selected_rows": 52608,
+        "expected_hours": 52608,
+        "coverage": 0.983234
+      }
+    ]
+  },
+  "quality": {
+    "rows": 52608,
+    "start": "2020-01-01T00:00:00Z",
+    "end": "2025-12-31T23:00:00Z",
+    "missing_cells": 0,
+    "duplicate_timestamps": 0,
+    "csv_sha256": "a6ecba7118049248f6e23ac3cdeebe52014dd6f5fdaab4357433524498018627"
+  }
+}

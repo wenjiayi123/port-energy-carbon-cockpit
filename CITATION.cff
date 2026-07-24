@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this benchmark, please cite the repository."
+title: "Port Energy-Carbon RL Cockpit"
+type: software
+authors:
+  - family-names: "Wen"
+    given-names: "Jiayi"
+version: 0.2.0
+date-released: 2026-07-20
+license: MIT
+abstract: "An auditable offline benchmark for port energy-carbon dispatch using four RL algorithms and a constrained MPC baseline."
+repository-code: "https://github.com/wenjiayi123/port-energy-carbon-cockpit"
+url: "https://github.com/wenjiayi123/port-energy-carbon-cockpit"

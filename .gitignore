@@ -1,0 +1,34 @@
+.DS_Store
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+*.log
+backend/app/data/generated/
+backend/app/data/artifacts/
+backend/app/data/audit/
+backend/app/data/runs/*
+!backend/app/data/runs/.gitkeep
+frontend/.env.local
+release/
+tmp/
+
+# Local integrations and generated evidence
+*.pid
+*.zip
+*.tar.gz
+frontend/public/assets/*.tmp
+
+# Private/submission working material is not part of the open-source tree
+/港口实时能碳与调度优化驾驶舱_软件著作权申请材料_V1.0/
+/软著申请材料_work/
+/能碳驾驶舱_完整演示台词_操作版.md

@@ -1,0 +1,8 @@
+default:
+  efficiency_weight: 0.35
+  energy_weight: 0.25
+  carbon_weight: 0.40
+green_preference_mapping:
+  min_carbon_weight: 0.20
+  max_carbon_weight: 0.70
+

@@ -1,0 +1,10 @@
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+energy_carbon_dispatch_backend.egg-info
+app/data/artifacts
+app/data/audit
+app/data/runs/*
+!app/data/runs/.gitkeep
