@@ -25,7 +25,7 @@ jobs:
           python -m pip install --upgrade "pip>=26.1.2"
           python -m pip install -e "backend[dev]" pip-audit
       - name: Lint backend
-        run: python -m ruff check backend/app
+        run: python -m ruff check --config backend/pyproject.toml backend/app
       - name: Test backend and RL smoke runs
         run: cd backend && python -m pytest app/tests -q
       - name: Validate default dataset
