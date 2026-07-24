@@ -11,6 +11,8 @@
 <strong>面向港口能源、碳排与资源协同调度的可审计离线实验系统</strong><br>
 <strong>An auditable offline experimentation system for coordinated port energy, carbon, and resource dispatch</strong>
 
+<strong>研发作者：</strong>温家懿 · <strong>Research Author:</strong> Wen Jiayi
+
 [![CI](https://github.com/wenjiayi123/port-energy-carbon-cockpit/actions/workflows/ci.yml/badge.svg)](https://github.com/wenjiayi123/port-energy-carbon-cockpit/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/wenjiayi123/port-energy-carbon-cockpit/actions/workflows/codeql.yml/badge.svg)](https://github.com/wenjiayi123/port-energy-carbon-cockpit/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-16b8a6.svg)](LICENSE)
