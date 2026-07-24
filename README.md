@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/social-preview.png" alt="CarbonOps港口能碳强化学习驾驶舱" width="100%" />
+</p>
+
 <div align="center">
 
 # 港口能碳强化学习驾驶舱
@@ -18,6 +22,28 @@
 [快速开始](#快速开始--quick-start) · [系统架构](#系统架构--architecture) · [五类基线](#五类可执行基线--five-executable-baselines) · [数据契约](#替换港口数据--bring-your-own-port-data) · [可信边界](#可信边界--trust-boundaries) · [参与贡献](CONTRIBUTING.md)
 
 </div>
+
+<table>
+  <tr>
+    <th align="center">公开小时电网数据<br /><sub>PUBLIC GRID HOURS</sub></th>
+    <th align="center">留出测试<br /><sub>HELD-OUT TEST</sub></th>
+    <th align="center">碳排<br /><sub>CARBON</sub></th>
+    <th align="center">情景成本<br /><sub>SCENARIO COST</sub></th>
+    <th align="center">约束与吞吐<br /><sub>CONSTRAINTS &amp; THROUGHPUT</sub></th>
+  </tr>
+  <tr>
+    <td align="center"><strong>52,608</strong><br />98.32%原始覆盖</td>
+    <td align="center"><strong>48 × 24 h</strong><br />1,152小时步</td>
+    <td align="center"><strong>−8.69%</strong><br />强固定资源基线</td>
+    <td align="center"><strong>−7.85%</strong><br />同岸电机会</td>
+    <td align="center"><strong>100% / 99.97%</strong><br />约束满足 / 吞吐保持</td>
+  </tr>
+</table>
+
+<p align="center">
+  <sub>所有主指标均由版本化公开数据、验证集冻结对照和SHA-256绑定代码复算；同时公开更严格基线下的边际收益与峰值权衡。</sub><br />
+  <sub>Every headline metric is recomputed from versioned public data, a validation-frozen comparator, and SHA-256-bound code—with the harder comparator and peak trade-off disclosed.</sub>
+</p>
 
 ![Port Energy-Carbon RL Cockpit overview](docs/assets/cockpit-overview.jpg)
 
