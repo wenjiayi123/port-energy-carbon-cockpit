@@ -265,7 +265,7 @@ export function PortCommandCenter({
     <div className="command-center-screen">
       <header className="command-header">
         <div className="command-live-block">
-          <span className="command-live"><i /><Bi zh="离线基准" en="OFFLINE BENCHMARK" /></span>
+          <span className="command-live"><i /><Bi zh="公开离线基准 · 等待接入港口" en="PUBLIC BENCHMARK · PORT INTEGRATION PENDING" /></span>
           <b>{clockText}</b>
           <small>{dateText}</small>
         </div>

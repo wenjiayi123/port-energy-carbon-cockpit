@@ -51,4 +51,10 @@ fi
 
 PYTHONPATH="$ROOT/backend" "$PYTHON_BIN" -m app.rl.cli validate-data port_la_2020_2025_hourly >/dev/null
 
+if ! grep -q "公开离线基准 · 等待接入港口" \
+  "$ROOT/frontend/src/components/PortCommandCenter.tsx"; then
+  echo "missing first-clone port-integration boundary in command center" >&2
+  exit 1
+fi
+
 echo "structure and default dataset ok: $ROOT"
