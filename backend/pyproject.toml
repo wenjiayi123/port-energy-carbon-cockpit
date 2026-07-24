@@ -8,13 +8,15 @@ dependencies = [
   "uvicorn[standard]>=0.30.0",
   "pydantic>=2.8.0",
   "pydantic-settings>=2.4.0",
-  "pandas>=2.2.0",
-  "numpy>=1.26,<3",
+  # The offline benchmark is an evidence artifact. Pin its numerical stack so
+  # six-decimal aggregate checks do not drift across developer and CI hosts.
+  "pandas==3.0.3",
+  "numpy==1.26.4",
   "certifi>=2024.8.30",
   "openpyxl>=3.1.5,<4",
   "pyyaml>=6.0.0",
-  "gymnasium>=1.0,<2",
-  "stable-baselines3>=2.4,<3",
+  "gymnasium==1.0.0",
+  "stable-baselines3==2.4.1",
   "torch>=2.13,<3; platform_system != 'Darwin' or platform_machine != 'x86_64'",
 ]
 
