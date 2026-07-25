@@ -5,18 +5,23 @@ import time
 
 import pytest
 
+import app.rl.policy_selection as policy_selection
 import app.rl.training as training_module
 from app.rl.benchmark import select_validation_static_reference
 from app.rl.dataset import PortDataset
 from app.rl.catalog import ALGORITHM_CATALOG
 from app.rl.environment import (
+    DEPLOYMENT_OBSERVATION_KEYS,
     OBSERVATION_KEYS,
+    OPERATIONAL_OBSERVATION_KEYS,
     MPCPolicy,
     PortEnergyDispatchEnv,
     encode_continuous_controls,
 )
+from app.rl.scenarios import deployment_contract, scenario_items
 from app.rl.training import TrainingService
 from app.rl.tuning import load_search_space
+from app.services.dispatch_simulator import DispatchSimulator
 
 
 def test_training_environment_never_renders_and_test_environment_does() -> None:
@@ -34,12 +39,8 @@ def test_training_environment_never_renders_and_test_environment_does() -> None:
 
 
 def test_algorithm_and_observation_contracts_match_executable_spaces() -> None:
-    continuous = PortEnergyDispatchEnv(
-        split="train", action_mode="continuous", episode_hours=1
-    )
-    discrete = PortEnergyDispatchEnv(
-        split="train", action_mode="discrete", episode_hours=1
-    )
+    continuous = PortEnergyDispatchEnv(split="train", action_mode="continuous", episode_hours=1)
+    discrete = PortEnergyDispatchEnv(split="train", action_mode="discrete", episode_hours=1)
     assert continuous.observation_space.shape == (len(OBSERVATION_KEYS),)
     assert len(OBSERVATION_KEYS) == 19
     assert discrete.action_space.n == 81
@@ -95,6 +96,183 @@ def test_public_dataset_has_required_train_validation_test_boundary() -> None:
     assert 0.0 < first[4] < 1.0
 
 
+def test_vessel_activity_dataset_extends_observation_without_changing_actions() -> None:
+    dataset_id = "port_la_2020_2024_vessel_activity_hourly"
+    dataset = PortDataset.load(dataset_id)
+    assert dataset.environment_id == "PortEnergyDispatchEnv-v2"
+    assert len(dataset.frame) == 43_848
+    assert len(dataset.split("train")) == 26_304
+    assert len(dataset.split("validation")) == 8_760
+    assert len(dataset.split("test")) == 8_784
+    assert dataset.metadata["public_source_evidence"]["vessel_activity_daily_rows"] == 1_238
+    assert dataset.metadata["public_source_evidence"][
+        "vessel_activity_reported_day_coverage"
+    ] == pytest.approx(0.677243)
+    assert dataset.operational_feature_coverage()["status"] == "pass"
+
+    continuous = PortEnergyDispatchEnv(
+        dataset=dataset_id,
+        split="test",
+        action_mode="continuous",
+        episode_hours=1,
+    )
+    discrete = PortEnergyDispatchEnv(
+        dataset=dataset_id,
+        split="test",
+        action_mode="discrete",
+        episode_hours=1,
+    )
+    observation, info = continuous.reset(seed=11, options={"row_index": 0})
+    assert continuous.observation_space.shape == (
+        len(OBSERVATION_KEYS) + len(OPERATIONAL_OBSERVATION_KEYS),
+    )
+    assert len(observation) == 25
+    assert info["environment_id"] == "PortEnergyDispatchEnv-v2"
+    assert discrete.action_space.n == 81
+
+
+def test_vessel_activity_controls_aggregate_shore_power_opportunity() -> None:
+    dataset_id = "port_la_2020_2024_vessel_activity_hourly"
+    dataset = PortDataset.load(dataset_id)
+    test = dataset.split("test")
+    row_index = int(test["vessels_at_berth"].idxmin())
+    expected_kw = min(
+        float(dataset.metadata["environment_parameters"]["shore_demand_kw"]),
+        float(test.iloc[row_index]["vessels_at_berth"])
+        * float(dataset.metadata["environment_parameters"]["vessel_auxiliary_demand_kw"]),
+    )
+    env = PortEnergyDispatchEnv(
+        dataset=dataset_id,
+        split="test",
+        episode_hours=1,
+    )
+    env.reset(seed=11, options={"row_index": row_index})
+    action = encode_continuous_controls(
+        {
+            "shore_power_ratio": 1.0,
+            "crane_ratio": 1.0,
+            "yard_ratio": 1.0,
+            "battery_power_ratio": 0.0,
+        }
+    )
+    _, _, _, _, info = env.step(action)
+    assert info["shore_power_opportunity_kwh"] == pytest.approx(expected_kw)
+    assert info["shore_power_kwh"] == pytest.approx(expected_kw)
+
+
+def test_live_port_contract_is_fail_closed_and_v3_affects_dispatch(tmp_path) -> None:
+    csv_path = tmp_path / "live_port.csv"
+    columns = [
+        "period",
+        "split",
+        "loaded_import_teu",
+        "loaded_export_teu",
+        "total_teu",
+        "grid_carbon_kg_per_kwh",
+        "electricity_price_per_kwh",
+        "fuel_price_per_liter",
+        "source_id",
+        "observation_hours",
+        "crane_capacity_teu_per_hour",
+        "yard_capacity_teu_per_hour",
+        "shore_demand_kw",
+        "base_load_kw",
+        "load_kw_per_teu",
+        "crane_load_kw",
+        "yard_load_kw",
+        "grid_capacity_kw",
+        *OPERATIONAL_OBSERVATION_KEYS,
+        *DEPLOYMENT_OBSERVATION_KEYS,
+    ]
+    rows = []
+    for index in range(6):
+        split = "train" if index < 2 else "validation" if index < 4 else "test"
+        rows.append(
+            [
+                f"2026-01-01T{index:02d}:00:00Z",
+                split,
+                60,
+                40,
+                100,
+                0.2,
+                0.5,
+                8.0,
+                "terminal_approved",
+                1,
+                100,
+                100,
+                50,
+                100,
+                1,
+                10,
+                20,
+                5_000,
+                1,
+                2,
+                1,
+                1,
+                2,
+                1,
+                5,
+                1,
+                10,
+                0,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                20,
+            ]
+        )
+    csv_path.write_text(
+        ",".join(columns)
+        + "\n"
+        + "\n".join(",".join(str(value) for value in row) for row in rows)
+        + "\n",
+        encoding="utf-8",
+    )
+    csv_path.with_suffix(".metadata.json").write_text(
+        json.dumps(
+            {
+                "id": "live_port",
+                "temporal_mode": "sequential_rows",
+                "time_column": "period",
+                "environment_id": "PortEnergyDispatchEnv-v3",
+            }
+        ),
+        encoding="utf-8",
+    )
+    env = PortEnergyDispatchEnv(
+        dataset=str(csv_path),
+        split="test",
+        episode_hours=1,
+    )
+    observation, _ = env.reset(seed=1, options={"row_index": 0})
+    assert len(observation) == 35
+    action = encode_continuous_controls(
+        {
+            "shore_power_ratio": 1.0,
+            "crane_ratio": 1.0,
+            "yard_ratio": 1.0,
+            "battery_power_ratio": 0.0,
+        }
+    )
+    _, _, _, _, info = env.step(action)
+    assert info["processed_teu"] == pytest.approx(25.0)
+    assert info["shore_power_opportunity_kwh"] == pytest.approx(25.0)
+    assert info["renewable_energy_kwh"] == pytest.approx(20.0)
+
+    contract = deployment_contract()
+    assert contract["environment_id"] == "PortEnergyDispatchEnv-v3"
+    templates = {
+        item["id"]: item for item in scenario_items() if item["mode"] == "live_port_template"
+    }
+    assert templates
+    assert all(not item["readiness"]["production_ready"] for item in templates.values())
+    assert all(item["readiness"]["missing_adapters"] for item in templates.values())
+
+
 def test_hyperparameter_search_contract_keeps_test_out_of_selection() -> None:
     search = load_search_space()
     protocol = search["selection_protocol"]
@@ -136,7 +314,9 @@ def test_sequential_port_dataset_overrides_physical_model_without_code_changes(t
 
     dataset = PortDataset.load(csv_path)
     assert dataset.evaluation_start_indices("train", 3) == [0]
-    env = PortEnergyDispatchEnv(dataset=str(csv_path), split="train", episode_hours=4, render_mode="trajectory")
+    env = PortEnergyDispatchEnv(
+        dataset=str(csv_path), split="train", episode_hours=4, render_mode="trajectory"
+    )
     env.reset(seed=1, options={"row_index": 0})
     action = encode_continuous_controls(
         {
@@ -156,8 +336,87 @@ def test_sequential_port_dataset_overrides_physical_model_without_code_changes(t
     assert second["load_kw"] == pytest.approx(330.0)
 
 
+def test_dataset_cache_invalidates_when_package_changes(tmp_path) -> None:
+    csv_path = tmp_path / "cache_check.csv"
+    rows = [
+        (
+            "period,split,loaded_import_teu,loaded_export_teu,total_teu,"
+            "grid_carbon_kg_per_kwh,electricity_price_per_kwh,"
+            "fuel_price_per_liter,source_id"
+        ),
+        "2026-01,train,1,1,2,0.2,0.5,8,source-a",
+        "2026-02,validation,1,1,2,0.2,0.5,8,source-a",
+        "2026-03,test,1,1,2,0.2,0.5,8,source-a",
+    ]
+    csv_path.write_text("\n".join(rows) + "\n", encoding="utf-8")
+    first = PortDataset.load(csv_path)
+    rows[-1] = "2026-03,test,2,1,3,0.2,0.5,8,source-b"
+    csv_path.write_text("\n".join(rows) + "\n", encoding="utf-8")
+    second = PortDataset.load(csv_path)
+    assert second.sha256 != first.sha256
+    assert second.frame.iloc[-1]["total_teu"] == pytest.approx(3.0)
+
+
+def test_auto_strategy_selection_skips_newer_smoke_runs(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(policy_selection, "RUNS_DIR", tmp_path)
+    for run_id, steps in (
+        ("rl-20260725-120000-substantial", 100_000),
+        ("rl-20260726-001000-smoke", 32),
+    ):
+        run_dir = tmp_path / run_id
+        run_dir.mkdir()
+        (run_dir / "manifest.json").write_text(
+            json.dumps(
+                {
+                    "job_id": run_id,
+                    "status": "completed",
+                    "step": steps,
+                    "artifact_path": str(run_dir / "model.zip"),
+                    "artifact_sha256": "recorded",
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    assert policy_selection.resolve_requested_strategy("auto:latest") == (
+        "rl-20260725-120000-substantial"
+    )
+    assert policy_selection.resolve_requested_strategy("explicit-policy") == (
+        "explicit-policy"
+    )
+
+
+def test_dashboard_admission_rejects_safe_but_underperforming_policy() -> None:
+    metrics = {
+        "test_steps": 1_152,
+        "safety_violations": 0,
+        "constraint_success_rate_pct": 100.0,
+        "carbon_reduction_pct": -9.806,
+        "cost_saving_pct": -10.293,
+        "fixed_baseline_carbon_reduction_pct": -0.029,
+        "fixed_baseline_cost_saving_pct": -1.232,
+        "fixed_baseline_throughput_change_pct": 0.0,
+    }
+    rejected = {"split": "test", "metrics": metrics}
+    admitted = {
+        "split": "test",
+        "metrics": {
+            **metrics,
+            "carbon_reduction_pct": 1.0,
+            "cost_saving_pct": 1.0,
+            "fixed_baseline_carbon_reduction_pct": 1.0,
+            "fixed_baseline_cost_saving_pct": 1.0,
+        },
+    }
+
+    assert not DispatchSimulator._dashboard_policy_admitted(rejected)
+    assert DispatchSimulator._dashboard_policy_admitted(admitted)
+
+
 @pytest.mark.parametrize("algorithm", ["ppo", "sac", "td3", "dqn"])
-def test_each_rl_algorithm_executes_real_learner_steps(tmp_path, monkeypatch, algorithm: str) -> None:
+def test_each_rl_algorithm_executes_real_learner_steps(
+    tmp_path, monkeypatch, algorithm: str
+) -> None:
     run_root = tmp_path / algorithm
     run_root.mkdir()
     monkeypatch.setattr(training_module, "RUNS_DIR", run_root)
@@ -186,4 +445,8 @@ def test_each_rl_algorithm_executes_real_learner_steps(tmp_path, monkeypatch, al
     history = service.history()
     assert history["series"]
     assert history["checkpoints"]
-    assert all(point.get("validation_rendering") is False for point in history["series"] if "validation_rendering" in point)
+    assert all(
+        point.get("validation_rendering") is False
+        for point in history["series"]
+        if "validation_rendering" in point
+    )

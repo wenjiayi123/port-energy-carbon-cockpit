@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "evidence_label": "PUBLIC_DATASET_COMPARISON_NOT_FIELD_TELEMETRY",
+  "recommended_training_dataset": "port_la_2020_2024_vessel_activity_hourly",
+  "preserved_longitudinal_baseline": "port_la_2020_2025_hourly",
+  "datasets": [
+    {
+      "id": "port_la_2020_2025_hourly",
+      "environment_id": "PortEnergyDispatchEnv-v1",
+      "observation_count": 19,
+      "rows": 52608,
+      "train_rows": 35064,
+      "validation_rows": 8784,
+      "test_rows": 8760,
+      "official_port_workload_observations": 72,
+      "official_port_workload_resolution": "monthly",
+      "reported_hourly_grid_carbon_rows": 51726,
+      "imputed_hourly_grid_carbon_rows": 882
+    },
+    {
+      "id": "port_la_2020_2024_vessel_activity_hourly",
+      "environment_id": "PortEnergyDispatchEnv-v2",
+      "observation_count": 25,
+      "rows": 43848,
+      "train_rows": 26304,
+      "validation_rows": 8760,
+      "test_rows": 8784,
+      "official_monthly_teu_observations": 60,
+      "official_daily_vessel_activity_observations": 1238,
+      "reported_vessel_activity_day_coverage": 0.677243,
+      "non_reporting_day_method": "explicit linear calendar-day interpolation",
+      "held_out_mpc_vs_fixed_full_resources": {
+        "carbon_reduction_pct": 8.904,
+        "cost_saving_pct": 8.215,
+        "throughput_retention_pct": 100.0,
+        "constraint_success_rate_pct": 100.0
+      },
+      "held_out_mpc_vs_validation_selected_static": {
+        "carbon_reduction_pct": 2.765,
+        "cost_saving_pct": 2.108,
+        "throughput_change_pct": 0.731,
+        "peak_load_reduction_pct": -3.609
+      }
+    }
+  ],
+  "decision_basis": "Higher port-operation information content and daily source provenance; row count alone is not used as a credibility proxy.",
+  "limitations": [
+    "Neither package is terminal telemetry or a field KPI.",
+    "Hourly TEU is a disclosed deterministic allocation.",
+    "The enhanced package has no terminal meters, TOS events or equipment telemetry.",
+    "National AIS scale does not supply energy, tariff, equipment or verified TEU labels."
+  ]
+}

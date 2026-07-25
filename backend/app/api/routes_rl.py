@@ -5,6 +5,8 @@ from typing import Any
 from fastapi import APIRouter, Body, HTTPException
 
 from app.rl.dataset import DEFAULT_DATASET_ID, PortDataset, registered_dataset_id
+from app.rl.policy_selection import resolve_requested_strategy
+from app.rl.scenarios import resolve_training_scenario
 from app.rl.training import training_service, utc_now
 
 
@@ -20,6 +22,12 @@ def _api_training_config(payload: dict[str, Any]) -> dict[str, Any]:
     config = dict(payload.get("config") or payload)
     config["dataset_id"] = _registered_api_dataset(config)
     config.pop("data_file", None)
+    config.update(
+        resolve_training_scenario(
+            str(config.get("scenario") or "") or None,
+            str(config["dataset_id"]),
+        )
+    )
     return config
 
 
@@ -121,7 +129,9 @@ def model_registry() -> dict[str, Any]:
 @router.post("/rl/simulate")
 def simulate(payload: dict[str, Any] = Body(default={})) -> dict[str, Any]:
     try:
-        return training_service.evaluate(str(payload.get("strategy_id") or "auto:latest"))
+        return training_service.evaluate(
+            resolve_requested_strategy(payload.get("strategy_id"))
+        )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except RuntimeError as exc:
@@ -131,7 +141,9 @@ def simulate(payload: dict[str, Any] = Body(default={})) -> dict[str, Any]:
 @router.post("/rlops/policies/verify")
 def verify_policy(payload: dict[str, Any] = Body(default={})) -> dict[str, Any]:
     try:
-        evaluation = training_service.evaluate(str(payload.get("strategy_id") or "auto:latest"))
+        evaluation = training_service.evaluate(
+            resolve_requested_strategy(payload.get("strategy_id"))
+        )
     except (FileNotFoundError, RuntimeError) as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     metrics = evaluation["metrics"]
@@ -141,6 +153,16 @@ def verify_policy(payload: dict[str, Any] = Body(default={})) -> dict[str, Any]:
         {"name": "dataset_quality_gate", "passed": evaluation["dataset_quality"]["status"] == "pass"},
         {"name": "artifact_hash_recorded", "passed": bool(evaluation["policy"]["artifact_sha256"])},
         {"name": "grid_peak_constraint", "passed": metrics["safety_violations"] == 0},
+        {"name": "carbon_non_regression", "passed": metrics["carbon_reduction_pct"] >= 0},
+        {"name": "cost_non_regression", "passed": metrics["cost_saving_pct"] >= 0},
+        {
+            "name": "fixed_baseline_carbon_non_regression",
+            "passed": metrics["fixed_baseline_carbon_reduction_pct"] >= 0,
+        },
+        {
+            "name": "fixed_baseline_cost_non_regression",
+            "passed": metrics["fixed_baseline_cost_saving_pct"] >= 0,
+        },
         {"name": "manual_dispatch_boundary", "passed": True},
     ]
     passed = all(item["passed"] for item in checks)

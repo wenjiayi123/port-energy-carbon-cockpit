@@ -6,6 +6,11 @@ The benchmark exposes PPO, SAC, TD3, and DQN through Stable-Baselines3, plus a f
 finite-horizon constrained MPC beam-search baseline. Algorithms share the same environment,
 dataset package, constraints, and held-out evaluation path.
 
+The environment contract is layered: v1 has 19 energy-dispatch observations, v2 adds six
+official vessel-activity features, and v3 adds ten terminal deployment fields for a total
+of 35 observations. All versions keep the same four continuous controls and 81 explicit
+DQN combinations.
+
 ## Intended use
 
 - Offline research, reproducibility, algorithm comparison, and operator decision support.
@@ -29,14 +34,23 @@ Each new run records configuration, random seed, dataset package SHA-256, callba
 checkpoints, model/controller artifact SHA-256, held-out evaluation, and optional persisted
 verification. `GET /api/rl/registry` reports lifecycle stage and gate status.
 The search space and selection contract live in `configs/rl_search_space.json`.
-Short runs below 10,000 steps are labelled as wiring smoke evidence, not convergence.
+Runs below 10,000 steps are wiring smoke evidence. The published 10,000-step multi-seed
+selection report is short-budget comparative evidence, not a convergence or superiority claim.
+
+Artifact integrity and zero modeled safety violations are necessary but not sufficient for
+dashboard admission. A trained policy must also complete 1,152 held-out steps and avoid carbon
+and cost regression against both constrained-control and fixed-resource comparators. Rejected
+runs remain downloadable evidence but cannot replace the publishable cockpit baseline.
 
 ## Limitations and risks
 
-The default dataset has hourly EIA grid signals but monthly Port throughput anchors allocated
-through a declared profile. Results remain sensitive to physical assumptions, reward weights,
-capacity calibration, test-period shift, price construction and environment simplification.
-An offline win does not demonstrate safe or effective performance at a real port.
+The default training dataset adds 1,238 official daily Port of Los Angeles vessel-activity
+rows to public hourly grid signals, but hourly TEU is still allocated through a declared
+profile and non-reporting calendar days are quality-coded interpolations. The original
+52,608-hour package remains the longer energy-carbon benchmark. Results remain sensitive to
+physical assumptions, reward weights, capacity calibration, test-period shift, price
+construction and environment simplification. An offline win does not demonstrate safe or
+effective performance at a real port.
 
 The environment models storage SOC, power, efficiency, degradation and terminal-SOC constraints.
 Those values are declared scenario assumptions, not verified Port equipment specifications;

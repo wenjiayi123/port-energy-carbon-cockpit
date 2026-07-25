@@ -11,6 +11,7 @@ autonomous equipment control.
 | Carbon accounting | Scope 1 auxiliary fuel and location-based Scope 2 are reported separately | Active |
 | Market-based Scope 2 | Field and quality contract exist | Unavailable until contractual instruments are supplied |
 | Dataset governance | Schema, finite values, split isolation, provenance, units, package hash, quality score | Enforced |
+| Port scenario contract | v3 weather, vessel, berth, equipment, grid, shore compatibility and renewable observations | Fail-closed |
 | Distribution checks | Train/test standardized mean-difference report | Advisory or blocking at high shift |
 | Model lifecycle | Candidate, validated offline, verified offline, and blocked stages | Production eligibility always false |
 | Artifact integrity | SHA-256 for newly trained model/controller artifacts | Enforced for new runs |
@@ -22,7 +23,8 @@ autonomous equipment control.
 
 ## External evidence required before a real port deployment
 
-1. A TOS/EMS adapter that emits the canonical schema with timestamped source identifiers.
+1. TOS, EMS, berth/vessel, equipment, weather/navigation and shore-compatibility adapters
+   that emit the v3 canonical schema with timestamped source identifiers.
 2. Calibrated terminal capacities, load curves, delay costs, and safety limits approved by the port.
 3. Meter and fuel records with lineage, correction policy, retention, and reconciliation procedures.
 4. Supplier-specific or contractual electricity instruments for market-based Scope 2 reporting.
@@ -39,7 +41,10 @@ The production gate remains closed until these items are supplied and independen
 - `GET /api/health/ready`: dataset, run storage, and RL-runtime readiness.
 - `GET /api/metrics`: Prometheus text metrics.
 - `GET /api/rl/registry`: model lifecycle, data hash, artifact hash, drift, and test status.
-- `POST /api/rlops/policies/verify`: persists an offline verification record.
+- `GET /api/scenarios`: per-port dataset, observation and adapter readiness.
+- `GET /api/scenarios/contract`: common objectives, observations, actions and hard constraints.
+- `POST /api/rlops/policies/verify`: persists split, hash, safety and carbon/cost
+  non-regression checks; a safe but underperforming policy is marked `blocked`.
 
 ## Deployment modes
 

@@ -165,10 +165,27 @@ class DispatchSimulator:
                 evaluation = json.loads(path.read_text(encoding="utf-8"))
                 if evaluation.get("policy", {}).get("artifact_sha256") != recorded_artifact_sha256:
                     continue
+                if not DispatchSimulator._dashboard_policy_admitted(evaluation):
+                    continue
                 return evaluation
             except Exception:
                 continue
         return None
+
+    @staticmethod
+    def _dashboard_policy_admitted(evaluation: dict[str, Any]) -> bool:
+        metrics = evaluation.get("metrics") or {}
+        return bool(
+            evaluation.get("split") == "test"
+            and int(metrics.get("test_steps") or 0) >= 1_152
+            and int(metrics.get("safety_violations") or 0) == 0
+            and float(metrics.get("constraint_success_rate_pct") or 0.0) == 100.0
+            and float(metrics.get("carbon_reduction_pct") or 0.0) > 0.0
+            and float(metrics.get("cost_saving_pct") or 0.0) > 0.0
+            and float(metrics.get("fixed_baseline_carbon_reduction_pct") or 0.0) > 0.0
+            and float(metrics.get("fixed_baseline_cost_saving_pct") or 0.0) > 0.0
+            and float(metrics.get("fixed_baseline_throughput_change_pct") or 0.0) >= -1.0
+        )
 
     @staticmethod
     def _weights(green_preference: float) -> dict[str, float]:

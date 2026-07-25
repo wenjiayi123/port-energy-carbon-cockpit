@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+import sys
 import time
 from typing import Any
 
@@ -80,10 +81,7 @@ def _mean_totals(items: list[dict[str, Any]]) -> dict[str, float]:
         "soc_violation_steps",
         "peak_kw",
     )
-    return {
-        key: round(float(np.mean([float(item[key]) for item in items])), 6)
-        for key in keys
-    }
+    return {key: round(float(np.mean([float(item[key]) for item in items])), 6) for key in keys}
 
 
 def evaluate_model(
@@ -202,6 +200,11 @@ def tune_algorithm(
 ) -> dict[str, Any]:
     trials: list[dict[str, Any]] = []
     for index, candidate in enumerate(candidates):
+        print(
+            f"tuning: algorithm={algorithm} candidate={index + 1}/{len(candidates)}",
+            file=sys.stderr,
+            flush=True,
+        )
         _, _, evidence = train_candidate(
             algorithm,
             candidate,
@@ -218,9 +221,7 @@ def tune_algorithm(
             }
         )
     eligible = [
-        trial
-        for trial in trials
-        if float(trial["validation"]["mean"]["safety_violations"]) <= 0.0
+        trial for trial in trials if float(trial["validation"]["mean"]["safety_violations"]) <= 0.0
     ]
     selected = max(
         eligible or trials,
@@ -232,6 +233,11 @@ def tune_algorithm(
     if final_seeds:
         artifact_dir.mkdir(parents=True, exist_ok=True)
         for final_seed in final_seeds:
+            print(
+                f"tuning: algorithm={algorithm} final_seed={final_seed}",
+                file=sys.stderr,
+                flush=True,
+            )
             model, config, evidence = train_candidate(
                 algorithm,
                 selected_candidate,
@@ -292,14 +298,8 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     args = build_parser().parse_args()
     search = load_search_space(args.search_space)
-    final_seeds = [
-        int(value.strip()) for value in args.final_seeds.split(",") if value.strip()
-    ]
-    algorithms = (
-        sorted(search["algorithms"])
-        if args.algorithm == "all"
-        else [args.algorithm]
-    )
+    final_seeds = [int(value.strip()) for value in args.final_seeds.split(",") if value.strip()]
+    algorithms = sorted(search["algorithms"]) if args.algorithm == "all" else [args.algorithm]
     artifact_dir = args.output.parent / f"{args.output.stem}_artifacts"
     results = [
         tune_algorithm(
@@ -319,12 +319,11 @@ def main() -> None:
         "schema_version": "1.0",
         "generated_at": utc_now(),
         "evidence_label": (
-            "RL_SMOKE_WIRING_ONLY"
-            if args.steps < 10_000
-            else "OFFLINE_RL_EXPERIMENT_NOT_FIELD_KPI"
+            "RL_SMOKE_WIRING_ONLY" if args.steps < 10_000 else "OFFLINE_RL_EXPERIMENT_NOT_FIELD_KPI"
         ),
         "dataset_id": dataset.dataset_id,
         "dataset_package_sha256": dataset.package_sha256,
+        "environment_id": dataset.environment_id,
         "search_space_path": portable_path(args.search_space),
         "search_space_sha256": sha256_file(args.search_space),
         "code_sha256": {

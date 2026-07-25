@@ -42,6 +42,24 @@ OPTIONAL_COLUMNS = {
     "fuel_carbon_kg_per_liter": "fuel_carbon_col",
     "delay_cost_cny_per_minute": "delay_cost_col",
     "delay_limit_minutes": "delay_limit_col",
+    "vessel_auxiliary_demand_kw": "vessel_auxiliary_demand_col",
+    "shore_power_available_ratio": "shore_power_available_ratio_col",
+    "vessels_at_anchor": "vessels_at_anchor_col",
+    "vessels_at_berth": "vessels_at_berth_col",
+    "vessels_departed": "vessels_departed_col",
+    "average_days_at_berth": "average_days_at_berth_col",
+    "average_days_in_port": "average_days_in_port_col",
+    "port_activity_observed": "port_activity_observed_col",
+    "wind_speed_m_s": "wind_speed_col",
+    "wave_height_m": "wave_height_col",
+    "visibility_km": "visibility_col",
+    "precipitation_mm": "precipitation_col",
+    "berth_available_ratio": "berth_available_ratio_col",
+    "crane_available_ratio": "crane_available_ratio_col",
+    "yard_available_ratio": "yard_available_ratio_col",
+    "grid_available_ratio": "grid_available_ratio_col",
+    "shore_power_compatible_ratio": "shore_power_compatible_ratio_col",
+    "renewable_power_available_kw": "renewable_power_available_col",
 }
 OPTIONAL_UNITS = {
     "observation_hours": "hours",
@@ -57,6 +75,24 @@ OPTIONAL_UNITS = {
     "fuel_carbon_kg_per_liter": "kgCO2e/liter",
     "delay_cost_cny_per_minute": "CNY/minute",
     "delay_limit_minutes": "minutes",
+    "vessel_auxiliary_demand_kw": "kW/vessel",
+    "shore_power_available_ratio": "ratio",
+    "vessels_at_anchor": "vessels",
+    "vessels_at_berth": "vessels",
+    "vessels_departed": "vessels/day",
+    "average_days_at_berth": "days",
+    "average_days_in_port": "days",
+    "port_activity_observed": "0/1",
+    "wind_speed_m_s": "m/s",
+    "wave_height_m": "m",
+    "visibility_km": "km",
+    "precipitation_mm": "mm/hour",
+    "berth_available_ratio": "ratio",
+    "crane_available_ratio": "ratio",
+    "yard_available_ratio": "ratio",
+    "grid_available_ratio": "ratio",
+    "shore_power_compatible_ratio": "ratio",
+    "renewable_power_available_kw": "kW",
 }
 
 
@@ -85,12 +121,54 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--fuel-carbon-col")
     result.add_argument("--delay-cost-col")
     result.add_argument("--delay-limit-col")
-    result.add_argument("--temporal-mode", choices=["profiled_period", "sequential_rows"], default="profiled_period")
-    result.add_argument("--environment-config", type=Path, help="JSON object with terminal environment parameters")
+    result.add_argument("--vessel-auxiliary-demand-col")
+    result.add_argument("--shore-power-available-ratio-col")
+    result.add_argument("--vessels-at-anchor-col")
+    result.add_argument("--vessels-at-berth-col")
+    result.add_argument("--vessels-departed-col")
+    result.add_argument("--average-days-at-berth-col")
+    result.add_argument("--average-days-in-port-col")
+    result.add_argument("--port-activity-observed-col")
+    result.add_argument("--wind-speed-col")
+    result.add_argument("--wave-height-col")
+    result.add_argument("--visibility-col")
+    result.add_argument("--precipitation-col")
+    result.add_argument("--berth-available-ratio-col")
+    result.add_argument("--crane-available-ratio-col")
+    result.add_argument("--yard-available-ratio-col")
+    result.add_argument("--grid-available-ratio-col")
+    result.add_argument("--shore-power-compatible-ratio-col")
+    result.add_argument("--renewable-power-available-col")
+    result.add_argument(
+        "--temporal-mode",
+        choices=["profiled_period", "sequential_rows"],
+        default="profiled_period",
+    )
+    result.add_argument(
+        "--time-col", help="Required source timestamp column for sequential_rows"
+    )
+    result.add_argument(
+        "--environment-config",
+        type=Path,
+        help="JSON object with terminal environment parameters",
+    )
     result.add_argument("--source-id", required=True)
     result.add_argument("--source-url", action="append", default=[])
     result.add_argument("--license", dest="license_name", required=True)
     result.add_argument("--name", default="Canonical port training dataset")
+    result.add_argument("--version", default="1.0")
+    result.add_argument("--port-id", default="custom_port")
+    result.add_argument("--timezone", required=True)
+    result.add_argument("--currency", required=True)
+    result.add_argument(
+        "--environment-id",
+        choices=[
+            "PortEnergyDispatchEnv-v1",
+            "PortEnergyDispatchEnv-v2",
+            "PortEnergyDispatchEnv-v3",
+        ],
+        default="PortEnergyDispatchEnv-v1",
+    )
     return result
 
 
@@ -100,6 +178,10 @@ def main() -> None:
     output = args.output.expanduser().resolve()
     if source == output:
         raise SystemExit("--output must differ from --input")
+    if not args.source_url:
+        raise SystemExit("at least one --source-url is required for provenance")
+    if args.temporal_mode == "sequential_rows" and not args.time_col:
+        raise SystemExit("--time-col is required for sequential_rows")
     frame = pd.read_csv(source)
     mapping = {
         str(getattr(args, argument_name)): canonical
@@ -110,6 +192,10 @@ def main() -> None:
         raise SystemExit(f"source columns not found: {', '.join(missing)}")
     renamed = frame.rename(columns=mapping)
     canonical = renamed[list(CANONICAL_COLUMNS)].copy()
+    if args.time_col:
+        if args.time_col not in frame.columns:
+            raise SystemExit(f"source column not found: {args.time_col}")
+        canonical.insert(0, "timestamp_utc", frame[args.time_col])
     for canonical_name, argument_name in OPTIONAL_COLUMNS.items():
         source_column = getattr(args, argument_name)
         if source_column:
@@ -121,7 +207,9 @@ def main() -> None:
     canonical.to_csv(output, index=False)
     environment_parameters = {}
     if args.environment_config:
-        environment_parameters = json.loads(args.environment_config.expanduser().read_text(encoding="utf-8"))
+        environment_parameters = json.loads(
+            args.environment_config.expanduser().read_text(encoding="utf-8")
+        )
         if not isinstance(environment_parameters, dict):
             raise SystemExit("--environment-config must contain one JSON object")
     units = {
@@ -132,18 +220,74 @@ def main() -> None:
         "electricity_price_per_kwh": "CNY/kWh",
         "fuel_price_per_liter": "CNY/liter",
     }
-    units.update({column: unit for column, unit in OPTIONAL_UNITS.items() if column in canonical.columns})
+    units.update(
+        {
+            column: unit
+            for column, unit in OPTIONAL_UNITS.items()
+            if column in canonical.columns
+        }
+    )
+    operational_required = []
+    if args.environment_id in {
+        "PortEnergyDispatchEnv-v2",
+        "PortEnergyDispatchEnv-v3",
+    }:
+        operational_required.extend(
+            [
+                "vessels_at_anchor",
+                "vessels_at_berth",
+                "vessels_departed",
+                "average_days_at_berth",
+                "average_days_in_port",
+                "port_activity_observed",
+            ]
+        )
+    if args.environment_id == "PortEnergyDispatchEnv-v3":
+        operational_required.extend(
+            [
+                "wind_speed_m_s",
+                "wave_height_m",
+                "visibility_km",
+                "precipitation_mm",
+                "berth_available_ratio",
+                "crane_available_ratio",
+                "yard_available_ratio",
+                "grid_available_ratio",
+                "shore_power_compatible_ratio",
+                "renewable_power_available_kw",
+            ]
+        )
     metadata = {
         "id": output.stem,
         "name": args.name,
+        "version": args.version,
         "license": args.license_name,
         "source_urls": args.source_url,
         "attribution": f"Prepared from {source.name}; source_id={args.source_id}",
         "scope_note": "Canonical snapshot prepared for offline training and held-out evaluation.",
         "temporal_mode": args.temporal_mode,
+        "time_column": "timestamp_utc" if args.time_col else None,
+        "environment_id": args.environment_id,
         "environment_parameters": environment_parameters,
+        "port_profile": {
+            "port_id": args.port_id,
+            "timezone": args.timezone,
+            "currency": args.currency,
+        },
         "units": units,
+        "assumptions": [
+            "Source columns are mapped without changing their numeric values.",
+            "Environment parameters must be calibrated from terminal-approved evidence.",
+        ],
+        "intended_use": (
+            "Immutable offline training, validation, and held-out testing snapshot; "
+            "not a mutable production-control table."
+        ),
+        "operational_feature_contract": {
+            "required_columns": operational_required,
+        },
     }
+    metadata = {key: value for key, value in metadata.items() if value is not None}
     output.with_suffix(".metadata.json").write_text(
         json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",

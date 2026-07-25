@@ -5,6 +5,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+from threading import RLock
 from typing import Any
 
 import pandas as pd
@@ -55,6 +56,52 @@ OPTIONAL_NUMERIC_COLUMNS = {
     "battery_degradation_cny_per_kwh",
     "terminal_soc_tolerance",
     "demand_charge_cny_per_kw",
+    "vessel_auxiliary_demand_kw",
+    "shore_power_available_ratio",
+    "vessels_at_anchor",
+    "vessels_at_berth",
+    "vessels_departed",
+    "average_days_at_berth",
+    "average_days_in_port",
+    "port_activity_observed",
+    "wind_speed_m_s",
+    "wave_height_m",
+    "visibility_km",
+    "precipitation_mm",
+    "berth_available_ratio",
+    "crane_available_ratio",
+    "yard_available_ratio",
+    "grid_available_ratio",
+    "shore_power_compatible_ratio",
+    "renewable_power_available_kw",
+}
+OPERATIONAL_COLUMNS = {
+    "vessels_at_anchor",
+    "vessels_at_berth",
+    "vessels_departed",
+    "average_days_at_berth",
+    "average_days_in_port",
+    "port_activity_observed",
+}
+DEPLOYMENT_COLUMNS = {
+    "wind_speed_m_s",
+    "wave_height_m",
+    "visibility_km",
+    "precipitation_mm",
+    "berth_available_ratio",
+    "crane_available_ratio",
+    "yard_available_ratio",
+    "grid_available_ratio",
+    "shore_power_compatible_ratio",
+    "renewable_power_available_kw",
+}
+RATIO_COLUMNS = {
+    "shore_power_available_ratio",
+    "berth_available_ratio",
+    "crane_available_ratio",
+    "yard_available_ratio",
+    "grid_available_ratio",
+    "shore_power_compatible_ratio",
 }
 DRIFT_COLUMNS = {
     "loaded_import_teu",
@@ -77,6 +124,8 @@ REQUIRED_METADATA_FIELDS = {
     "assumptions",
     "intended_use",
 }
+_DATASET_CACHE: dict[tuple[Any, ...], Any] = {}
+_DATASET_CACHE_LOCK = RLock()
 
 
 @dataclass(frozen=True)
@@ -94,6 +143,20 @@ class PortDataset:
         csv_path = resolve_dataset_path(dataset)
         if not csv_path.exists():
             raise FileNotFoundError(f"Training dataset does not exist: {csv_path}")
+        metadata_path = csv_path.with_suffix(".metadata.json")
+        csv_stat = csv_path.stat()
+        metadata_stat = metadata_path.stat() if metadata_path.exists() else None
+        cache_key = (
+            str(csv_path.resolve()),
+            csv_stat.st_size,
+            csv_stat.st_mtime_ns,
+            metadata_stat.st_size if metadata_stat else 0,
+            metadata_stat.st_mtime_ns if metadata_stat else 0,
+        )
+        with _DATASET_CACHE_LOCK:
+            cached = _DATASET_CACHE.get(cache_key)
+        if cached is not None:
+            return cached
         frame = pd.read_csv(csv_path)
         missing = REQUIRED_COLUMNS - set(frame.columns)
         if missing:
@@ -108,7 +171,14 @@ class PortDataset:
         period_split_counts = frame.groupby("period")["split"].nunique()
         if bool((period_split_counts > 1).any()):
             raise ValueError("A period cannot appear in more than one temporal split")
-        if frame[list(TEXT_COLUMNS)].fillna("").astype(str).apply(lambda column: column.str.strip().eq("")).any().any():
+        if (
+            frame[list(TEXT_COLUMNS)]
+            .fillna("")
+            .astype(str)
+            .apply(lambda column: column.str.strip().eq(""))
+            .any()
+            .any()
+        ):
             raise ValueError("Dataset period, split, and source_id values must be non-empty")
         numeric = REQUIRED_COLUMNS - TEXT_COLUMNS
         for column in numeric:
@@ -121,7 +191,9 @@ class PortDataset:
             raise ValueError("Dataset numeric values must be finite")
         if (frame[list(all_numeric)] < 0).any().any():
             raise ValueError("Dataset numeric values must be non-negative")
-        metadata_path = csv_path.with_suffix(".metadata.json")
+        present_ratios = RATIO_COLUMNS & set(frame.columns)
+        if present_ratios and (frame[list(present_ratios)] > 1).any().any():
+            raise ValueError("Dataset availability and compatibility ratios must not exceed 1")
         metadata_bytes = metadata_path.read_bytes() if metadata_path.exists() else b""
         metadata = json.loads(metadata_bytes.decode("utf-8")) if metadata_bytes else {}
         temporal_mode = str(metadata.get("temporal_mode") or "profiled_period")
@@ -130,9 +202,7 @@ class PortDataset:
         if temporal_mode == "sequential_rows":
             time_column = str(metadata.get("time_column") or "")
             if not time_column or time_column not in frame.columns:
-                raise ValueError(
-                    "sequential_rows datasets require metadata.time_column in the CSV"
-                )
+                raise ValueError("sequential_rows datasets require metadata.time_column in the CSV")
             timestamps = pd.to_datetime(frame[time_column], utc=True, errors="raise")
             if bool(timestamps.duplicated().any()):
                 raise ValueError("Sequential dataset timestamps must be unique")
@@ -173,7 +243,7 @@ class PortDataset:
         digest = hashlib.sha256(csv_bytes).hexdigest()
         metadata_digest = hashlib.sha256(metadata_bytes).hexdigest()
         package_digest = hashlib.sha256(csv_bytes + b"\0" + metadata_bytes).hexdigest()
-        return cls(
+        result = cls(
             str(metadata.get("id") or csv_path.stem),
             csv_path,
             frame,
@@ -182,6 +252,11 @@ class PortDataset:
             metadata_digest,
             package_digest,
         )
+        with _DATASET_CACHE_LOCK:
+            if len(_DATASET_CACHE) >= 16:
+                _DATASET_CACHE.clear()
+            _DATASET_CACHE[cache_key] = result
+        return result
 
     def split(self, name: str) -> pd.DataFrame:
         selected = self.frame[self.frame["split"].astype(str) == name].reset_index(drop=True)
@@ -196,14 +271,23 @@ class PortDataset:
             raise ValueError("metadata temporal_mode must be profiled_period or sequential_rows")
         return mode
 
+    @property
+    def environment_id(self) -> str:
+        environment_id = str(self.metadata.get("environment_id") or "PortEnergyDispatchEnv-v1")
+        if environment_id not in {
+            "PortEnergyDispatchEnv-v1",
+            "PortEnergyDispatchEnv-v2",
+            "PortEnergyDispatchEnv-v3",
+        }:
+            raise ValueError(f"Unsupported environment_id: {environment_id}")
+        return environment_id
+
     def evaluation_start_indices(self, split: str, episode_hours: int) -> list[int]:
         frame = self.split(split)
         if self.temporal_mode == "sequential_rows":
             stride = max(1, int(episode_hours))
             starts = list(range(0, max(1, len(frame) - stride + 1), stride))
-            requested_limit = int(
-                self.metadata.get("evaluation_episode_limit") or len(starts)
-            )
+            requested_limit = int(self.metadata.get("evaluation_episode_limit") or len(starts))
             limit = max(1, min(requested_limit, len(starts)))
             if limit == len(starts):
                 return starts
@@ -212,10 +296,7 @@ class PortDataset:
             # Deterministically span the full split instead of cherry-picking
             # adjacent low-load days. The selected start indices are persisted
             # in the benchmark report for exact replay.
-            positions = {
-                round(index * (len(starts) - 1) / (limit - 1))
-                for index in range(limit)
-            }
+            positions = {round(index * (len(starts) - 1) / (limit - 1)) for index in range(limit)}
             return [starts[position] for position in sorted(positions)]
         return list(range(len(frame)))
 
@@ -232,21 +313,58 @@ class PortDataset:
             "metadata_sha256": self.metadata_sha256,
             "package_sha256": self.package_sha256,
             "metadata": self.metadata,
+            "environment_id": self.environment_id,
+            "operational_feature_coverage": self.operational_feature_coverage(),
             "quality": self.quality_report(),
             "drift": self.drift_report(),
             "valid": True,
         }
 
+    def operational_feature_coverage(self) -> dict[str, Any]:
+        fields = sorted(
+            OPERATIONAL_COLUMNS
+            | (DEPLOYMENT_COLUMNS if self.environment_id == "PortEnergyDispatchEnv-v3" else set())
+        )
+        available = [name for name in fields if name in self.frame.columns]
+        required = list(
+            self.metadata.get("operational_feature_contract", {}).get("required_columns", [])
+        )
+        missing_required = sorted(name for name in required if name not in available)
+        return {
+            "available_columns": available,
+            "missing_columns": sorted(set(fields) - set(available)),
+            "required_columns": required,
+            "missing_required_columns": missing_required,
+            "status": "pass" if not missing_required else "blocked",
+            "note": (
+                "Column presence is not source verification; provenance and "
+                "measurement quality remain governed by dataset metadata."
+            ),
+        }
+
     def quality_report(self) -> dict[str, Any]:
         """Return evidence-oriented quality checks without inventing source coverage."""
-        duplicate_mask = self.frame.duplicated(subset=["period", "split", "source_id"], keep=False)
+        identity_period = (
+            str(self.metadata.get("time_column"))
+            if self.temporal_mode == "sequential_rows"
+            else "period"
+        )
+        duplicate_mask = self.frame.duplicated(
+            subset=[identity_period, "split", "source_id"],
+            keep=False,
+        )
         missing_cells = int(self.frame.isna().sum().sum())
         missing_metadata = sorted(
             name for name in REQUIRED_METADATA_FIELDS if not self.metadata.get(name)
         )
         source_urls = self.metadata.get("source_urls")
-        source_urls_valid = isinstance(source_urls, list) and bool(source_urls) and all(
-            isinstance(value, str) and value.startswith(("https://", "http://")) for value in source_urls
+        source_urls_valid = (
+            isinstance(source_urls, list)
+            and bool(source_urls)
+            and all(
+                isinstance(value, str) and value.startswith(("https://", "http://"))
+                for value in source_urls
+            )
         )
         unit_coverage = sorted(
             column
@@ -280,7 +398,9 @@ class PortDataset:
         score = max(0, score)
         grade = "A" if score >= 90 else "B" if score >= 75 else "C" if score >= 60 else "D"
         return {
-            "status": "pass" if score >= 75 and not duplicate_rows and not missing_cells else "review",
+            "status": "pass"
+            if score >= 75 and not duplicate_rows and not missing_cells
+            else "review",
             "score": score,
             "grade": grade,
             "rows": int(len(self.frame)),
@@ -293,7 +413,9 @@ class PortDataset:
             "duplicate_identity_rows": duplicate_rows,
             "source_count": int(self.frame["source_id"].nunique()),
             "metadata_completeness": round(
-                (len(REQUIRED_METADATA_FIELDS) - len(missing_metadata)) / len(REQUIRED_METADATA_FIELDS), 4
+                (len(REQUIRED_METADATA_FIELDS) - len(missing_metadata))
+                / len(REQUIRED_METADATA_FIELDS),
+                4,
             ),
             "missing_metadata_fields": missing_metadata,
             "missing_unit_fields": unit_coverage,
@@ -312,7 +434,9 @@ class PortDataset:
             difference = abs(float(train_values.mean()) - float(test_values.mean()))
             magnitude = max(abs(float(train_values.mean())), abs(float(test_values.mean())), 1.0)
             tolerance = max(1e-12, magnitude * 1e-9)
-            pooled_std = math.sqrt(max(0.0, (float(train_values.var(ddof=0)) + float(test_values.var(ddof=0))) / 2))
+            pooled_std = math.sqrt(
+                max(0.0, (float(train_values.var(ddof=0)) + float(test_values.var(ddof=0))) / 2)
+            )
             if difference <= tolerance:
                 standardized_difference = 0.0
             elif pooled_std <= tolerance:
@@ -375,5 +499,7 @@ def list_datasets() -> list[dict[str, Any]]:
         try:
             items.append(PortDataset.load(csv_path).describe())
         except Exception as exc:
-            items.append({"id": csv_path.stem, "path": str(csv_path), "valid": False, "error": str(exc)})
+            items.append(
+                {"id": csv_path.stem, "path": str(csv_path), "valid": False, "error": str(exc)}
+            )
     return items

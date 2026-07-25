@@ -14,8 +14,8 @@
 | `fuel_price_per_liter` | CNY/liter | scenario or purchased fuel price |
 | `source_id` | text | provenance key |
 
-Additional columns are allowed and remain available to a future environment
-extension. Required numeric columns must be non-negative.
+Additional columns are allowed. Required numeric columns must be non-negative;
+availability and compatibility ratios must be within `[0, 1]`.
 
 The bundled hourly public dataset also preserves EIA demand/carbon fields,
 their quality code, the monthly EIA price anchor, official monthly total TEU,
@@ -45,6 +45,14 @@ defaults:
 | `battery_charge_efficiency`, `battery_discharge_efficiency` | ratio | one-way efficiency |
 | `battery_degradation_cny_per_kwh` | CNY/kWh | scenario cycling-cost coefficient |
 | `terminal_soc_tolerance` | ratio | end-of-episode SOC tolerance |
+| `vessels_at_anchor`, `vessels_at_berth`, `vessels_departed` | vessels | aggregate port activity |
+| `average_days_at_berth`, `average_days_in_port` | days | aggregate dwell observations |
+| `port_activity_observed` | 0/1 | reported-source versus filled-row indicator |
+| `wind_speed_m_s`, `wave_height_m`, `visibility_km`, `precipitation_mm` | source units | weather/navigation inputs |
+| `berth_available_ratio`, `crane_available_ratio`, `yard_available_ratio` | ratio | terminal-approved availability |
+| `grid_available_ratio` | ratio | available fraction of declared grid capacity |
+| `shore_power_available_ratio`, `shore_power_compatible_ratio` | ratio | infrastructure and vessel compatibility |
+| `renewable_power_available_kw` | kW | onsite zero-direct-emission supply available to the load |
 
 The same parameters may be placed once in the adjacent metadata file under
 `environment_parameters`. Set `temporal_mode` to `profiled_period` for aggregate
@@ -79,6 +87,15 @@ assumptions. This dataset does not include AIS identities, berth calls, actual
 equipment availability, yard occupancy, maintenance or renewable-procurement
 telemetry.
 
+## Vessel-activity enhanced benchmark
+
+`port_la_2020_2024_vessel_activity_hourly.csv` contains 43,848 contiguous
+hours and adds 1,238 official Port of Los Angeles business-day vessel-activity
+rows. v2 uses six additional observations for anchor, berth, departure and
+dwell state. Non-reporting days are explicitly interpolated and quality coded.
+Use this package for new RL training; retain the 52,608-hour v1 package for the
+longer energy-carbon benchmark and existing metric evidence.
+
 ## Replace with a port dataset
 
 If the source already follows the canonical schema:
@@ -105,11 +122,19 @@ backend/.venv/bin/python scripts/prepare_port_dataset.py \
   --fuel-price-col fuel_cny_per_liter \
   --observation-hours-col interval_hours \
   --temporal-mode sequential_rows \
+  --time-col observed_at_utc \
+  --environment-id PortEnergyDispatchEnv-v3 \
   --environment-config /data/verified_terminal_parameters.json \
+  --port-id my_port \
+  --timezone Asia/Kuala_Lumpur \
+  --currency MYR \
   --source-id my_terminal_tos \
   --source-url https://example.invalid/data-catalog \
   --license proprietary-authorized
 ```
+
+Map every v3 weather, activity, availability, compatibility and renewable
+column with the corresponding `--*-col` option. v3 rejects incomplete datasets.
 
 For live integration, build a read-only extractor from TOS/EMS/AIS into this
 contract, version snapshots in object storage, and train from immutable snapshots.

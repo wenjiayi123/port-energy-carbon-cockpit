@@ -13,8 +13,32 @@ from app.rl.dataset import DEFAULT_DATASET_ID, PortDataset
 
 
 HOURLY_DEMAND_PROFILE = np.array(
-    [0.72, 0.66, 0.62, 0.60, 0.64, 0.78, 0.92, 1.08, 1.18, 1.22, 1.17, 1.10,
-     1.04, 1.08, 1.16, 1.24, 1.30, 1.25, 1.14, 1.02, 0.94, 0.88, 0.82, 0.76],
+    [
+        0.72,
+        0.66,
+        0.62,
+        0.60,
+        0.64,
+        0.78,
+        0.92,
+        1.08,
+        1.18,
+        1.22,
+        1.17,
+        1.10,
+        1.04,
+        1.08,
+        1.16,
+        1.24,
+        1.30,
+        1.25,
+        1.14,
+        1.02,
+        0.94,
+        0.88,
+        0.82,
+        0.76,
+    ],
     dtype=np.float32,
 )
 HOURLY_DEMAND_PROFILE /= float(HOURLY_DEMAND_PROFILE.mean())
@@ -52,6 +76,8 @@ DEFAULT_ENVIRONMENT_PARAMETERS = {
     "battery_degradation_cny_per_kwh": 0.18,
     "terminal_soc_tolerance": 0.05,
     "demand_charge_cny_per_kw": 0.0,
+    "vessel_auxiliary_demand_kw": 650.0,
+    "shore_power_available_ratio": 1.0,
 }
 
 OBSERVATION_KEYS = (
@@ -75,6 +101,36 @@ OBSERVATION_KEYS = (
     "cumulative_carbon",
     "cumulative_delay",
 )
+OPERATIONAL_OBSERVATION_KEYS = (
+    "vessels_at_anchor",
+    "vessels_at_berth",
+    "vessels_departed",
+    "average_days_at_berth",
+    "average_days_in_port",
+    "port_activity_observed",
+)
+DEPLOYMENT_OBSERVATION_KEYS = (
+    "wind_speed_m_s",
+    "wave_height_m",
+    "visibility_km",
+    "precipitation_mm",
+    "berth_available_ratio",
+    "crane_available_ratio",
+    "yard_available_ratio",
+    "grid_available_ratio",
+    "shore_power_compatible_ratio",
+    "renewable_power_available_kw",
+)
+
+
+def observation_keys_for_environment(environment_id: str) -> tuple[str, ...]:
+    if environment_id == "PortEnergyDispatchEnv-v1":
+        return OBSERVATION_KEYS
+    if environment_id == "PortEnergyDispatchEnv-v2":
+        return OBSERVATION_KEYS + OPERATIONAL_OBSERVATION_KEYS
+    if environment_id == "PortEnergyDispatchEnv-v3":
+        return OBSERVATION_KEYS + OPERATIONAL_OBSERVATION_KEYS + DEPLOYMENT_OBSERVATION_KEYS
+    raise ValueError(f"Unsupported environment_id: {environment_id}")
 
 
 class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
@@ -100,17 +156,39 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         if action_mode not in {"continuous", "discrete"}:
             raise ValueError("action_mode must be continuous or discrete")
         if render_mode not in {None, "trajectory"}:
-            raise ValueError("render_mode must be None during training or trajectory during testing")
+            raise ValueError(
+                "render_mode must be None during training or trajectory during testing"
+            )
         self.dataset = PortDataset.load(dataset)
         self.frame = self.dataset.split(split)
+        self.environment_id = self.dataset.environment_id
+        self.observation_keys = observation_keys_for_environment(self.environment_id)
+        required_observations = (
+            set(OPERATIONAL_OBSERVATION_KEYS)
+            if self.environment_id == "PortEnergyDispatchEnv-v2"
+            else set(OPERATIONAL_OBSERVATION_KEYS + DEPLOYMENT_OBSERVATION_KEYS)
+            if self.environment_id == "PortEnergyDispatchEnv-v3"
+            else set()
+        )
+        if required_observations:
+            missing_operational = required_observations - set(self.frame.columns)
+            if missing_operational:
+                raise ValueError(
+                    f"{self.environment_id} requires operational columns: "
+                    + ", ".join(sorted(missing_operational))
+                )
+        train_frame = self.dataset.split("train")
+        self._operational_normalizers = {
+            name: max(1.0, float(train_frame[name].quantile(0.95)))
+            for name in OPERATIONAL_OBSERVATION_KEYS + DEPLOYMENT_OBSERVATION_KEYS
+            if name in train_frame.columns
+        }
         configured_parameters = self.dataset.metadata.get("environment_parameters") or {}
         self._resolved_parameters = {
             name: float(configured_parameters.get(name, default))
             for name, default in DEFAULT_ENVIRONMENT_PARAMETERS.items()
         }
-        self._parameter_columns = set(DEFAULT_ENVIRONMENT_PARAMETERS) & set(
-            self.frame.columns
-        )
+        self._parameter_columns = set(DEFAULT_ENVIRONMENT_PARAMETERS) & set(self.frame.columns)
         self.temporal_mode = self.dataset.temporal_mode
         self.split_name = split
         self.action_mode = action_mode
@@ -125,7 +203,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         self.observation_space = spaces.Box(
             low=0.0,
             high=1.5,
-            shape=(len(OBSERVATION_KEYS),),
+            shape=(len(self.observation_keys),),
             dtype=np.float32,
         )
         self._row_index = 0
@@ -197,13 +275,17 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "dataset_sha256": self.dataset.package_sha256,
             "dataset_csv_sha256": self.dataset.sha256,
             "dataset_metadata_sha256": self.dataset.metadata_sha256,
+            "environment_id": self.environment_id,
+            "observation_keys": list(self.observation_keys),
             "split": self.split_name,
             "period": str(self._row()["period"]),
             "source_id": str(self._row()["source_id"]),
             "rendering": self.render_mode is not None,
         }
 
-    def step(self, action: np.ndarray | int) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
+    def step(
+        self, action: np.ndarray | int
+    ) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
         controls = self.decode_action(action)
         transition = self._calculate_transition(controls)
         transition["controls"] = controls
@@ -211,14 +293,28 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         self._battery_soc = transition["battery_soc"]
         self._last_battery_power_ratio = controls["battery_power_ratio"]
         for key in (
-            "energy_kwh", "carbon_kg", "grid_carbon_kg", "fuel_carbon_kg",
-            "cost", "delay_cost_cny", "delay_minutes", "processed_teu", "shore_power_kwh",
-            "shore_power_opportunity_kwh", "safety_violations",
-            "peak_violation_steps", "delay_violation_steps",
-            "soc_violation_steps", "battery_charge_kwh", "battery_discharge_kwh",
-            "battery_throughput_kwh", "battery_degradation_cost_cny",
-            "demand_charge_cost_cny", "battery_constraint_projection_kwh",
-            "crane_activation_ratio_sum", "yard_activation_ratio_sum",
+            "energy_kwh",
+            "carbon_kg",
+            "grid_carbon_kg",
+            "fuel_carbon_kg",
+            "cost",
+            "delay_cost_cny",
+            "delay_minutes",
+            "processed_teu",
+            "shore_power_kwh",
+            "shore_power_opportunity_kwh",
+            "safety_violations",
+            "peak_violation_steps",
+            "delay_violation_steps",
+            "soc_violation_steps",
+            "battery_charge_kwh",
+            "battery_discharge_kwh",
+            "battery_throughput_kwh",
+            "battery_degradation_cost_cny",
+            "demand_charge_cost_cny",
+            "battery_constraint_projection_kwh",
+            "crane_activation_ratio_sum",
+            "yard_activation_ratio_sum",
         ):
             self._totals[key] += float(transition[key])
         self._totals["reward"] += float(transition["reward"])
@@ -347,14 +443,51 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             return float(DEFAULT_ENVIRONMENT_PARAMETERS[name])
         raise KeyError(name)
 
+    def _row_value(self, name: str, default: float = 0.0) -> float:
+        row = self._row()
+        if name not in row.index:
+            return float(default)
+        value = float(row[name])
+        return float(default) if np.isnan(value) else value
+
+    def _shore_power_opportunity_kw(self) -> float:
+        capacity = self._parameter("shore_demand_kw")
+        if self.environment_id == "PortEnergyDispatchEnv-v1":
+            return capacity
+        per_vessel = self._parameter("vessel_auxiliary_demand_kw")
+        availability = float(
+            np.clip(
+                self._row_value(
+                    "shore_power_available_ratio",
+                    self._parameter("shore_power_available_ratio"),
+                ),
+                0.0,
+                1.0,
+            )
+        )
+        if self.environment_id == "PortEnergyDispatchEnv-v3":
+            availability *= float(
+                np.clip(
+                    self._row_value("shore_power_compatible_ratio"),
+                    0.0,
+                    1.0,
+                )
+            )
+        demand = self._row_value("vessels_at_berth") * per_vessel
+        return min(capacity * availability, demand)
+
     def _observation(self) -> np.ndarray:
         row = self._row()
         demand = self._demand_teu()
         forecast_rows = [self._row_at(offset) for offset in (1, 2, 3)]
-        forecast_demand = float(np.mean([
-            float(item["total_teu"]) / max(1.0, float(item.get("observation_hours", 1.0)))
-            for item in forecast_rows
-        ]))
+        forecast_demand = float(
+            np.mean(
+                [
+                    float(item["total_teu"]) / max(1.0, float(item.get("observation_hours", 1.0)))
+                    for item in forecast_rows
+                ]
+            )
+        )
         forecast_carbon = float(
             np.mean([float(item["grid_carbon_kg_per_kwh"]) for item in forecast_rows])
         )
@@ -364,9 +497,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         timestamp = None
         time_column = str(self.dataset.metadata.get("time_column") or "")
         if time_column and time_column in row.index:
-            timestamp = datetime.fromisoformat(
-                str(row[time_column]).replace("Z", "+00:00")
-            )
+            timestamp = datetime.fromisoformat(str(row[time_column]).replace("Z", "+00:00"))
         if timestamp is not None:
             hour = int(timestamp.hour)
             month = int(timestamp.month)
@@ -377,46 +508,104 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         month_angle = 2 * np.pi * (month - 1) / 12.0
         grid_capacity = self._parameter("grid_capacity_kw")
         previous_peak = self._totals.get("peak_kw", 0.0)
-        observation = np.array(
-            [
-                demand / 1800.0,
-                self._queue_teu / 5000.0,
-                forecast_demand / 1800.0,
-                float(row["grid_carbon_kg_per_kwh"]) / 0.8,
-                forecast_carbon / 0.8,
-                float(row["electricity_price_per_kwh"]) / 3.5,
-                forecast_price / 3.5,
-                float(row["fuel_price_per_liter"]) / 12.0,
-                max(0.0, 1.0 - previous_peak / max(1.0, grid_capacity)),
-                self._battery_soc,
-                (self._last_battery_power_ratio + 1.0) / 2.0,
-                (np.sin(hour_angle) + 1.0) / 2.0,
-                (np.cos(hour_angle) + 1.0) / 2.0,
-                (np.sin(month_angle) + 1.0) / 2.0,
-                (np.cos(month_angle) + 1.0) / 2.0,
-                float(row["loaded_import_teu"]) / max(1.0, float(row["total_teu"])),
-                float(row["loaded_export_teu"]) / max(1.0, float(row["total_teu"])),
-                self._totals.get("carbon_kg", 0.0) / 100_000.0,
-                self._totals.get("delay_minutes", 0.0) / 2_000.0,
-            ],
-            dtype=np.float32,
-        )
+        values = [
+            demand / 1800.0,
+            self._queue_teu / 5000.0,
+            forecast_demand / 1800.0,
+            float(row["grid_carbon_kg_per_kwh"]) / 0.8,
+            forecast_carbon / 0.8,
+            float(row["electricity_price_per_kwh"]) / 3.5,
+            forecast_price / 3.5,
+            float(row["fuel_price_per_liter"]) / 12.0,
+            max(0.0, 1.0 - previous_peak / max(1.0, grid_capacity)),
+            self._battery_soc,
+            (self._last_battery_power_ratio + 1.0) / 2.0,
+            (np.sin(hour_angle) + 1.0) / 2.0,
+            (np.cos(hour_angle) + 1.0) / 2.0,
+            (np.sin(month_angle) + 1.0) / 2.0,
+            (np.cos(month_angle) + 1.0) / 2.0,
+            float(row["loaded_import_teu"]) / max(1.0, float(row["total_teu"])),
+            float(row["loaded_export_teu"]) / max(1.0, float(row["total_teu"])),
+            self._totals.get("carbon_kg", 0.0) / 100_000.0,
+            self._totals.get("delay_minutes", 0.0) / 2_000.0,
+        ]
+        if self.environment_id in {
+            "PortEnergyDispatchEnv-v2",
+            "PortEnergyDispatchEnv-v3",
+        }:
+            values.extend(
+                self._row_value(name) / self._operational_normalizers.get(name, 1.0)
+                for name in OPERATIONAL_OBSERVATION_KEYS
+            )
+        if self.environment_id == "PortEnergyDispatchEnv-v3":
+            values.extend(
+                self._row_value(name) / self._operational_normalizers.get(name, 1.0)
+                for name in DEPLOYMENT_OBSERVATION_KEYS
+            )
+        observation = np.array(values, dtype=np.float32)
         return np.clip(observation, 0.0, 1.5)
 
     def _calculate_transition(self, controls: dict[str, float]) -> dict[str, Any]:
         row = self._row()
         demand_teu = self._demand_teu() + self._queue_teu
-        crane_capacity = self._parameter("crane_capacity_teu_per_hour") * controls["crane_ratio"]
-        yard_capacity = self._parameter("yard_capacity_teu_per_hour") * controls["yard_ratio"]
+        crane_availability = (
+            float(
+                np.clip(
+                    self._row_value("crane_available_ratio", 1.0),
+                    0.0,
+                    1.0,
+                )
+            )
+            if self.environment_id == "PortEnergyDispatchEnv-v3"
+            else 1.0
+        )
+        yard_availability = (
+            float(
+                np.clip(
+                    self._row_value("yard_available_ratio", 1.0),
+                    0.0,
+                    1.0,
+                )
+            )
+            if self.environment_id == "PortEnergyDispatchEnv-v3"
+            else 1.0
+        )
+        berth_availability = (
+            float(
+                np.clip(
+                    self._row_value("berth_available_ratio", 1.0),
+                    0.0,
+                    1.0,
+                )
+            )
+            if self.environment_id == "PortEnergyDispatchEnv-v3"
+            else 1.0
+        )
+        crane_availability *= berth_availability
+        yard_availability *= berth_availability
+        crane_capacity = (
+            self._parameter("crane_capacity_teu_per_hour")
+            * controls["crane_ratio"]
+            * crane_availability
+        )
+        yard_capacity = (
+            self._parameter("yard_capacity_teu_per_hour")
+            * controls["yard_ratio"]
+            * yard_availability
+        )
         processed_teu = min(demand_teu, crane_capacity, yard_capacity)
         queue_teu = max(0.0, demand_teu - processed_teu)
         delay_minutes = queue_teu / max(1.0, min(crane_capacity, yard_capacity)) * 60.0
 
-        shore_demand_kw = self._parameter("shore_demand_kw")
+        shore_demand_kw = self._shore_power_opportunity_kw()
         shore_power_kwh = shore_demand_kw * controls["shore_power_ratio"]
         auxiliary_energy_kwh = shore_demand_kw - shore_power_kwh
-        auxiliary_fuel_liters = auxiliary_energy_kwh / max(0.001, self._parameter("fuel_kwh_per_liter"))
-        base_load_kw = self._parameter("base_load_kw") + processed_teu * self._parameter("load_kw_per_teu")
+        auxiliary_fuel_liters = auxiliary_energy_kwh / max(
+            0.001, self._parameter("fuel_kwh_per_liter")
+        )
+        base_load_kw = self._parameter("base_load_kw") + processed_teu * self._parameter(
+            "load_kw_per_teu"
+        )
         crane_load_kw = self._parameter("crane_load_kw") * controls["crane_ratio"]
         yard_load_kw = self._parameter("yard_load_kw") * controls["yard_ratio"]
         gross_load_kw = base_load_kw + crane_load_kw + yard_load_kw + shore_power_kwh
@@ -427,7 +616,18 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         min_soc = self._parameter("battery_min_soc")
         max_soc = self._parameter("battery_max_soc")
         requested_battery_kw = controls["battery_power_ratio"] * battery_power_limit
-        grid_capacity_kw = self._parameter("grid_capacity_kw")
+        grid_availability = (
+            float(
+                np.clip(
+                    self._row_value("grid_available_ratio", 1.0),
+                    0.0,
+                    1.0,
+                )
+            )
+            if self.environment_id == "PortEnergyDispatchEnv-v3"
+            else 1.0
+        )
+        grid_capacity_kw = self._parameter("grid_capacity_kw") * grid_availability
         # Safety layer 1: charging may not push the grid import above its hard
         # capacity. Positive battery power discharges to the port load.
         safe_charge_limit = max(0.0, grid_capacity_kw - gross_load_kw)
@@ -444,17 +644,11 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         available_charge = max(
             0.0, (max_soc - self._battery_soc) * battery_capacity / charge_efficiency
         )
-        battery_discharge_kwh = min(
-            max(0.0, grid_safe_battery_kw), available_discharge
-        )
-        battery_charge_kwh = min(
-            max(0.0, -grid_safe_battery_kw), available_charge
-        )
+        battery_discharge_kwh = min(max(0.0, grid_safe_battery_kw), available_discharge)
+        battery_charge_kwh = min(max(0.0, -grid_safe_battery_kw), available_charge)
         next_battery_soc = self._battery_soc
         next_battery_soc += battery_charge_kwh * charge_efficiency / battery_capacity
-        next_battery_soc -= battery_discharge_kwh / (
-            discharge_efficiency * battery_capacity
-        )
+        next_battery_soc -= battery_discharge_kwh / (discharge_efficiency * battery_capacity)
         next_battery_soc = float(np.clip(next_battery_soc, min_soc, max_soc))
         # Safety layer 2: preserve reachability of the declared terminal SOC.
         # This is an explicit action projection, not a learned soft penalty.
@@ -475,34 +669,23 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             0.0, min(battery_power_limit, grid_capacity_kw - worst_case_base_load)
         )
         future_charge_soc = (
-            remaining_after_step
-            * conservative_charge_limit
-            * charge_efficiency
-            / battery_capacity
+            remaining_after_step * conservative_charge_limit * charge_efficiency / battery_capacity
         )
         future_discharge_soc = (
-            remaining_after_step
-            * battery_power_limit
-            / (discharge_efficiency * battery_capacity)
+            remaining_after_step * battery_power_limit / (discharge_efficiency * battery_capacity)
         )
         reachable_low = max(min_soc, target_soc - future_charge_soc)
         reachable_high = min(max_soc, target_soc + future_discharge_soc)
-        projected_next_soc = float(
-            np.clip(next_battery_soc, reachable_low, reachable_high)
-        )
+        projected_next_soc = float(np.clip(next_battery_soc, reachable_low, reachable_high))
         if projected_next_soc >= self._battery_soc:
             battery_charge_kwh = min(
                 safe_charge_limit,
-                (projected_next_soc - self._battery_soc)
-                * battery_capacity
-                / charge_efficiency,
+                (projected_next_soc - self._battery_soc) * battery_capacity / charge_efficiency,
             )
             battery_discharge_kwh = 0.0
         else:
             battery_discharge_kwh = (
-                (self._battery_soc - projected_next_soc)
-                * battery_capacity
-                * discharge_efficiency
+                (self._battery_soc - projected_next_soc) * battery_capacity * discharge_efficiency
             )
             battery_charge_kwh = 0.0
         next_battery_soc = projected_next_soc
@@ -512,32 +695,32 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         peak_violation_kw = max(0.0, load_kw - grid_capacity_kw)
         peak_violation = int(peak_violation_kw > 0.0)
         delay_violation = int(delay_minutes > self._parameter("delay_limit_minutes"))
-        terminal_soc_error = abs(
-            next_battery_soc - self._parameter("battery_initial_soc")
-        )
+        terminal_soc_error = abs(next_battery_soc - self._parameter("battery_initial_soc"))
         terminal_soc_violation = int(
             self._hour + 1 >= self.episode_hours
             and terminal_soc_error > self._parameter("terminal_soc_tolerance")
         )
-        safety_violations = int(
-            peak_violation or delay_violation or terminal_soc_violation
-        )
+        safety_violations = int(peak_violation or delay_violation or terminal_soc_violation)
 
-        grid_energy_kwh = max(0.0, load_kw)
-        energy_kwh = grid_energy_kwh + auxiliary_energy_kwh
+        renewable_power_kw = (
+            self._row_value("renewable_power_available_kw")
+            if self.environment_id == "PortEnergyDispatchEnv-v3"
+            else 0.0
+        )
+        renewable_energy_kwh = min(max(0.0, load_kw), renewable_power_kw)
+        grid_energy_kwh = max(0.0, load_kw - renewable_energy_kwh)
+        energy_kwh = grid_energy_kwh + renewable_energy_kwh + auxiliary_energy_kwh
         grid_carbon_kg = grid_energy_kwh * float(row["grid_carbon_kg_per_kwh"])
         fuel_carbon_kg = auxiliary_fuel_liters * self._parameter("fuel_carbon_kg_per_liter")
         carbon_kg = grid_carbon_kg + fuel_carbon_kg
         delay_cost_cny = delay_minutes * self._parameter("delay_cost_cny_per_minute")
         battery_throughput_kwh = battery_charge_kwh + battery_discharge_kwh
-        battery_degradation_cost_cny = (
-            battery_throughput_kwh
-            * self._parameter("battery_degradation_cny_per_kwh")
+        battery_degradation_cost_cny = battery_throughput_kwh * self._parameter(
+            "battery_degradation_cny_per_kwh"
         )
         previous_peak = self._totals.get("peak_kw", 0.0)
-        demand_charge_cost_cny = (
-            max(0.0, load_kw - previous_peak)
-            * self._parameter("demand_charge_cny_per_kw")
+        demand_charge_cost_cny = max(0.0, load_kw - previous_peak) * self._parameter(
+            "demand_charge_cny_per_kw"
         )
         remaining_hours = max(1, self.episode_hours - (self._hour + 1))
         # The terminal value begins to matter eight hours ahead. This avoids
@@ -560,19 +743,17 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "safety": -float(safety_violations) * 4.0,
             # Penalize the actual capacity ratio so a peak-smoothing objective
             # has a gradient before the hard grid-capacity constraint is hit.
-            "peak": -(load_kw / max(1.0, grid_capacity_kw)) ** 2,
+            "peak": -((load_kw / max(1.0, grid_capacity_kw)) ** 2),
             "storage": -(
                 terminal_soc_error
                 / max(self._parameter("terminal_soc_tolerance"), 0.01)
-                * (
-                    1.0
-                    if self._hour + 1 >= self.episode_hours
-                    else restoration_pressure
-                )
+                * (1.0 if self._hour + 1 >= self.episode_hours else restoration_pressure)
             ),
         }
         throughput_bonus = 0.65 * processed_teu / max(1.0, demand_teu)
-        reward = throughput_bonus + sum(self.reward_weights[key] * value for key, value in terms.items())
+        reward = throughput_bonus + sum(
+            self.reward_weights[key] * value for key, value in terms.items()
+        )
         return {
             "reward": float(reward),
             "reward_terms": {key: float(value) for key, value in terms.items()},
@@ -591,12 +772,11 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "carbon_kg": float(carbon_kg),
             "grid_carbon_kg": float(grid_carbon_kg),
             "fuel_carbon_kg": float(fuel_carbon_kg),
+            "renewable_energy_kwh": float(renewable_energy_kwh),
             "cost": float(cost),
             "delay_cost_cny": float(delay_cost_cny),
             "battery_soc": next_battery_soc,
-            "battery_power_kw": float(
-                battery_discharge_kwh - battery_charge_kwh
-            ),
+            "battery_power_kw": float(battery_discharge_kwh - battery_charge_kwh),
             "battery_charge_kwh": float(battery_charge_kwh),
             "battery_discharge_kwh": float(battery_discharge_kwh),
             "battery_throughput_kwh": float(battery_throughput_kwh),
@@ -614,15 +794,34 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
 
     def _trajectory_record(self, transition: dict[str, Any]) -> dict[str, Any]:
         controls = transition.get("controls") or {}
-        hour = self._hour % 24
+        row = self._row()
+        time_column = str(self.dataset.metadata.get("time_column") or "")
+        timestamp = (
+            datetime.fromisoformat(str(row[time_column]).replace("Z", "+00:00"))
+            if time_column and time_column in row.index
+            else None
+        )
+        hour = timestamp.hour if timestamp else self._hour % 24
+        aggregate_label = (
+            f"AGGREGATED-{int(self._row_value('vessels_at_berth'))}-VESSELS"
+            if self.environment_id == "PortEnergyDispatchEnv-v2"
+            else f"PUBLIC-DATA-{str(row['period'])}"
+        )
         return {
             "step": self._hour + 1,
             "time": f"{hour:02d}:00",
             "event": "dataset_policy_dispatch",
-            "period": str(self._row()["period"]),
-            "source_id": str(self._row()["source_id"]),
-            "vessel_id": f"PUBLIC-DATA-{str(self._row()['period'])}",
-            "berth_id": f"B{(hour % 4) + 1}",
+            "period": str(row["period"]),
+            "source_id": str(row["source_id"]),
+            "vessel_id": aggregate_label,
+            "berth_id": "PORT-AGG"
+            if self.environment_id == "PortEnergyDispatchEnv-v2"
+            else f"B{(hour % 4) + 1}",
+            "vessels_at_anchor": self._row_value("vessels_at_anchor"),
+            "vessels_at_berth": self._row_value("vessels_at_berth"),
+            "vessels_departed": self._row_value("vessels_departed"),
+            "average_days_at_berth": self._row_value("average_days_at_berth"),
+            "average_days_in_port": self._row_value("average_days_in_port"),
             "crane_count": max(1, round(float(controls.get("crane_ratio", 1.0)) * 4)),
             "yard_truck_count": max(1, round(float(controls.get("yard_ratio", 1.0)) * 12)),
             "shore_power_connected": float(transition["shore_power_ratio"]) >= 0.5,
@@ -641,9 +840,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "electricity_price_cny_per_kwh": round(
                 float(self._row()["electricity_price_per_kwh"]), 5
             ),
-            "grid_carbon_kg_per_kwh": round(
-                float(self._row()["grid_carbon_kg_per_kwh"]), 5
-            ),
+            "grid_carbon_kg_per_kwh": round(float(self._row()["grid_carbon_kg_per_kwh"]), 5),
             "decision_reason": (
                 f"policy action: shore={float(transition['shore_power_ratio']):.2f}, "
                 f"battery={float(transition['battery_power_kw']):+.0f}kW, "
@@ -701,12 +898,8 @@ class MPCPolicy:
         actions = self.candidates()
         target_soc = env._parameter("battery_initial_soc")
 
-        def search_rank(
-            item: tuple[float, float, float, dict[str, float]]
-        ) -> float:
-            return item[0] + 0.5 * self.terminal_soc_weight * abs(
-                item[2] - target_soc
-            )
+        def search_rank(item: tuple[float, float, float, dict[str, float]]) -> float:
+            return item[0] + 0.5 * self.terminal_soc_weight * abs(item[2] - target_soc)
 
         beam: list[tuple[float, float, float, dict[str, float]]] = []
         for controls in actions:
@@ -737,7 +930,8 @@ class MPCPolicy:
                     )
                     expanded.append(
                         (
-                            accumulated_cost + self.discount ** hour_offset * self._transition_cost(transition),
+                            accumulated_cost
+                            + self.discount**hour_offset * self._transition_cost(transition),
                             float(transition["queue_teu"]),
                             float(transition["battery_soc"]),
                             first_controls,
@@ -746,8 +940,7 @@ class MPCPolicy:
             beam = sorted(expanded, key=search_rank)[: self.beam_width]
         return min(
             beam,
-            key=lambda item: item[0]
-            + self.terminal_soc_weight * abs(item[2] - target_soc),
+            key=lambda item: item[0] + self.terminal_soc_weight * abs(item[2] - target_soc),
         )[3]
 
     @staticmethod

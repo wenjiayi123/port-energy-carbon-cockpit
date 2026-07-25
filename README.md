@@ -34,7 +34,7 @@
     <th align="center">约束与吞吐<br /><sub>CONSTRAINTS &amp; THROUGHPUT</sub></th>
   </tr>
   <tr>
-    <td align="center"><strong>52,608</strong><br />98.32%原始覆盖 / source coverage</td>
+    <td align="center"><strong>52,608 h + 1,238 d</strong><br />小时电网 + 官方逐日船舶活动</td>
     <td align="center"><strong>48 × 24 h</strong><br />1,152小时步 / hourly steps</td>
     <td align="center"><strong>−8.69%</strong><br />强固定资源基线 / strong fixed-resource baseline</td>
     <td align="center"><strong>−7.85%</strong><br />同岸电机会 / same shore-power opportunity</td>
@@ -47,10 +47,20 @@
   <sub>Every headline metric is recomputed from versioned public data, a validation-frozen comparator, and SHA-256-bound code—with the harder comparator and peak trade-off disclosed.</sub>
 </p>
 
-![Port Energy-Carbon RL Cockpit overview](docs/assets/cockpit-overview.jpg)
+![Port Energy-Carbon RL Cockpit verified overview](docs/assets/cockpit-overview-verified.png)
 
-> 截图来自仓库自带公开基准的留出测试轨迹。图中数值是可复现的离线场景输出，不是实时码头遥测、生产绩效或监管核证结果。<br>
-> The screenshot is a held-out rollout from the bundled public benchmark. Values are reproducible offline scenario outputs—not live terminal telemetry, production performance, or regulatory assurance.
+> 截图来自增强公开数据包的留出测试轨迹和浏览器实测按钮联动。图中数值是可复现的离线场景输出，不是实时码头遥测、生产绩效或监管核证结果。<br>
+> The screenshots show held-out replay from the enhanced public package and browser-verified button linkage. Values are reproducible offline scenario outputs—not live terminal telemetry, production performance, or regulatory assurance.
+
+### 同屏证据 / Same-screen evidence
+
+训练中心在同一画面展示四种 RL、MPC 控制基线、当前数据集、观测/动作契约，以及“训练不渲染、测试集才回放”的执行边界。
+
+![Five-algorithm training matrix](docs/assets/cockpit-training-matrix.png)
+
+小懿训练顾问保留项目原有 Q 版海事形象，并把五算法、增强数据集、训练配置、真实进度与策略测试入口放在同一个联动中枢。浏览器验收实际点击“小懿 → 低碳”，动作网关返回成功并同步高亮对应按钮；执行详情保留识别、按钮/接口、确认、执行和结果证据。
+
+![Xiaoyi system and button linkage](docs/assets/xiaoyi-system-linkage.png)
 
 ## 项目定位 / Project position
 
@@ -62,7 +72,7 @@ This project places port energy use, shore power, equipment allocation, delay, c
 
 | 维度 / Dimension | 实际实现 / What is implemented |
 | --- | --- |
-| 实验内核 / Experiment core | Gymnasium `PortEnergyDispatchEnv-v1`，19 维归一化观测，4 维连续动作或 81 个离散动作。 / A Gymnasium environment with 19 normalized observations and either four continuous controls or 81 explicit discrete actions. |
+| 实验内核 / Experiment core | Gymnasium v1/v2/v3 分层合同：19 维能碳基准、25 维逐日船舶活动增强、35 维实港接入合同；动作始终为 4 维连续或 81 个离散组合。 / Layered 19/25/35-observation Gymnasium contracts with the same four continuous controls or 81 explicit discrete actions. |
 | 算法矩阵 / Algorithm matrix | PPO、SAC、TD3、DQN 四种 RL 算法，加四步有限时域约束 MPC。 / Four RL algorithms—PPO, SAC, TD3, DQN—plus a constrained four-step finite-horizon MPC baseline. |
 | 训练边界 / Training boundary | `train` 无渲染拟合、`validation` 选型、完成后才在 `test` 生成轨迹。 / Non-rendering fit on `train`, selection on `validation`, and trajectory generation only during final `test` evaluation. |
 | 证据链 / Evidence chain | 配置、随机种子、CSV/元数据/组合包 SHA-256、回调指标、checkpoint、模型哈希、测试与验证结果。 / Config, seed, CSV/metadata/package SHA-256, callback metrics, checkpoints, model hash, evaluation, and verification evidence. |
@@ -102,7 +112,7 @@ flowchart LR
 
   subgraph Experiment["Experiment plane / 实验平面"]
     TRAIN["Train split\nrender_mode=None"]
-    ENV["PortEnergyDispatchEnv-v1"]
+    ENV["PortEnergyDispatchEnv\nv1 · v2 · v3"]
     RL["PPO · SAC · TD3 · DQN"]
     MPC["Constrained MPC"]
     TEST["Held-out test\ntrajectory rendering"]
@@ -153,9 +163,9 @@ All four RL algorithms execute the actual Stable-Baselines3 `learn()` path, and 
 
 ### 环境状态与目标 / Environment state and objective
 
-19 维观测包含当前及未来 3 小时需求/碳因子/电价、积压、电网余量、储能 SOC、上一储能动作、小时与月份周期编码、进出口占比及累计碳排/延误指标。4 维动作控制岸电比例、岸桥启用比例、场内车辆启用比例和储能充放电功率。每一步显式计算处理量、队列、负荷、峰值越界、储能退化、辅助燃油、范围一/范围二排放、能耗与延误成本，并由动作屏蔽器约束电网容量、SOC 与终端 SOC 可达性。
+v1 的 19 维观测覆盖需求/预测、碳因子、电价、积压、电网余量、储能、时间、货类及累计指标；v2 再加入锚泊、靠泊、离港和在港时间等 6 项官方港口活动信号；实港 v3 继续加入天气、泊位/设备/电网可用率、岸电兼容和可再生能源 10 项强制输入。4 维动作控制岸电比例、岸桥启用比例、场内车辆启用比例和储能充放电功率。每一步显式计算处理量、队列、负荷、峰值越界、储能退化、辅助燃油、范围一/范围二排放、能耗与延误成本，并由动作屏蔽器约束电网容量、设备可用率、岸电兼容、SOC 与终端 SOC 可达性。
 
-The 19-value observation contains current and three-hour-ahead demand, carbon and price signals, backlog, grid headroom, storage SOC, prior storage action, cyclical hour/month encodings, cargo mix, and cumulative carbon/delay indicators. Four actions control shore power, active crane and yard fleets, and battery charge/discharge. Each step computes throughput, queue, load, peak violations, degradation, auxiliary fuel, Scope 1/2 emissions, energy and delay costs; an action shield enforces grid, SOC and terminal-SOC reachability constraints.
+v1 exposes 19 energy-dispatch observations; v2 adds six official vessel-activity signals; the real-port v3 contract adds ten mandatory weather, availability, shore-compatibility and renewable-power inputs. Four actions control shore power, active crane and yard fleets, and battery charge/discharge. Each step computes throughput, queue, load, peak violations, degradation, auxiliary fuel, Scope 1/2 emissions, energy and delay costs; action shields enforce grid, availability, compatibility, SOC and terminal-SOC reachability constraints.
 
 ## 可审计实验生命周期 / Auditable experiment lifecycle
 
@@ -186,7 +196,7 @@ Each new run is written to `backend/app/data/runs/<job-id>/`, while run outputs 
 
 ## 数据与碳核算 / Data and carbon accounting
 
-默认 benchmark 组合了四类公开来源：
+仓库保留两个互补数据包。52,608 小时长周期基准组合了四类公开来源：
 
 1. [Port of Los Angeles 2020–2025 container statistics](https://www.portoflosangeles.org/business/statistics/container-statistics)：72 条官方月度 TEU；2020–2023 年训练、2024 年验证、2025 年全年留出测试。
 2. [U.S. EIA monthly retail electricity prices](https://www.eia.gov/opendata/documentation.php)：同期加州商业部门月均电价，作为每月均值锚点。
@@ -199,6 +209,10 @@ The default benchmark combines four public-source families:
 2. [U.S. EIA monthly retail electricity prices](https://www.eia.gov/opendata/documentation.php): California commercial-sector monthly means used as price anchors.
 3. [EIA Hourly Electric Grid Monitor](https://www.eia.gov/electricity/gridmonitor/about/): LADWP hourly demand and consumed carbon intensity for 2020–2025; 51,726 of 52,608 hours are reported and 882 are quality-coded month-hour median imputations, for 98.32% source coverage.
 4. [U.S. EPA eGRID CAMX](https://www.epa.gov/egrid/summary-data): an annual regional cross-check.
+
+新训练默认使用 `port_la_2020_2024_vessel_activity_hourly`：在同一版本化能碳底座上加入洛杉矶港 Wharfinger Division 2020–2024 年 1,238 条官方工作日锚泊、靠泊、离港与在港时间记录。它包含 43,848 个连续小时；2020–2022 训练、2023 验证、2024 留出测试。非报告日明确标记为线性插值，不冒充逐小时港口遥测。旧数据包和原指标完整保留，作为更长的能碳证据基线。完整比较见 [dataset credibility report](reports/dataset_credibility_comparison.md)。
+
+New training defaults to `port_la_2020_2024_vessel_activity_hourly`, which adds 1,238 official Port of Los Angeles Wharfinger Division business-day anchor, berth, departure, and dwell observations to the versioned energy-carbon base. Its 43,848 contiguous hours use 2020–2022 for training, 2023 for validation, and 2024 for held-out testing. Non-reporting days are explicitly marked interpolations, not hourly terminal telemetry. The original package and metrics remain intact as the longer energy-carbon baseline.
 
 月度 TEU 通过公开的确定性曲线分配到小时；LADWP 商业分时电价时段只用于形成日内形状，并归一回 EIA 月均电价。该价格仍是情景代理而非港口账单，设备容量、负荷、储能与延误成本是元数据中声明的模型参数。完整来源、单位、插补、转换与哈希见 [数据卡](docs/DATA_CARD.md) 和 [dataset metadata](backend/app/data/datasets/port_la_2020_2025_hourly.metadata.json)。<br>
 Monthly TEU is allocated to hours through a disclosed deterministic profile. LADWP commercial time-of-use periods provide only the intraday shape, rescaled to each EIA monthly mean. Prices remain scenario proxies rather than terminal bills; equipment, storage and delay parameters are declared model assumptions. See the [data card](docs/DATA_CARD.md) and [dataset metadata](backend/app/data/datasets/port_la_2020_2025_hourly.metadata.json).
@@ -214,6 +228,10 @@ Across 48 deterministic held-out windows spanning 2025—1,152 simulated hourly 
 上方“减少固定满配冗余”的场景口径。
 
 The report also publishes a harder comparator: select an 80%/80% crane/yard-vehicle static configuration from nine candidates using only 2024 validation data, freeze it, and test in 2025. Against that comparator, MPC still reduces carbon by <strong>2.84%</strong>, energy by <strong>2.52%</strong>, and cost by <strong>2.08%</strong>, while increasing throughput by <strong>0.85%</strong>—but peak load rises <strong>3.38%</strong>. This result discloses marginal algorithm benefit and the multi-objective trade-off; it does not replace the full-resource redundancy scenario above.
+
+逐日船舶活动增强集的独立报告同样覆盖 48×24 个 2024 留出小时窗口：相对固定满配强基线，MPC 碳排降低 <strong>8.90%</strong>、情景成本降低 <strong>8.22%</strong>、吞吐保持 <strong>100.00%</strong>、约束满足 <strong>100%</strong>；相对验证集选择的 80%/80% 更严格基线，碳排仍降低 <strong>2.77%</strong>、成本降低 <strong>2.11%</strong>，但峰值增加 <strong>3.61%</strong>。见 [enhanced benchmark](reports/offline_benchmark_vessel_activity_v1.md)。
+
+The vessel-activity enhanced report evaluates 48×24 held-out hours from 2024. MPC reduces carbon by <strong>8.90%</strong> and scenario cost by <strong>8.22%</strong> versus the fixed full-resource comparator, with <strong>100.00%</strong> throughput retention and <strong>100%</strong> constraint satisfaction. Against the harder validation-selected 80%/80% comparator, carbon still falls <strong>2.77%</strong> and cost <strong>2.11%</strong>, while peak load rises <strong>3.61%</strong>. These remain offline scenario results.
 
 ## 快速开始 / Quick start
 
@@ -253,12 +271,12 @@ cd backend
 .venv/bin/python -m app.rl.cli algorithms
 
 # 验证数据契约和哈希 / validate dataset contract and hashes
-.venv/bin/python -m app.rl.cli validate-data port_la_2020_2025_hourly
+.venv/bin/python -m app.rl.cli validate-data port_la_2020_2024_vessel_activity_hourly
 
 # 仅在 train 上训练，不渲染 / fit on train only, without rendering
 .venv/bin/python -m app.rl.cli train \
   --algorithm sac \
-  --dataset port_la_2020_2025_hourly \
+  --dataset port_la_2020_2024_vessel_activity_hourly \
   --total-steps 120000 \
   --seed 20260720
 
@@ -267,16 +285,37 @@ cd backend
 
 # 仅用validation选型 / tune on validation only; short runs must be marked smoke
 PYTHONPATH=. .venv/bin/python -m app.rl.tuning \
-  --algorithm all --steps 10000
+  --algorithm all \
+  --dataset port_la_2020_2024_vessel_activity_hourly \
+  --steps 10000 \
+  --final-seeds 11,29,47 \
+  --output ../reports/rl_tuning_vessel_activity_10k.json
 
 # 重算公开MPC报告 / recompute and verify the publishable MPC report
 PYTHONPATH=. .venv/bin/python -m app.rl.benchmark run
 PYTHONPATH=. .venv/bin/python -m app.rl.benchmark \
   verify ../reports/offline_benchmark_v3.json
+
+# 在仓库根目录重建逐日船舶活动数据并复算增强报告
+cd ..
+make data-enhanced
+make benchmark-enhanced
+make verify-benchmark-enhanced
 ```
 
 API 启动训练需要 `confirm=true`。训练进度来自 `model.num_timesteps`、callback 指标和实际耗时；ETA 使用已测 step rate 推导，不使用固定时长计时器。<br>
 API training requires `confirm=true`. Progress comes from `model.num_timesteps`, callback metrics, and measured elapsed time; ETA is derived from observed step rate, not a fixed-duration timer.
+
+The enhanced package also includes a reproducible
+[10k multi-seed RL matrix](reports/rl_tuning_vessel_activity_10k.md): all four
+learners completed real fit/validation/test execution with zero modeled safety
+violations across the reported seeds. It is explicitly labelled short-budget
+comparative evidence, not convergence or production performance.
+
+A separate [100k TD3 run](reports/rl_td3_vessel_activity_100k/README.md)
+is intentionally retained as rejected evidence: its split/artifact/safety
+checks passed, but it underperformed both constrained-control and fixed-resource
+comparators on carbon and scenario cost. It is not used as a positive metric.
 
 ## 替换港口数据 / Bring your own port data
 
@@ -287,14 +326,21 @@ Algorithms are not hard-coded to Los Angeles. Replace the data through the stabl
 python scripts/prepare_port_dataset.py \
   --input /path/to/tos_ems_export.csv \
   --output backend/app/data/datasets/my_port.csv \
-  --mapping /path/to/column_mapping.json \
+  --temporal-mode sequential_rows \
+  --time-col observed_at_utc \
+  --environment-id PortEnergyDispatchEnv-v3 \
+  --port-id my_port \
+  --timezone Asia/Kuala_Lumpur \
+  --currency MYR \
   --source-id my_port_snapshot \
+  --source-url https://data-owner.example/evidence/snapshot \
   --license proprietary-authorized
 
 cd backend
 .venv/bin/python -m app.rl.cli validate-data my_port
 ```
 
+- v3 的字段映射选项见 `python scripts/prepare_port_dataset.py --help`；缺少天气、泊位/设备/电网可用率、岸电兼容或可再生能源字段会 fail closed。完整流程见 [实港接入蓝图](docs/PORT_INTEGRATION_BLUEPRINT.md)。 / See the mapper help and the [real-port blueprint](docs/PORT_INTEGRATION_BLUEPRINT.md); missing v3 deployment fields fail closed.
 - `profiled_period`：适合公开月度/聚合 benchmark，按声明曲线构造 episode。 / for aggregate public benchmarks with a declared profile.
 - `sequential_rows`：适合只读 TOS/EMS 小时快照，环境按不可变行推进。 / for immutable hourly TOS/EMS snapshots advanced row by row.
 - CLI 可读取操作者明确提供的外部 CSV；HTTP API 只允许仓库已注册的数据集 ID，阻断任意文件路径访问。 / The CLI may read operator-supplied external CSV files; HTTP endpoints accept only registered dataset IDs and reject arbitrary filesystem paths.
@@ -313,6 +359,8 @@ cd backend
 | `/api/rl/registry` | GET | 完整性、漂移、测试、验证与生命周期 / integrity, drift, test, verification, lifecycle |
 | `/api/rlops/policies/verify` | POST | 持久化离线验证证据 / persist offline verification evidence |
 | `/api/rl/dispatch` | POST | 仅生成 dry-run packet / produce a dry-run packet only |
+| `/api/scenarios` | GET | 国际港口模板、数据与适配器就绪状态 / port templates, dataset and adapter readiness |
+| `/api/scenarios/contract` | GET | v3 观测、动作、目标和硬约束 / v3 observations, actions, objectives and hard constraints |
 | `/api/health/{live,ready}` | GET | 进程与依赖就绪检查 / process and dependency readiness |
 | `/api/metrics` | GET | Prometheus 文本指标 / Prometheus text metrics |
 
@@ -322,8 +370,8 @@ cd backend
 
 | 能力 / Capability | 仓库默认状态 / Default state | 不能据此声称 / What it does not prove |
 | --- | --- | --- |
-| 公开 TEU + EIA 电价/小时碳强度 + eGRID benchmark | 已包含并记录来源 / bundled with provenance | 实时 TOS、EMS、AIS、港口账单或码头计量 / live TOS, EMS, AIS, port bill, or terminal meters |
-| 小时 episode | EIA 电网信号为小时报告值，TEU 为月度锚点的确定性分配 / hourly EIA grid signal; deterministic allocation of monthly TEU | 观测到的码头小时吞吐或设备负荷 / observed terminal throughput or equipment load |
+| 公开 TEU + EIA 小时电网 + eGRID + 港方逐日船舶活动 | 已包含、哈希绑定并记录来源 / bundled, hash-bound and attributed | 实时 TOS、EMS、AIS、港口账单或码头计量 / live TOS, EMS, AIS, port bill, or terminal meters |
+| 小时 episode | EIA 电网为小时信号；船舶活动为港方工作日报告；TEU 仍为月度锚点的确定性分配 / hourly grid, official business-day vessel activity, deterministic monthly-TEU allocation | 观测到的码头小时吞吐或设备负荷 / observed terminal hourly throughput or equipment load |
 | 四种真实 RL learner | 可执行、可产出模型 / executable and artifact-producing | 默认策略已经收敛或优于 MPC / default convergence or superiority |
 | MPC 测试轨迹 | 默认可运行 / runnable by default | 生产调度建议已获批准 / production-approved recommendations |
 | 公开指标报告 | 2025 年 48 个均匀窗口、1,152 个留出仿真步、哈希可复算 / 48 uniformly spaced windows, 1,152 held-out simulation steps, hash verification | 码头实测 KPI、随机全量年度评估或 RL 收敛 / measured terminal KPI, random full-year evaluation, or RL convergence |

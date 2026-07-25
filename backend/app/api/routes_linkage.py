@@ -17,6 +17,8 @@ from fastapi.responses import JSONResponse
 
 from app.services.kpi_engine import KpiEngine
 from app.rl.dataset import DEFAULT_DATASET_ID, registered_dataset_id
+from app.rl.policy_selection import resolve_requested_strategy
+from app.rl.scenarios import resolve_training_scenario
 from app.rl.training import training_service
 
 
@@ -636,33 +638,49 @@ def _objective_from_instruction(text: str, requested: str | None = None) -> str:
 
 def _build_training_config(instruction: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
     payload = payload or {}
-    objective_id = _objective_from_instruction(instruction, payload.get("objective_id"))
+    submitted = dict(payload.get("config") or {})
+    requested = {**payload, **submitted}
+
+    def selected(name: str, fallback: Any) -> Any:
+        value = requested.get(name)
+        return fallback if value is None else value
+
+    objective_id = _objective_from_instruction(instruction, requested.get("objective_id"))
     profile = TRAINING_OBJECTIVES[objective_id]
     try:
         dataset_id = registered_dataset_id(
-            str(payload.get("dataset_id") or payload.get("data_file") or DEFAULT_DATASET_ID)
+            str(requested.get("dataset_id") or requested.get("data_file") or DEFAULT_DATASET_ID)
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    try:
+        scenario = resolve_training_scenario(
+            str(requested.get("scenario") or "") or None,
+            dataset_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {
         "objective_id": objective_id,
-        "objective_label": profile["label"],
-        "algorithm": profile["algorithm"],
+        "objective_label": requested.get("objective_label") or profile["label"],
+        "algorithm": requested.get("algorithm") or profile["algorithm"],
         "dataset_id": dataset_id,
-        "scenario": payload.get("scenario") or "port_la_public_benchmark",
-        "asset_group": "berth_shore_power_yard_truck",
-        "horizon_min": profile["horizon_min"],
+        **scenario,
+        "asset_group": requested.get("asset_group") or "berth_shore_power_yard_truck",
+        "horizon_min": selected("horizon_min", profile["horizon_min"]),
         "step_min": 60,
-        "total_steps": profile["total_steps"],
-        "batch_size": 256,
-        "learning_rate": 0.0003 if profile["algorithm"] != "ppo" else 0.00025,
-        "gamma": 0.995,
-        "tau": 0.005,
-        "entropy_coef": 0.02,
-        "guardrail_mode": "strict",
-        "reward_weights": profile["reward_weights"],
-        "reason": profile["reason"],
-        "seed": int(payload.get("seed") or 20260720),
+        "total_steps": selected("total_steps", profile["total_steps"]),
+        "batch_size": selected("batch_size", 256),
+        "learning_rate": selected("learning_rate", 0.0003 if profile["algorithm"] != "ppo" else 0.00025),
+        "gamma": selected("gamma", 0.995),
+        "tau": selected("tau", 0.005),
+        "entropy_coef": selected("entropy_coef", 0.0),
+        "guardrail_mode": requested.get("guardrail_mode") or "strict",
+        "reward_weights": requested.get("reward_weights") or profile["reward_weights"],
+        "reason": requested.get("objective_reason") or profile["reason"],
+        "seed": int(requested.get("seed") or 20260720),
+        "eval_interval": selected("eval_interval", 5_000),
+        "checkpoint_interval": selected("checkpoint_interval", 20_000),
         "render_during_training": False,
     }
 
@@ -906,6 +924,15 @@ def _start_training(payload: dict[str, Any]) -> dict[str, Any]:
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     raw_config.pop("data_file", None)
+    try:
+        raw_config.update(
+            resolve_training_scenario(
+                str(raw_config.get("scenario") or "") or None,
+                str(raw_config["dataset_id"]),
+            )
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return training_service.start(raw_config)
 
 
@@ -915,16 +942,24 @@ def _strategies() -> list[dict[str, Any]]:
 
 def _simulate_policy(payload: dict[str, Any] | None = None) -> dict[str, Any]:
     payload = payload or {}
-    return training_service.evaluate(str(payload.get("strategy_id") or "auto:latest"))
+    return training_service.evaluate(
+        resolve_requested_strategy(payload.get("strategy_id"))
+    )
 
 
 def _verify_policy(payload: dict[str, Any] | None = None) -> dict[str, Any]:
-    evaluation = training_service.evaluate(str((payload or {}).get("strategy_id") or "auto:latest"))
+    evaluation = training_service.evaluate(
+        resolve_requested_strategy((payload or {}).get("strategy_id"))
+    )
     metrics = evaluation["metrics"]
     checks = [
         {"name": "独立测试集", "passed": evaluation["split"] == "test"},
         {"name": "数据集哈希", "passed": bool(evaluation["policy"]["dataset_sha256"])},
         {"name": "峰值与安全约束", "passed": metrics["safety_violations"] == 0},
+        {"name": "碳排不劣化", "passed": metrics["carbon_reduction_pct"] >= 0},
+        {"name": "成本不劣化", "passed": metrics["cost_saving_pct"] >= 0},
+        {"name": "固定基线碳排不劣化", "passed": metrics["fixed_baseline_carbon_reduction_pct"] >= 0},
+        {"name": "固定基线成本不劣化", "passed": metrics["fixed_baseline_cost_saving_pct"] >= 0},
         {"name": "人工确认边界", "passed": True},
     ]
     passed = all(item["passed"] for item in checks)

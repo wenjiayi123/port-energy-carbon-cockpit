@@ -114,6 +114,104 @@ def test_dataset_validation_endpoint_records_public_provenance() -> None:
     assert payload["drift"]["method"] == "absolute_standardized_mean_difference"
 
 
+def test_port_scenarios_expose_fail_closed_v3_contract() -> None:
+    contract = client.get("/api/scenarios/contract")
+    scenarios = client.get("/api/scenarios")
+
+    assert contract.status_code == 200
+    assert contract.json()["environment_id"] == "PortEnergyDispatchEnv-v3"
+    assert "weather_and_navigation" in contract.json()["observations"]
+    assert len(contract.json()["actions"]["continuous"]) == 4
+
+    assert scenarios.status_code == 200
+    items = {item["id"]: item for item in scenarios.json()}
+    enhanced = items["port_la_vessel_activity_benchmark"]
+    assert enhanced["readiness"]["offline_benchmark_ready"] is True
+    assert enhanced["dataset"]["rows"] == 43_848
+    live_templates = [item for item in items.values() if item["mode"] == "live_port_template"]
+    assert live_templates
+    assert all(not item["readiness"]["production_ready"] for item in live_templates)
+
+
+def test_training_scenario_and_dataset_must_resolve_to_same_contract() -> None:
+    valid = client.post(
+        "/api/rl/train/start",
+        json={
+            "config": {
+                "scenario": "port_la_vessel_activity_benchmark",
+                "dataset_id": "port_la_2020_2024_vessel_activity_hourly",
+                "algorithm": "dqn",
+                "total_steps": 32,
+            }
+        },
+    )
+    mismatch = client.post(
+        "/api/rl/train/start",
+        json={
+            "config": {
+                "scenario": "port_la_public_benchmark",
+                "dataset_id": "port_la_2020_2024_vessel_activity_hourly",
+                "algorithm": "dqn",
+                "total_steps": 32,
+            }
+        },
+    )
+    live_template = client.post(
+        "/api/rl/train/start",
+        json={
+            "config": {
+                "scenario": "port_rotterdam_live_template",
+                "dataset_id": "port_la_2020_2024_vessel_activity_hourly",
+                "algorithm": "dqn",
+                "total_steps": 32,
+            }
+        },
+    )
+
+    assert valid.status_code == 200
+    assert valid.json()["preview"]["scenario"] == "port_la_vessel_activity_benchmark"
+    assert valid.json()["preview"]["environment_id"] == "PortEnergyDispatchEnv-v2"
+    assert mismatch.status_code == 422
+    assert "expects dataset" in mismatch.json()["detail"]
+    assert live_template.status_code == 422
+    assert "connector template" in live_template.json()["detail"]
+
+
+def test_xiaoyi_training_preview_preserves_nested_ui_configuration() -> None:
+    response = client.post(
+        "/api/assistant/actions/execute",
+        json={
+            "instruction": "小懿，开始训练碳排最低目标",
+            "action_id": "start_rl_training",
+            "dry_run": True,
+            "objective_id": "carbon_min",
+            "config": {
+                "objective_id": "carbon_min",
+                "objective_label": "碳排最低目标",
+                "algorithm": "dqn",
+                "scenario": "port_la_vessel_activity_benchmark",
+                "data_file": "port_la_2020_2024_vessel_activity_hourly",
+                "total_steps": 32,
+                "batch_size": 64,
+                "learning_rate": 0.0001,
+                "gamma": 0.99,
+                "tau": 0,
+                "entropy_coef": 0,
+                "reward_weights": {"carbon": 0.8, "safety": 0.2},
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    config = response.json()["recommendation"]["config"]
+    assert config["algorithm"] == "dqn"
+    assert config["dataset_id"] == "port_la_2020_2024_vessel_activity_hourly"
+    assert config["scenario"] == "port_la_vessel_activity_benchmark"
+    assert config["total_steps"] == 32
+    assert config["tau"] == 0
+    assert config["reward_weights"] == {"carbon": 0.8, "safety": 0.2}
+
+
 def test_http_dataset_inputs_cannot_read_arbitrary_server_paths() -> None:
     validation = client.post("/api/rl/datasets/validate", json={"data_file": "/etc/passwd"})
     training = client.post(

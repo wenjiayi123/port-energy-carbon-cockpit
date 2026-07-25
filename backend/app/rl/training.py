@@ -27,6 +27,7 @@ from app.rl.environment import (
     MPCPolicy,
     PortEnergyDispatchEnv,
     encode_continuous_controls,
+    observation_keys_for_environment,
 )
 
 
@@ -69,17 +70,17 @@ class TrainingService:
         aliases = {"td3_bc": "td3", "real_port_rule": "mpc", "iql": "dqn"}
         algorithm = aliases.get(algorithm, algorithm)
         if algorithm not in ALGORITHM_CATALOG:
-            raise ValueError(f"Unknown algorithm: {algorithm}; choose from {', '.join(ALGORITHM_CATALOG)}")
-        dataset_value = str(
-            raw.get("dataset_id") or raw.get("data_file") or DEFAULT_DATASET_ID
-        )
+            raise ValueError(
+                f"Unknown algorithm: {algorithm}; choose from {', '.join(ALGORITHM_CATALOG)}"
+            )
+        dataset_value = str(raw.get("dataset_id") or raw.get("data_file") or DEFAULT_DATASET_ID)
         dataset = PortDataset.load(dataset_value)
         defaults = ALGORITHM_CATALOG[algorithm]["defaults"]
         total_steps = int(raw.get("total_steps") or defaults["total_steps"])
         if algorithm != "mpc" and not 32 <= total_steps <= 5_000_000:
             raise ValueError("total_steps must be between 32 and 5,000,000")
         if int(raw.get("step_min") or 60) != 60:
-            raise ValueError("PortEnergyDispatchEnv-v1 uses a fixed 60-minute environment step")
+            raise ValueError(f"{dataset.environment_id} uses a fixed 60-minute environment step")
         if str(raw.get("guardrail_mode") or "strict") != "strict":
             raise ValueError("Only strict environment constraints are implemented")
         weights = raw.get("reward_weights") or {}
@@ -102,17 +103,30 @@ class TrainingService:
             "gamma": float(raw.get("gamma") or defaults["gamma"]),
             "tau": float(raw.get("tau") or 0.005),
             "seed": int(raw.get("seed") or 20260720),
-            "episode_hours": int(raw.get("episode_hours") or min(24, max(4, int(raw.get("horizon_min") or 1440) // 60))),
+            "episode_hours": int(
+                raw.get("episode_hours")
+                or min(24, max(4, int(raw.get("horizon_min") or 1440) // 60))
+            ),
             "step_min": 60,
             "guardrail_mode": "strict",
-            "eval_interval": max(1, int(raw.get("eval_interval") or min(max(total_steps // 10, 1), 10_000))),
-            "checkpoint_interval": max(1, int(raw.get("checkpoint_interval") or min(max(total_steps // 4, 1), 25_000))),
+            "eval_interval": max(
+                1, int(raw.get("eval_interval") or min(max(total_steps // 10, 1), 10_000))
+            ),
+            "checkpoint_interval": max(
+                1, int(raw.get("checkpoint_interval") or min(max(total_steps // 4, 1), 25_000))
+            ),
             "reward_weights": weights,
             "train_split": "train",
             "validation_split": "validation",
             "test_split": "test",
             "render_during_training": False,
             "runtime_versions": self._runtime_versions(),
+            "environment_id": dataset.environment_id,
+            "observation_count": len(observation_keys_for_environment(dataset.environment_id)),
+            "action_contract": {
+                "continuous": 4,
+                "dqn_discrete_combinations": 81,
+            },
         }
         return config
 
@@ -125,7 +139,9 @@ class TrainingService:
             run_dir = RUNS_DIR / job_id
             run_dir.mkdir(parents=True, exist_ok=False)
             config_path = run_dir / "config.json"
-            config_path.write_text(json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8")
+            config_path.write_text(
+                json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
             self._pause.clear()
             self._stop.clear()
             self._job = {
@@ -166,7 +182,9 @@ class TrainingService:
             step = int(job.get("step") or 0)
             rate = step / elapsed if elapsed > 0 else 0.0
             remaining = max(0, int(job.get("total_steps") or 0) - step)
-            remaining_sec = remaining / rate if rate > 0 and job.get("status") == "running" else None
+            remaining_sec = (
+                remaining / rate if rate > 0 and job.get("status") == "running" else None
+            )
             metrics = list(job.get("recent_metrics") or [])
             latest = metrics[-1] if metrics else {}
             return {
@@ -190,7 +208,9 @@ class TrainingService:
                 "completed_at": job.get("completed_at"),
                 "duration_sec": round(elapsed, 2),
                 "elapsed_sec": round(elapsed, 2),
-                "estimated_duration_sec": round(elapsed + remaining_sec, 2) if remaining_sec is not None else None,
+                "estimated_duration_sec": round(elapsed + remaining_sec, 2)
+                if remaining_sec is not None
+                else None,
                 "remaining_sec": round(remaining_sec, 2) if remaining_sec is not None else None,
                 "eta_at": self._eta(remaining_sec),
                 "can_pause": job["status"] == "running",
@@ -207,19 +227,27 @@ class TrainingService:
     def control(self, action: str) -> dict[str, Any]:
         with self._lock:
             if not self._job:
-                return {**self._idle_status(), "control_action": action, "control_result": "no_active_job"}
+                return {
+                    **self._idle_status(),
+                    "control_action": action,
+                    "control_result": "no_active_job",
+                }
             status = self._job["status"]
             changed = False
             if action == "pause" and status == "running":
                 self._pause.set()
                 self._job["status"] = "paused"
                 self._job["pause_started_monotonic"] = time.monotonic()
-                self._job["logs"].append("Pause requested; learner callback is holding before the next environment step")
+                self._job["logs"].append(
+                    "Pause requested; learner callback is holding before the next environment step"
+                )
                 changed = True
             elif action == "resume" and status == "paused":
                 pause_started = self._job.get("pause_started_monotonic")
                 if pause_started:
-                    self._job["paused_total_sec"] += max(0.0, time.monotonic() - float(pause_started))
+                    self._job["paused_total_sec"] += max(
+                        0.0, time.monotonic() - float(pause_started)
+                    )
                 self._job["pause_started_monotonic"] = None
                 self._job["status"] = "running"
                 self._pause.clear()
@@ -232,7 +260,11 @@ class TrainingService:
                 self._job["logs"].append("Stop requested; current checkpoint will be saved")
                 changed = True
             self._persist_state()
-        return {**self.status(), "control_action": action, "control_result": "applied" if changed else "ignored"}
+        return {
+            **self.status(),
+            "control_action": action,
+            "control_result": "applied" if changed else "ignored",
+        }
 
     def strategies(self) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
@@ -248,7 +280,8 @@ class TrainingService:
                     "algorithm": manifest["config"]["algorithm"],
                     "artifact_path": manifest.get("artifact_path"),
                     "artifact_sha256": manifest.get("artifact_sha256"),
-                    "objective": manifest["config"].get("objective_label") or manifest["config"].get("objective_id"),
+                    "objective": manifest["config"].get("objective_label")
+                    or manifest["config"].get("objective_id"),
                     "dataset_id": manifest["config"]["dataset_id"],
                     "dataset_sha256": manifest["config"]["dataset_sha256"],
                     "ready": manifest["status"] in {"completed", "stopped"},
@@ -269,7 +302,9 @@ class TrainingService:
             artifact_value = manifest.get("artifact_path")
             artifact = Path(artifact_value) if artifact_value else None
             artifact_exists = bool(artifact and artifact.exists())
-            artifact_sha256 = self._cached_sha256(artifact) if artifact_exists and artifact else None
+            artifact_sha256 = (
+                self._cached_sha256(artifact) if artifact_exists and artifact else None
+            )
             recorded_artifact_sha256 = manifest.get("artifact_sha256")
             artifact_integrity = (
                 "verified"
@@ -285,7 +320,9 @@ class TrainingService:
                 dataset = PortDataset.load(config["data_file"])
                 current_dataset_sha256 = dataset.package_sha256
                 dataset_status = (
-                    "verified" if current_dataset_sha256 == config.get("dataset_sha256") else "changed"
+                    "verified"
+                    if current_dataset_sha256 == config.get("dataset_sha256")
+                    else "changed"
                 )
                 drift = dataset.drift_report()
             except Exception as exc:
@@ -315,28 +352,30 @@ class TrainingService:
                 stage = "verified_offline"
             else:
                 stage = "validated_offline"
-            policies.append({
-                "policy_id": manifest.get("job_id"),
-                "policy_version": manifest.get("policy_version"),
-                "algorithm": config.get("algorithm"),
-                "stage": stage,
-                "run_status": manifest.get("status"),
-                "trained_at": manifest.get("completed_at"),
-                "dataset_id": config.get("dataset_id"),
-                "trained_dataset_sha256": config.get("dataset_sha256"),
-                "current_dataset_sha256": current_dataset_sha256,
-                "dataset_status": dataset_status,
-                "artifact_path": artifact_value,
-                "artifact_sha256": artifact_sha256,
-                "recorded_artifact_sha256": recorded_artifact_sha256,
-                "artifact_integrity": artifact_integrity,
-                "evaluation_status": evaluation.get("status", "not_tested"),
-                "evaluation_metrics": evaluation.get("metrics", {}),
-                "verification_status": verification.get("status", "not_verified"),
-                "drift": drift,
-                "production_eligible": False,
-                "production_blocker": "Human-approved port adapters and production validation are required.",
-            })
+            policies.append(
+                {
+                    "policy_id": manifest.get("job_id"),
+                    "policy_version": manifest.get("policy_version"),
+                    "algorithm": config.get("algorithm"),
+                    "stage": stage,
+                    "run_status": manifest.get("status"),
+                    "trained_at": manifest.get("completed_at"),
+                    "dataset_id": config.get("dataset_id"),
+                    "trained_dataset_sha256": config.get("dataset_sha256"),
+                    "current_dataset_sha256": current_dataset_sha256,
+                    "dataset_status": dataset_status,
+                    "artifact_path": artifact_value,
+                    "artifact_sha256": artifact_sha256,
+                    "recorded_artifact_sha256": recorded_artifact_sha256,
+                    "artifact_integrity": artifact_integrity,
+                    "evaluation_status": evaluation.get("status", "not_tested"),
+                    "evaluation_metrics": evaluation.get("metrics", {}),
+                    "verification_status": verification.get("status", "not_verified"),
+                    "drift": drift,
+                    "production_eligible": False,
+                    "production_blocker": "Human-approved port adapters and production validation are required.",
+                }
+            )
         return {
             "updated_at": utc_now(),
             "count": len(policies),
@@ -355,7 +394,9 @@ class TrainingService:
         config = manifest["config"]
         algorithm = config["algorithm"]
         action_mode = "discrete" if algorithm == "dqn" else "continuous"
-        model = None if algorithm == "mpc" else self._load_model(algorithm, manifest["artifact_path"])
+        model = (
+            None if algorithm == "mpc" else self._load_model(algorithm, manifest["artifact_path"])
+        )
         dataset = PortDataset.load(config["data_file"])
         learned_totals: list[dict[str, Any]] = []
         baseline_totals: list[dict[str, Any]] = []
@@ -371,21 +412,32 @@ class TrainingService:
                 else config["episode_hours"]
             )
             learned = PortEnergyDispatchEnv(
-                dataset=config["data_file"], split="test", action_mode=action_mode,
-                reward_weights=config.get("reward_weights"), episode_hours=evaluation_hours,
+                dataset=config["data_file"],
+                split="test",
+                action_mode=action_mode,
+                reward_weights=config.get("reward_weights"),
+                episode_hours=evaluation_hours,
                 render_mode="trajectory",
             )
             baseline = PortEnergyDispatchEnv(
-                dataset=config["data_file"], split="test", action_mode="continuous",
-                reward_weights=config.get("reward_weights"), episode_hours=evaluation_hours,
+                dataset=config["data_file"],
+                split="test",
+                action_mode="continuous",
+                reward_weights=config.get("reward_weights"),
+                episode_hours=evaluation_hours,
                 render_mode="trajectory",
             )
             fixed = PortEnergyDispatchEnv(
-                dataset=config["data_file"], split="test", action_mode="continuous",
-                reward_weights=config.get("reward_weights"), episode_hours=evaluation_hours,
+                dataset=config["data_file"],
+                split="test",
+                action_mode="continuous",
+                reward_weights=config.get("reward_weights"),
+                episode_hours=evaluation_hours,
                 render_mode=None,
             )
-            learned_summary = self.rollout(learned, model, algorithm, row_index, int(config["seed"]))
+            learned_summary = self.rollout(
+                learned, model, algorithm, row_index, int(config["seed"])
+            )
             baseline_summary = self.rollout(baseline, None, "mpc", row_index, int(config["seed"]))
             fixed_summary = self.rollout(fixed, None, "fixed", row_index, int(config["seed"]))
             learned_totals.append(learned_summary)
@@ -397,8 +449,12 @@ class TrainingService:
         policy = self._mean_totals(learned_totals)
         control = self._mean_totals(baseline_totals)
         fixed = self._mean_totals(fixed_totals)
-        policy_shore_rate = policy["shore_power_kwh"] / max(1.0, policy["shore_power_opportunity_kwh"]) * 100.0
-        control_shore_rate = control["shore_power_kwh"] / max(1.0, control["shore_power_opportunity_kwh"]) * 100.0
+        policy_shore_rate = (
+            policy["shore_power_kwh"] / max(1.0, policy["shore_power_opportunity_kwh"]) * 100.0
+        )
+        control_shore_rate = (
+            control["shore_power_kwh"] / max(1.0, control["shore_power_opportunity_kwh"]) * 100.0
+        )
         metrics = {
             "mean_reward": policy["reward"],
             "control_mean_reward": control["reward"],
@@ -470,7 +526,9 @@ class TrainingService:
             ),
         }
         evaluation_path = Path(manifest["run_dir"]) / "evaluation.json"
-        evaluation_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+        evaluation_path.write_text(
+            json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
         return result
 
     def record_verification(self, strategy_id: str, result: dict[str, Any]) -> Path:
@@ -482,7 +540,13 @@ class TrainingService:
     def history(self) -> dict[str, Any]:
         items = self.strategies()
         if not items:
-            return {"available": False, "series": [], "metrics": {}, "checkpoints": [], "title": "No completed training runs"}
+            return {
+                "available": False,
+                "series": [],
+                "metrics": {},
+                "checkpoints": [],
+                "title": "No completed training runs",
+            }
         manifest = self._resolve_manifest(items[0]["strategy_id"])
         metric_path = Path(manifest["run_dir"]) / "metrics.jsonl"
         series: list[dict[str, Any]] = []
@@ -491,12 +555,18 @@ class TrainingService:
                 if line.strip():
                     series.append(json.loads(line))
         evaluation_path = Path(manifest["run_dir"]) / "evaluation.json"
-        evaluation = json.loads(evaluation_path.read_text(encoding="utf-8")) if evaluation_path.exists() else {}
+        evaluation = (
+            json.loads(evaluation_path.read_text(encoding="utf-8"))
+            if evaluation_path.exists()
+            else {}
+        )
         evaluation_metrics = dict(evaluation.get("metrics") or {})
         rewards = [float(point.get("reward", 0.0)) for point in series]
         if rewards:
             evaluation_metrics.setdefault("best_callback_reward", round(max(rewards), 6))
-            evaluation_metrics.setdefault("mean_last_20_callback_reward", round(float(np.mean(rewards[-20:])), 6))
+            evaluation_metrics.setdefault(
+                "mean_last_20_callback_reward", round(float(np.mean(rewards[-20:])), 6)
+            )
         if "safety_violations" in evaluation_metrics:
             evaluation_metrics.setdefault(
                 "constraint_success_rate_pct",
@@ -506,7 +576,9 @@ class TrainingService:
             int(point["step"]): point for point in series if "validation_return" in point
         }
         checkpoints = []
-        for checkpoint_path in sorted((Path(manifest["run_dir"]) / "checkpoints").glob("step-*.zip")):
+        for checkpoint_path in sorted(
+            (Path(manifest["run_dir"]) / "checkpoints").glob("step-*.zip")
+        ):
             checkpoint_step = int(checkpoint_path.stem.split("-")[-1])
             validation = validation_by_step.get(checkpoint_step, {})
             checkpoints.append(
@@ -524,7 +596,7 @@ class TrainingService:
             "title_en": "Persisted callback metrics from the actual learner",
             "source": manifest["config"]["data_file"],
             "evidence_level": "dataset hash + measured callback metrics + saved model",
-            "environment": "PortEnergyDispatchEnv-v1",
+            "environment": manifest["config"].get("environment_id", "PortEnergyDispatchEnv-v1"),
             "algorithm": manifest["config"]["algorithm"].upper(),
             "seed": manifest["config"]["seed"],
             "total_steps": manifest["step"],
@@ -567,7 +639,11 @@ class TrainingService:
                 render_mode=None,
             )
             model = self.build_model(config, env)
-            model.learn(total_timesteps=config["total_steps"], callback=EvidenceCallback(), progress_bar=False)
+            model.learn(
+                total_timesteps=config["total_steps"],
+                callback=EvidenceCallback(),
+                progress_bar=False,
+            )
             with self._lock:
                 if not self._job or self._job["job_id"] != job_id:
                     return
@@ -576,7 +652,9 @@ class TrainingService:
                 model.save(str(artifact_base))
                 self._job["artifact_path"] = str(artifact_base.with_suffix(".zip"))
                 self._job["step"] = int(model.num_timesteps)
-                self._job["progress"] = min(100.0, self._job["step"] / max(1, config["total_steps"]) * 100)
+                self._job["progress"] = min(
+                    100.0, self._job["step"] / max(1, config["total_steps"]) * 100
+                )
                 self._job["status"] = "stopped" if self._stop.is_set() else "completed"
                 self._job["completed_at"] = utc_now()
                 self._job["duration_sec"] = self._elapsed(self._job)
@@ -619,8 +697,11 @@ class TrainingService:
             )
         if algorithm == "sac":
             return SAC(
-                **common, batch_size=min(config["batch_size"], max(2, steps)), tau=config["tau"],
-                learning_starts=min(1_000, max(10, steps // 10)), buffer_size=max(1_000, min(500_000, steps * 2)),
+                **common,
+                batch_size=min(config["batch_size"], max(2, steps)),
+                tau=config["tau"],
+                learning_starts=min(1_000, max(10, steps // 10)),
+                buffer_size=max(1_000, min(500_000, steps * 2)),
             )
         if algorithm == "td3":
             action_dim = int(np.prod(env.action_space.shape))
@@ -629,13 +710,19 @@ class TrainingService:
                 sigma=0.1 * np.ones(action_dim),
             )
             return TD3(
-                **common, batch_size=min(config["batch_size"], max(2, steps)), tau=config["tau"], action_noise=noise,
-                learning_starts=min(1_000, max(10, steps // 10)), buffer_size=max(1_000, min(500_000, steps * 2)),
+                **common,
+                batch_size=min(config["batch_size"], max(2, steps)),
+                tau=config["tau"],
+                action_noise=noise,
+                learning_starts=min(1_000, max(10, steps // 10)),
+                buffer_size=max(1_000, min(500_000, steps * 2)),
             )
         if algorithm == "dqn":
             return DQN(
-                **common, batch_size=min(config["batch_size"], max(2, steps)),
-                learning_starts=min(1_000, max(10, steps // 10)), buffer_size=max(1_000, min(500_000, steps * 2)),
+                **common,
+                batch_size=min(config["batch_size"], max(2, steps)),
+                learning_starts=min(1_000, max(10, steps // 10)),
+                buffer_size=max(1_000, min(500_000, steps * 2)),
                 exploration_fraction=float(config.get("exploration_fraction") or 0.25),
             )
         raise ValueError(f"Unsupported trainable algorithm: {algorithm}")
@@ -656,13 +743,24 @@ class TrainingService:
             rewards = np.asarray(callback.locals.get("rewards", [0.0]), dtype=float)
             logger_values = dict(getattr(callback.model.logger, "name_to_value", {}) or {})
             infos = callback.locals.get("infos") or []
-            episode = next((info.get("episode") for info in infos if isinstance(info, dict) and info.get("episode")), None)
+            episode = next(
+                (
+                    info.get("episode")
+                    for info in infos
+                    if isinstance(info, dict) and info.get("episode")
+                ),
+                None,
+            )
             metric = {
                 "step": step,
                 "elapsed_sec": round(self._elapsed(self._job), 3),
                 "reward": round(float(rewards.mean()), 6),
                 "episode_complete": bool(episode),
-                "success_rate": round(100.0 * float((episode or {}).get("safety_violations", 0) == 0), 2) if episode else 0.0,
+                "success_rate": round(
+                    100.0 * float((episode or {}).get("safety_violations", 0) == 0), 2
+                )
+                if episode
+                else 0.0,
             }
             for key, value in logger_values.items():
                 if isinstance(value, (int, float, np.number)):
@@ -670,8 +768,12 @@ class TrainingService:
             if evaluation_due:
                 validation = self._validation_rollout(callback.model, self._job["config"], step)
                 metric.update(validation)
-            metric["actor_loss"] = metric.get("train/actor_loss", metric.get("train/policy_gradient_loss", 0.0))
-            metric["critic_loss"] = metric.get("train/critic_loss", metric.get("train/value_loss", 0.0))
+            metric["actor_loss"] = metric.get(
+                "train/actor_loss", metric.get("train/policy_gradient_loss", 0.0)
+            )
+            metric["critic_loss"] = metric.get(
+                "train/critic_loss", metric.get("train/value_loss", 0.0)
+            )
             metric["entropy"] = abs(metric.get("train/entropy_loss", 0.0))
             previous = (self._job.get("recent_metrics") or [])[-1:] or [{}]
             previous_ema = float(previous[0].get("reward_ema", metric["reward"]))
@@ -713,15 +815,23 @@ class TrainingService:
             if not self._job:
                 return
             step = int(callback.num_timesteps)
-            interval = max(1, int(self._job["config"].get("checkpoint_interval") or self._job["total_steps"]))
-            if step < interval or step % interval != 0 or step == int(self._job.get("last_checkpoint_step") or 0):
+            interval = max(
+                1, int(self._job["config"].get("checkpoint_interval") or self._job["total_steps"])
+            )
+            if (
+                step < interval
+                or step % interval != 0
+                or step == int(self._job.get("last_checkpoint_step") or 0)
+            ):
                 return
             checkpoint_dir = Path(self._job["run_dir"]) / "checkpoints"
             checkpoint_dir.mkdir(parents=True, exist_ok=True)
             checkpoint_base = checkpoint_dir / f"step-{step}"
             callback.model.save(str(checkpoint_base))
             self._job["last_checkpoint_step"] = step
-            self._job["logs"].append(f"Saved measured-step checkpoint: {checkpoint_base.with_suffix('.zip')}")
+            self._job["logs"].append(
+                f"Saved measured-step checkpoint: {checkpoint_base.with_suffix('.zip')}"
+            )
             self._persist_state()
 
     def _complete_mpc_job(self) -> None:
@@ -729,14 +839,24 @@ class TrainingService:
         run_dir = Path(self._job["run_dir"])
         artifact_path = run_dir / "mpc_policy.json"
         artifact_path.write_text(
-            json.dumps({"algorithm": "mpc", "controller": "four-step constrained MPC beam search with storage and terminal-SOC constraints", "config": self._job["config"]}, ensure_ascii=False, indent=2),
+            json.dumps(
+                {
+                    "algorithm": "mpc",
+                    "controller": "four-step constrained MPC beam search with storage and terminal-SOC constraints",
+                    "config": self._job["config"],
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
             encoding="utf-8",
         )
         self._job["artifact_path"] = str(artifact_path)
         self._job["status"] = "completed"
         self._job["completed_at"] = utc_now()
         self._job["duration_sec"] = 0.0
-        self._job["logs"].append("MPC has no fitted parameters; controller artifact recorded for held-out evaluation")
+        self._job["logs"].append(
+            "MPC has no fitted parameters; controller artifact recorded for held-out evaluation"
+        )
         self._write_manifest()
         self._persist_state()
 
@@ -748,7 +868,9 @@ class TrainingService:
         row_index: int,
         seed: int,
     ) -> dict[str, Any]:
-        observation, _ = env.reset(seed=seed + row_index, options={"row_index": row_index, "start_hour": 0})
+        observation, _ = env.reset(
+            seed=seed + row_index, options={"row_index": row_index, "start_hour": 0}
+        )
         terminated = truncated = False
         controller = MPCPolicy()
         fixed_controller = FixedDispatchPolicy()
@@ -805,7 +927,8 @@ class TrainingService:
         if not self._job:
             return
         state = {
-            key: value for key, value in self._job.items()
+            key: value
+            for key, value in self._job.items()
             if key not in {"started_monotonic", "pause_started_monotonic"}
         }
         state["duration_sec"] = round(self._elapsed(self._job), 3)
@@ -831,10 +954,21 @@ class TrainingService:
     @staticmethod
     def _mean_totals(items: list[dict[str, Any]]) -> dict[str, float]:
         keys = (
-            "reward", "energy_kwh", "carbon_kg", "grid_carbon_kg", "fuel_carbon_kg",
-            "cost", "delay_cost_cny", "delay_minutes", "processed_teu", "shore_power_kwh",
+            "reward",
+            "energy_kwh",
+            "carbon_kg",
+            "grid_carbon_kg",
+            "fuel_carbon_kg",
+            "cost",
+            "delay_cost_cny",
+            "delay_minutes",
+            "processed_teu",
+            "shore_power_kwh",
             "shore_power_opportunity_kwh",
-            "safety_violations", "peak_violation_steps", "delay_violation_steps", "peak_kw",
+            "safety_violations",
+            "peak_violation_steps",
+            "delay_violation_steps",
+            "peak_kw",
         )
         return {key: round(float(np.mean([float(item[key]) for item in items])), 6) for key in keys}
 
@@ -888,18 +1022,30 @@ class TrainingService:
 
     @staticmethod
     def _elapsed(job: dict[str, Any]) -> float:
-        if job.get("status") in {"completed", "stopped", "failed", "interrupted"} and job.get("duration_sec") is not None:
+        if (
+            job.get("status") in {"completed", "stopped", "failed", "interrupted"}
+            and job.get("duration_sec") is not None
+        ):
             return float(job["duration_sec"])
         end = time.monotonic()
         if job.get("status") == "paused" and job.get("pause_started_monotonic"):
             end = float(job["pause_started_monotonic"])
-        return max(0.0, end - float(job.get("started_monotonic") or end) - float(job.get("paused_total_sec") or 0.0))
+        return max(
+            0.0,
+            end
+            - float(job.get("started_monotonic") or end)
+            - float(job.get("paused_total_sec") or 0.0),
+        )
 
     @staticmethod
     def _eta(remaining_sec: float | None) -> str | None:
         if remaining_sec is None:
             return None
-        return datetime.fromtimestamp(time.time() + remaining_sec, timezone.utc).isoformat().replace("+00:00", "Z")
+        return (
+            datetime.fromtimestamp(time.time() + remaining_sec, timezone.utc)
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
 
     @staticmethod
     def _summary(job: dict[str, Any], step: int) -> str:
@@ -908,14 +1054,36 @@ class TrainingService:
 
     def _idle_status(self) -> dict[str, Any]:
         return {
-            "status": "idle", "progress": 0.0, "step": 0, "total_steps": 0, "reward": 0.0,
-            "entropy": 0.0, "actor_loss": 0.0, "critic_loss": 0.0, "kl_divergence": 0.0,
-            "success_rate": 0.0, "samples_per_sec": 0.0, "step_rate_per_min": 0.0,
-            "recent_metrics": [], "policy_version": "—", "artifact_path": None, "started_at": None,
-            "completed_at": None, "duration_sec": 0.0, "elapsed_sec": 0.0,
-            "estimated_duration_sec": None, "remaining_sec": None, "eta_at": None,
-            "can_pause": False, "can_resume": False, "can_stop": False, "config": {}, "logs": [],
-            "error": None, "summary": "No training job", "rendering": False,
+            "status": "idle",
+            "progress": 0.0,
+            "step": 0,
+            "total_steps": 0,
+            "reward": 0.0,
+            "entropy": 0.0,
+            "actor_loss": 0.0,
+            "critic_loss": 0.0,
+            "kl_divergence": 0.0,
+            "success_rate": 0.0,
+            "samples_per_sec": 0.0,
+            "step_rate_per_min": 0.0,
+            "recent_metrics": [],
+            "policy_version": "—",
+            "artifact_path": None,
+            "started_at": None,
+            "completed_at": None,
+            "duration_sec": 0.0,
+            "elapsed_sec": 0.0,
+            "estimated_duration_sec": None,
+            "remaining_sec": None,
+            "eta_at": None,
+            "can_pause": False,
+            "can_resume": False,
+            "can_stop": False,
+            "config": {},
+            "logs": [],
+            "error": None,
+            "summary": "No training job",
+            "rendering": False,
             "evidence": "progress will come from learner callbacks",
         }
 

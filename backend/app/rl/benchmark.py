@@ -16,9 +16,9 @@ from app.rl.environment import (
     DEFAULT_REWARD_WEIGHTS,
     FixedDispatchPolicy,
     MPCPolicy,
-    OBSERVATION_KEYS,
     PortEnergyDispatchEnv,
     encode_continuous_controls,
+    observation_keys_for_environment,
 )
 
 
@@ -144,7 +144,7 @@ def select_validation_static_reference(
     """Select a fixed-resource comparator using validation data only.
 
     This creates a harder denominator than fixed full resources without
-    allowing the held-out 2025 test split to influence the chosen ratios.
+    allowing the held-out test split to influence the chosen ratios.
     """
     package = PortDataset.load(dataset)
     starts = package.evaluation_start_indices("validation", episode_hours)
@@ -179,9 +179,7 @@ def select_validation_static_reference(
                 }
             )
     feasible = [
-        candidate
-        for candidate in candidates
-        if candidate["validation_safety_violations"] == 0.0
+        candidate for candidate in candidates if candidate["validation_safety_violations"] == 0.0
     ]
     selected = max(
         feasible or candidates,
@@ -207,8 +205,7 @@ def evaluate_split(
     package = PortDataset.load(dataset)
     starts = package.evaluation_start_indices(split, episode_hours)
     jobs = [
-        (dataset, split, row_index, "mpc", episode_hours, weights, None)
-        for row_index in starts
+        (dataset, split, row_index, "mpc", episode_hours, weights, None) for row_index in starts
     ]
     if workers > 1 and len(jobs) > 1:
         with ProcessPoolExecutor(max_workers=min(workers, len(jobs))) as pool:
@@ -269,9 +266,7 @@ def evaluate_split(
     strong_reference = _aggregate(strong_reference_episodes)
     transition_reference = _aggregate(transition_reference_episodes)
     calibrated_reference = (
-        _aggregate(calibrated_reference_episodes)
-        if calibrated_reference_episodes
-        else None
+        _aggregate(calibrated_reference_episodes) if calibrated_reference_episodes else None
     )
     total_steps = int(sum(int(episode["steps"]) for episode in mpc_episodes))
     violation_steps = int(
@@ -282,30 +277,20 @@ def evaluate_split(
             for episode in mpc_episodes
         )
     )
-    shore_rate = (
-        mpc["shore_power_kwh"] / max(1.0, mpc["shore_power_opportunity_kwh"]) * 100.0
-    )
+    shore_rate = mpc["shore_power_kwh"] / max(1.0, mpc["shore_power_opportunity_kwh"]) * 100.0
     calibrated_metrics = None
     if calibrated_reference is not None:
         calibrated_metrics = {
-            "carbon_reduction_pct": _saving(
-                calibrated_reference["carbon_kg"], mpc["carbon_kg"]
-            ),
-            "cost_saving_pct": _saving(
-                calibrated_reference["cost"], mpc["cost"]
-            ),
-            "energy_reduction_pct": _saving(
-                calibrated_reference["energy_kwh"], mpc["energy_kwh"]
-            ),
+            "carbon_reduction_pct": _saving(calibrated_reference["carbon_kg"], mpc["carbon_kg"]),
+            "cost_saving_pct": _saving(calibrated_reference["cost"], mpc["cost"]),
+            "energy_reduction_pct": _saving(calibrated_reference["energy_kwh"], mpc["energy_kwh"]),
             "throughput_change_pct": round(
                 (mpc["processed_teu"] - calibrated_reference["processed_teu"])
                 / max(abs(calibrated_reference["processed_teu"]), 1e-9)
                 * 100.0,
                 3,
             ),
-            "peak_load_reduction_pct": _saving(
-                calibrated_reference["peak_kw"], mpc["peak_kw"]
-            ),
+            "peak_load_reduction_pct": _saving(calibrated_reference["peak_kw"], mpc["peak_kw"]),
         }
     return {
         "split": split,
@@ -318,13 +303,9 @@ def evaluate_split(
         "transition_reference_mean": transition_reference,
         "validation_calibrated_reference_mean": calibrated_reference,
         "metrics_vs_strong_reference": {
-            "carbon_reduction_pct": _saving(
-                strong_reference["carbon_kg"], mpc["carbon_kg"]
-            ),
+            "carbon_reduction_pct": _saving(strong_reference["carbon_kg"], mpc["carbon_kg"]),
             "cost_saving_pct": _saving(strong_reference["cost"], mpc["cost"]),
-            "energy_reduction_pct": _saving(
-                strong_reference["energy_kwh"], mpc["energy_kwh"]
-            ),
+            "energy_reduction_pct": _saving(strong_reference["energy_kwh"], mpc["energy_kwh"]),
             "throughput_change_pct": round(
                 (mpc["processed_teu"] - strong_reference["processed_teu"])
                 / max(abs(strong_reference["processed_teu"]), 1e-9)
@@ -337,32 +318,21 @@ def evaluate_split(
                 * 100.0,
                 3,
             ),
-            "peak_load_reduction_pct": _saving(
-                strong_reference["peak_kw"], mpc["peak_kw"]
-            ),
+            "peak_load_reduction_pct": _saving(strong_reference["peak_kw"], mpc["peak_kw"]),
             "mean_daily_delay_minutes": round(mpc["delay_minutes"], 6),
-            "reference_mean_daily_delay_minutes": round(
-                strong_reference["delay_minutes"], 6
-            ),
+            "reference_mean_daily_delay_minutes": round(strong_reference["delay_minutes"], 6),
             "mean_crane_activation_pct": round(
-                mpc["crane_activation_ratio_sum"]
-                / max(1.0, float(episode_hours))
-                * 100.0,
+                mpc["crane_activation_ratio_sum"] / max(1.0, float(episode_hours)) * 100.0,
                 3,
             ),
             "mean_yard_activation_pct": round(
-                mpc["yard_activation_ratio_sum"]
-                / max(1.0, float(episode_hours))
-                * 100.0,
+                mpc["yard_activation_ratio_sum"] / max(1.0, float(episode_hours)) * 100.0,
                 3,
             ),
             "equipment_activation_reduction_pct": round(
                 (
                     2.0
-                    - (
-                        mpc["crane_activation_ratio_sum"]
-                        + mpc["yard_activation_ratio_sum"]
-                    )
+                    - (mpc["crane_activation_ratio_sum"] + mpc["yard_activation_ratio_sum"])
                     / max(1.0, float(episode_hours))
                 )
                 / 2.0
@@ -371,9 +341,7 @@ def evaluate_split(
             ),
             "mean_ending_soc": round(mpc["ending_battery_soc"], 6),
             "mean_ending_queue_teu": round(mpc["ending_queue_teu"], 6),
-            "battery_throughput_kwh": round(
-                mpc["battery_throughput_kwh"], 6
-            ),
+            "battery_throughput_kwh": round(mpc["battery_throughput_kwh"], 6),
             "shore_power_utilization_pct": round(shore_rate, 3),
             "constraint_success_rate_pct": round(
                 (total_steps - violation_steps) / max(1, total_steps) * 100.0,
@@ -382,15 +350,10 @@ def evaluate_split(
             "violation_steps": violation_steps,
         },
         "transition_scenario_metrics": {
-            "carbon_reduction_pct": _saving(
-                transition_reference["carbon_kg"], mpc["carbon_kg"]
-            ),
-            "cost_saving_pct": _saving(
-                transition_reference["cost"], mpc["cost"]
-            ),
+            "carbon_reduction_pct": _saving(transition_reference["carbon_kg"], mpc["carbon_kg"]),
+            "cost_saving_pct": _saving(transition_reference["cost"], mpc["cost"]),
             "scope": (
-                "diagnostic shore-power-transition scenario only; "
-                "excluded from resume-safe metrics"
+                "diagnostic shore-power-transition scenario only; excluded from resume-safe metrics"
             ),
         },
         "metrics_vs_validation_calibrated_reference": calibrated_metrics,
@@ -409,14 +372,10 @@ def build_report(
     workers: int = 1,
 ) -> dict[str, Any]:
     package = PortDataset.load(dataset)
-    code_hashes = {
-        path.as_posix(): sha256_file(PROJECT_ROOT / path)
-        for path in BENCHMARK_FILES
-    }
+    observation_keys = observation_keys_for_environment(package.environment_id)
+    code_hashes = {path.as_posix(): sha256_file(PROJECT_ROOT / path) for path in BENCHMARK_FILES}
     print("benchmark: validation split", file=sys.stderr, flush=True)
-    validation = evaluate_split(
-        dataset, "validation", episode_hours, workers=workers
-    )
+    validation = evaluate_split(dataset, "validation", episode_hours, workers=workers)
     calibrated_static = select_validation_static_reference(
         dataset,
         episode_hours,
@@ -436,12 +395,10 @@ def build_report(
         )
     test = sensitivity["balanced"]
     carbon_values = [
-        item["metrics_vs_strong_reference"]["carbon_reduction_pct"]
-        for item in sensitivity.values()
+        item["metrics_vs_strong_reference"]["carbon_reduction_pct"] for item in sensitivity.values()
     ]
     cost_values = [
-        item["metrics_vs_strong_reference"]["cost_saving_pct"]
-        for item in sensitivity.values()
+        item["metrics_vs_strong_reference"]["cost_saving_pct"] for item in sensitivity.values()
     ]
     constraint_values = [
         item["metrics_vs_strong_reference"]["constraint_success_rate_pct"]
@@ -461,7 +418,7 @@ def build_report(
             "drift": package.drift_report(),
         },
         "experiment": {
-            "environment": "PortEnergyDispatchEnv-v1",
+            "environment": package.environment_id,
             "candidate": "four-step constrained MPC beam search with terminal SOC value",
             "primary_reference": {
                 "name": "fixed_full_shore_power_resources",
@@ -478,8 +435,8 @@ def build_report(
             },
             "validation_calibrated_reference": calibrated_static,
             "observation_contract": {
-                "count": len(OBSERVATION_KEYS),
-                "keys": list(OBSERVATION_KEYS),
+                "count": len(observation_keys),
+                "keys": list(observation_keys),
                 "normalization_fit_scope": "train_only",
             },
             "reward_weights": DEFAULT_REWARD_WEIGHTS,
@@ -503,35 +460,24 @@ def build_report(
                 round(min(cost_values), 3),
                 round(max(cost_values), 3),
             ],
-            "minimum_constraint_success_rate_pct": round(
-                min(constraint_values), 3
-            ),
+            "minimum_constraint_success_rate_pct": round(min(constraint_values), 3),
         },
         "resume_safe_metrics": {
-            "carbon_reduction_pct": test["metrics_vs_strong_reference"][
-                "carbon_reduction_pct"
-            ],
+            "carbon_reduction_pct": test["metrics_vs_strong_reference"]["carbon_reduction_pct"],
             "cost_saving_pct": test["metrics_vs_strong_reference"]["cost_saving_pct"],
-            "energy_reduction_pct": test["metrics_vs_strong_reference"][
-                "energy_reduction_pct"
-            ],
+            "energy_reduction_pct": test["metrics_vs_strong_reference"]["energy_reduction_pct"],
             "peak_load_reduction_pct": test["metrics_vs_strong_reference"][
                 "peak_load_reduction_pct"
             ],
-            "equipment_activation_reduction_pct": test[
-                "metrics_vs_strong_reference"
-            ]["equipment_activation_reduction_pct"],
-            "throughput_change_pct": test["metrics_vs_strong_reference"][
-                "throughput_change_pct"
+            "equipment_activation_reduction_pct": test["metrics_vs_strong_reference"][
+                "equipment_activation_reduction_pct"
             ],
+            "throughput_change_pct": test["metrics_vs_strong_reference"]["throughput_change_pct"],
             "throughput_retention_pct": round(
-                100.0
-                + test["metrics_vs_strong_reference"]["throughput_change_pct"],
+                100.0 + test["metrics_vs_strong_reference"]["throughput_change_pct"],
                 3,
             ),
-            "mean_ending_soc": test["metrics_vs_strong_reference"][
-                "mean_ending_soc"
-            ],
+            "mean_ending_soc": test["metrics_vs_strong_reference"]["mean_ending_soc"],
             "constraint_success_rate_pct": test["metrics_vs_strong_reference"][
                 "constraint_success_rate_pct"
             ],
@@ -549,9 +495,7 @@ def build_report(
                 "public-data offline scenario versus a strong fixed full-shore-power "
                 "resource comparator; not a field KPI"
             ),
-            "harder_comparator": test[
-                "metrics_vs_validation_calibrated_reference"
-            ],
+            "harder_comparator": test["metrics_vs_validation_calibrated_reference"],
         },
         "claim_eligibility": {
             "scope": "offline_scenario_only",
@@ -559,15 +503,10 @@ def build_report(
                 "dataset_quality_pass": package.quality_report()["status"] == "pass",
                 "test_is_temporally_held_out": True,
                 "throughput_retention_at_least_99_percent": (
-                    100.0
-                    + test["metrics_vs_strong_reference"]["throughput_change_pct"]
-                    >= 99.0
+                    100.0 + test["metrics_vs_strong_reference"]["throughput_change_pct"] >= 99.0
                 ),
                 "constraint_success_100_percent": (
-                    test["metrics_vs_strong_reference"][
-                        "constraint_success_rate_pct"
-                    ]
-                    == 100.0
+                    test["metrics_vs_strong_reference"]["constraint_success_rate_pct"] == 100.0
                 ),
                 "comparator_selected_without_test_data": (
                     calibrated_static["selection_split"] == "validation"
@@ -576,13 +515,8 @@ def build_report(
             "passed": all(
                 (
                     package.quality_report()["status"] == "pass",
-                    100.0
-                    + test["metrics_vs_strong_reference"]["throughput_change_pct"]
-                    >= 99.0,
-                    test["metrics_vs_strong_reference"][
-                        "constraint_success_rate_pct"
-                    ]
-                    == 100.0,
+                    100.0 + test["metrics_vs_strong_reference"]["throughput_change_pct"] >= 99.0,
+                    test["metrics_vs_strong_reference"]["constraint_success_rate_pct"] == 100.0,
                     calibrated_static["selection_split"] == "validation",
                 )
             ),
@@ -608,7 +542,11 @@ def build_report(
                 "FX, fuel price, equipment parameters, hourly profile, and safety limits "
                 "are declared scenario assumptions."
             ),
-            "No terminal meter, TOS, AIS, weather, battery telemetry, or field outcome is used.",
+            (
+                "Operational fields are limited to the sources declared in dataset "
+                "metadata; no terminal meter, TOS, equipment telemetry, or field "
+                "outcome is implied."
+            ),
             "The strong fixed-resource denominator is a declared comparator, not measured terminal practice.",
         ],
     }
@@ -624,11 +562,16 @@ def write_report(report: dict[str, Any], output_stem: Path) -> tuple[Path, Path]
     )
     metrics = report["held_out_test"]["metrics_vs_strong_reference"]
     transition = report["held_out_test"]["transition_scenario_metrics"]
-    calibrated = report["held_out_test"][
-        "metrics_vs_validation_calibrated_reference"
-    ]
+    calibrated = report["held_out_test"]["metrics_vs_validation_calibrated_reference"]
     sensitivity = report["sensitivity"]
     resume = report["resume_safe_metrics"]
+
+    def period_span(periods: list[str]) -> str:
+        unique = list(dict.fromkeys(periods))
+        return unique[0] if len(unique) == 1 else f"{unique[0]} through {unique[-1]}"
+
+    validation_periods = period_span(report["validation"]["periods"])
+    test_periods = period_span(report["held_out_test"]["periods"])
     markdown = f"""# CarbonOps offline benchmark
 
 Evidence label: `{report["evidence_label"]}`
@@ -638,7 +581,7 @@ regulatory assurance, or evidence of RL convergence.
 
 ## Held-out result
 
-- Split: `{", ".join(report["held_out_test"]["periods"])}`
+- Split: `{test_periods}`
 - Test coverage: `{resume["test_steps"]}` hourly simulation steps
 - Primary comparator: full shore power with fixed crane/yard resources
 - MPC energy reduction vs strong comparator: `{metrics["energy_reduction_pct"]:.3f}%`
@@ -653,8 +596,9 @@ regulatory assurance, or evidence of RL convergence.
 
 ## Harder validation-calibrated comparator
 
-The static crane/yard ratios were selected from 9 candidates on the 2024
-validation split only, then frozen before the 2025 test. Against that comparator,
+The static crane/yard ratios were selected from 9 candidates on the
+`{validation_periods}` validation split only, then frozen before the
+`{test_periods}` test. Against that comparator,
 MPC reduces energy by `{calibrated["energy_reduction_pct"]:.3f}%`, carbon by
 `{calibrated["carbon_reduction_pct"]:.3f}%`, and cost by
 `{calibrated["cost_saving_pct"]:.3f}%`; throughput changes by
@@ -745,16 +689,11 @@ def verify_report(path: Path) -> dict[str, Any]:
             == current["experiment"]["validation_calibrated_reference"]
         ),
         "harder_comparator_metrics": (
-            recorded["held_out_test"][
-                "metrics_vs_validation_calibrated_reference"
-            ]
-            == current["held_out_test"][
-                "metrics_vs_validation_calibrated_reference"
-            ]
+            recorded["held_out_test"]["metrics_vs_validation_calibrated_reference"]
+            == current["held_out_test"]["metrics_vs_validation_calibrated_reference"]
         ),
         "claim_eligibility": (
-            recorded.get("claim_eligibility")
-            == current.get("claim_eligibility")
+            recorded.get("claim_eligibility") == current.get("claim_eligibility")
             and recorded.get("claim_eligibility", {}).get("passed") is True
         ),
     }

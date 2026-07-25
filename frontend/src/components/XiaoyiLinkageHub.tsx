@@ -179,7 +179,7 @@ const trainingObjectives = [
     algorithm: 'sac',
     totalSteps: 220000,
     horizonMin: 720,
-    rewardWeights: { carbon: 0.42, shore_power: 0.24, cost: 0.14, delay: 0.0, safety: 0.20, peak: 0.0 },
+    rewardWeights: { carbon: 0.42, shore_power: 0.24, cost: 0.14, delay: 0.0, safety: 0.20, peak: 0.0, storage: 0.08 },
     reason: '优先压低碳排并保留安全护栏。',
   },
   {
@@ -189,7 +189,7 @@ const trainingObjectives = [
     algorithm: 'td3',
     totalSteps: 180000,
     horizonMin: 540,
-    rewardWeights: { carbon: 0.30, shore_power: 0.0, cost: 0.32, delay: 0.18, safety: 0.20, peak: 0.0 },
+    rewardWeights: { carbon: 0.30, shore_power: 0.0, cost: 0.32, delay: 0.18, safety: 0.20, peak: 0.0, storage: 0.08 },
     reason: '用双评论家和延迟策略更新学习连续资源配比。',
   },
   {
@@ -199,7 +199,7 @@ const trainingObjectives = [
     algorithm: 'sac',
     totalSteps: 200000,
     horizonMin: 720,
-    rewardWeights: { carbon: 0.24, shore_power: 0.44, cost: 0.0, delay: 0.12, safety: 0.20, peak: 0.0 },
+    rewardWeights: { carbon: 0.24, shore_power: 0.44, cost: 0.0, delay: 0.12, safety: 0.20, peak: 0.0, storage: 0.08 },
     reason: '优先把靠泊窗口和岸电窗口匹配起来。',
   },
   {
@@ -209,7 +209,7 @@ const trainingObjectives = [
     algorithm: 'ppo',
     totalSteps: 160000,
     horizonMin: 360,
-    rewardWeights: { carbon: 0.18, shore_power: 0.0, cost: 0.20, delay: 0.0, safety: 0.22, peak: 0.40 },
+    rewardWeights: { carbon: 0.18, shore_power: 0.0, cost: 0.20, delay: 0.0, safety: 0.22, peak: 0.40, storage: 0.08 },
     reason: '削减岸电和设备作业叠加峰值。',
   },
   {
@@ -219,7 +219,7 @@ const trainingObjectives = [
     algorithm: 'dqn',
     totalSteps: 90000,
     horizonMin: 240,
-    rewardWeights: { carbon: 0.22, shore_power: 0.0, cost: 0.18, delay: 0.18, safety: 0.42, peak: 0.0 },
+    rewardWeights: { carbon: 0.22, shore_power: 0.0, cost: 0.18, delay: 0.18, safety: 0.42, peak: 0.0, storage: 0.08 },
     reason: '在 81 个可审计岸电、装卸资源与储能组合中学习离散调度动作。',
   },
 ] satisfies TrainingObjective[];
@@ -263,6 +263,7 @@ const rlAlgorithms: RlAlgorithmOption[] = [
 ];
 
 const trainingDataFiles: TrainingDataFile[] = [
+  { id: 'port_la_2020_2024_vessel_activity_hourly', label: '洛杉矶港官方逐日船舶活动增强集', path: 'port_la_2020_2024_vessel_activity_hourly', description: '43,848小时能碳序列 + 1,238条港方逐日锚泊、靠泊、离港和在港时间记录；2020–2022训练、2023验证、2024测试，非报告日明确标记为插值。' },
   { id: 'port_la_2020_2025_hourly', label: '洛杉矶港 × EIA 2020–2025 小时基准', path: 'port_la_2020_2025_hourly', description: '洛杉矶港72个月度TEU锚点 + EIA LADWP 52,608小时电力/碳信号；2020–2023训练、2024验证、2025测试，源数据覆盖率98.32%。' },
 ];
 
@@ -273,6 +274,7 @@ const rewardWeightLabels: Record<string, string> = {
   delay: '延误',
   safety: '安全',
   peak: '峰值',
+  storage: '储能终端 SOC',
 };
 
 const trainingParamFields: Array<{ key: NumericTrainingParamKey; label: string; min: number; max?: number; step: string }> = [
@@ -293,7 +295,7 @@ function createTrainingParams(profile: TrainingObjective): TrainingParams {
   return {
     algorithm: profile.algorithm,
     data_file: trainingDataFiles[0].path,
-    scenario: 'port_la_2025_public_benchmark',
+    scenario: 'port_la_vessel_activity_benchmark',
     asset_group: 'berth_shore_power_yard_truck',
     horizon_min: profile.horizonMin,
     step_min: 60,
@@ -1654,7 +1656,7 @@ export function XiaoyiLinkageHub({
         </span>
         <img
           className="xiaoyi-orb-character"
-          src="/assets/xiaoyi-ai-copilot.jpg"
+          src="/assets/xiaoyi-maritime-officer.png"
           alt=""
           draggable={false}
         />
@@ -1735,6 +1737,10 @@ export function XiaoyiLinkageHub({
                 <h3><Activity size={15} /> RL 训练 / 策略 <small>TRAINING / POLICY</small></h3>
                 <span className={`module-chip training-state-${trainingState}`}>训练区 / TRAINING · {trainingStateLabel}</span>
               </div>
+              <div className="training-config-label">
+                <span>下次任务配置</span>
+                <small>NEXT RUN CONFIG</small>
+              </div>
               <div className="training-summary-panel">
                 <span>
                   <small>优化目标</small>
@@ -1756,6 +1762,26 @@ export function XiaoyiLinkageHub({
                   <b>{displayNumber(trainingParams.total_steps)} steps</b>
                   <em>{trainingParams.horizon_min}min · {trainingParams.guardrail_mode}</em>
                 </span>
+              </div>
+              <div className="xiaoyi-algorithm-advisor" aria-label="小懿五算法训练顾问">
+                <header>
+                  <span><Bot size={13} />小懿训练顾问</span>
+                  <b>五算法同一环境契约</b>
+                </header>
+                <div>
+                  {rlAlgorithms.map((algorithm) => (
+                    <button
+                      className={trainingParams.algorithm === algorithm.id ? 'active' : ''}
+                      type="button"
+                      key={algorithm.id}
+                      onClick={() => applyAlgorithm(algorithm.id)}
+                    >
+                      <b>{algorithm.label}</b>
+                      <small>{algorithm.tag}</small>
+                    </button>
+                  ))}
+                </div>
+                <p>推荐使用逐日船舶活动增强集训练；旧 52,608 小时基准完整保留，用于能碳长周期证据对照。</p>
               </div>
               <div className="training-progress-label">
                 <span>训练进度</span>
@@ -2161,7 +2187,7 @@ export function XiaoyiLinkageHub({
                   <label>
                     <small>安全护栏</small>
                       <input value="strict · environment constraints" readOnly />
-                      <em>PortEnergyDispatchEnv-v1 固定 60 分钟 step。</em>
+                      <em>数据包声明的 v1/v2/v3 环境契约，固定 60 分钟 step。</em>
                   </label>
                 </div>
 

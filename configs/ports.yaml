@@ -1,8 +1,164 @@
+schema_version: "2.0"
+deployment_contract:
+  environment_id: PortEnergyDispatchEnv-v3
+  observations:
+    energy_and_market:
+      - grid_carbon_kg_per_kwh
+      - electricity_price_per_kwh
+      - fuel_price_per_liter
+      - renewable_power_available_kw
+      - grid_available_ratio
+    vessel_and_berth:
+      - loaded_import_teu
+      - loaded_export_teu
+      - total_teu
+      - vessels_at_anchor
+      - vessels_at_berth
+      - vessels_departed
+      - average_days_at_berth
+      - average_days_in_port
+      - berth_available_ratio
+    weather_and_navigation:
+      - wind_speed_m_s
+      - wave_height_m
+      - visibility_km
+      - precipitation_mm
+    equipment_and_shore_power:
+      - crane_available_ratio
+      - yard_available_ratio
+      - shore_power_compatible_ratio
+  actions:
+    continuous:
+      - shore_power_ratio
+      - crane_ratio
+      - yard_ratio
+      - battery_power_ratio
+    dqn_discretization: "3×3×3×3 = 81 auditable combinations"
+  objective_terms:
+    - carbon
+    - shore_power
+    - cost
+    - delay
+    - safety
+    - peak
+    - storage
+    - throughput
+  hard_constraints:
+    - grid_import_capacity
+    - crane_and_yard_availability
+    - berth_availability
+    - shore_power_compatibility
+    - battery_soc_and_terminal_soc
+    - delay_limit
+  required_adapters:
+    - terminal_operating_system
+    - energy_management_system
+    - berth_and_vessel_feed
+    - equipment_availability_feed
+    - weather_and_navigation_feed
+    - shore_power_compatibility_registry
+    - identity_and_audit
+
 ports:
   - id: port_la_public_benchmark
-    name: Port of Los Angeles and EIA public hourly dispatch benchmark
+    name: Port of Los Angeles 2020-2025 energy-carbon benchmark
+    mode: offline_public_benchmark
     timezone: America/Los_Angeles
+    currency: CNY
     dataset_id: port_la_2020_2025_hourly
-    live_tos_connected: false
-    live_ems_connected: false
-    note: Berths and equipment in the environment are abstract control resources, not terminal telemetry.
+    environment_id: PortEnergyDispatchEnv-v1
+    production_dispatch_authorized: false
+    adapters: {}
+    regulatory_profile:
+      - IMO 2023 GHG Strategy context
+      - Local terminal rules require operator calibration
+    regulatory_sources:
+      - https://www.imo.org/en/mediacentre/hottopics/pages/cutting-ghg-emissions.aspx
+    note: Longitudinal energy-carbon evidence with monthly official throughput anchors.
+
+  - id: port_la_vessel_activity_benchmark
+    name: Port of Los Angeles 2020-2024 vessel-activity enhanced benchmark
+    mode: offline_public_benchmark
+    timezone: America/Los_Angeles
+    currency: CNY
+    dataset_id: port_la_2020_2024_vessel_activity_hourly
+    environment_id: PortEnergyDispatchEnv-v2
+    production_dispatch_authorized: false
+    adapters: {}
+    regulatory_profile:
+      - IMO 2023 GHG Strategy context
+      - Local terminal rules require operator calibration
+    regulatory_sources:
+      - https://www.imo.org/en/mediacentre/hottopics/pages/cutting-ghg-emissions.aspx
+    note: Adds official daily anchor, berth, departure and dwell observations.
+
+  - id: port_la_live_template
+    name: Port of Los Angeles production connector template
+    mode: live_port_template
+    timezone: America/Los_Angeles
+    currency: USD
+    dataset_id:
+    environment_id: PortEnergyDispatchEnv-v3
+    production_dispatch_authorized: false
+    adapters:
+      terminal_operating_system: false
+      energy_management_system: false
+      berth_and_vessel_feed: false
+      equipment_availability_feed: false
+      weather_and_navigation_feed: false
+      shore_power_compatibility_registry: false
+      identity_and_audit: false
+    regulatory_profile:
+      - IMO 2023 GHG Strategy context
+      - U.S. and California port rules require local compliance mapping
+    regulatory_sources:
+      - https://www.imo.org/en/mediacentre/hottopics/pages/cutting-ghg-emissions.aspx
+    note: Connect terminal-approved feeds and complete dry-run acceptance before authorization.
+
+  - id: port_rotterdam_live_template
+    name: Port of Rotterdam production connector template
+    mode: live_port_template
+    timezone: Europe/Amsterdam
+    currency: EUR
+    dataset_id:
+    environment_id: PortEnergyDispatchEnv-v3
+    production_dispatch_authorized: false
+    adapters:
+      terminal_operating_system: false
+      energy_management_system: false
+      berth_and_vessel_feed: false
+      equipment_availability_feed: false
+      weather_and_navigation_feed: false
+      shore_power_compatibility_registry: false
+      identity_and_audit: false
+    regulatory_profile:
+      - IMO 2023 GHG Strategy
+      - EU AFIR shore-side electricity requirements
+      - EU ETS and FuelEU Maritime require local compliance mapping
+    regulatory_sources:
+      - https://www.imo.org/en/mediacentre/hottopics/pages/cutting-ghg-emissions.aspx
+      - https://eur-lex.europa.eu/eli/reg/2023/1804/2026-01-08/eng
+    note: Regulation labels are integration requirements, not automated legal assurance.
+
+  - id: port_singapore_live_template
+    name: Port of Singapore production connector template
+    mode: live_port_template
+    timezone: Asia/Singapore
+    currency: SGD
+    dataset_id:
+    environment_id: PortEnergyDispatchEnv-v3
+    production_dispatch_authorized: false
+    adapters:
+      terminal_operating_system: false
+      energy_management_system: false
+      berth_and_vessel_feed: false
+      equipment_availability_feed: false
+      weather_and_navigation_feed: false
+      shore_power_compatibility_registry: false
+      identity_and_audit: false
+    regulatory_profile:
+      - IMO 2023 GHG Strategy
+      - MPA and terminal requirements require local compliance mapping
+    regulatory_sources:
+      - https://www.imo.org/en/mediacentre/hottopics/pages/cutting-ghg-emissions.aspx
+    note: Tropical weather, transshipment workload and terminal constraints must come from approved feeds.

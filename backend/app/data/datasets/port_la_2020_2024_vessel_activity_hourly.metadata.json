@@ -1,0 +1,211 @@
+{
+  "id": "port_la_2020_2024_vessel_activity_hourly",
+  "name": "Port of Los Angeles 2020-2024 vessel-activity enhanced hourly energy-carbon dispatch benchmark",
+  "version": "2020-2024.1",
+  "license": "Port of Los Angeles statistics are provided free of charge with source credit requested. U.S. EIA and EPA data are U.S. federal public data. Repository MIT terms do not replace publisher attribution and disclaimers.",
+  "source_urls": [
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2020",
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2021",
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2022",
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2023",
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2024",
+    "https://www.portoflosangeles.org/Business/statistics/Container-Statistics/Historical-TEU-Statistics-2025",
+    "https://www.eia.gov/opendata/documentation.php",
+    "https://www.epa.gov/egrid/summary-data",
+    "https://api.eia.gov/v2/electricity/rto/fuel-type-data/",
+    "https://www.eia.gov/electricity/gridmonitor/about",
+    "https://www.ladwp.com/account/understanding-your-rates/commercial-electric-rates",
+    "https://kentico.portoflosangeles.org/getmedia/0d0d0edf-642c-4c36-a19e-17a3ab9f7fbc/Port-of-Los-Angeles-Container-Vessel-Activity-Summary-2020",
+    "https://kentico.portoflosangeles.org/getmedia/ac55745f-1d72-4b4f-b1c3-8984a3bbee48/Port-of-Los-Angeles-Container-Vessel-Activity-Summary-2021",
+    "https://kentico.portoflosangeles.org/getmedia/cc5f5153-37b6-4563-bfa3-2b8b55997758/Port-of-Los-Angeles-Container-Vessel-Activity-Summary-2022",
+    "https://kentico.portoflosangeles.org/getmedia/f936a4b4-7e56-46ad-9c04-b47623eff754/Port-of-Los-Angeles-Container-Vessel-Activity-Summary-2023",
+    "https://kentico.portoflosangeles.org/getmedia/d4f44790-0ed5-49c8-abfb-5c70386d7135/Port-of-Los-Angeles-Container-Vessel-Activity-Summary-2024"
+  ],
+  "attribution": "Port of Los Angeles Wharfinger Division vessel-activity summaries; Port of Los Angeles container statistics; U.S. EIA; U.S. EPA.",
+  "scope_note": "Offline public-data benchmark. Vessel counts and dwell are official daily port statistics; non-reporting calendar days are explicitly interpolated. Hourly TEU remains a disclosed allocation, and energy values are regional/model inputs rather than terminal telemetry.",
+  "temporal_mode": "sequential_rows",
+  "time_column": "timestamp_utc",
+  "environment_id": "PortEnergyDispatchEnv-v2",
+  "evaluation_episode_limit": 48,
+  "evaluation_sampling": "48 deterministic, uniformly spaced 24-hour episodes spanning each validation/test year; start indices are persisted in report evidence",
+  "port_profile": {
+    "port_id": "USLAX",
+    "port_name": "Port of Los Angeles",
+    "timezone": "America/Los_Angeles",
+    "currency": "CNY scenario converted from public USD anchors",
+    "deployment_mode": "offline_public_benchmark"
+  },
+  "operational_feature_contract": {
+    "required_columns": [
+      "vessels_at_anchor",
+      "vessels_at_berth",
+      "vessels_departed",
+      "average_days_at_berth",
+      "average_days_in_port",
+      "port_activity_observed"
+    ],
+    "actual_source_resolution": "daily business-day reports",
+    "hourly_fill_method": "linear calendar-day interpolation"
+  },
+  "units": {
+    "loaded_import_teu": "TEU/hour modeled allocation",
+    "loaded_export_teu": "TEU/hour modeled allocation",
+    "total_teu": "TEU/hour modeled allocation",
+    "grid_carbon_kg_per_kwh": "kgCO2e/kWh calibrated hourly proxy",
+    "electricity_price_per_kwh": "CNY/kWh calibrated hourly proxy",
+    "fuel_price_per_liter": "CNY/liter scenario",
+    "wholesale_lmp_usd_per_mwh": "USD/MWh official CAISO DAM LMP",
+    "eia930_demand_mw": "MW official EIA-930 adjusted/reported demand",
+    "eia930_consumed_electricity_mwh": "MWh official EIA-930 consumed electricity",
+    "eia930_consumed_carbon_lb_per_kwh": "lbCO2/kWh official EIA estimated consumed intensity",
+    "eia930_quality_code": "reported or declared calendar-hour median imputation",
+    "monthly_eia_price_cny_per_kwh": "CNY/kWh EIA monthly anchor",
+    "monthly_total_teu": "TEU/month official Port total",
+    "observation_hours": "hour",
+    "vessels_at_anchor": "vessels/day snapshot",
+    "vessels_at_berth": "vessels/day snapshot",
+    "vessels_departed": "vessels/day",
+    "average_days_at_berth": "days",
+    "average_days_in_port": "days",
+    "port_activity_observed": "0/1"
+  },
+  "assumptions": [
+    "Port monthly TEU is allocated across hours by a deterministic normalized profile.",
+    "LADWP published commercial time-of-use bands supply the intraday price periods; relative multipliers are disclosed assumptions.",
+    "Each hourly price shape is rescaled to the official EIA California commercial monthly mean.",
+    "EIA-930 LADWP published hourly consumed-electricity CO2 intensity supplies the carbon signal.",
+    "EPA eGRID CAMX remains an annual cross-check; the hourly signal is not rescaled to it.",
+    "Missing EIA-930 hours are explicitly quality-coded and filled with the observed month-hour median.",
+    "Storage and terminal physical parameters remain declared benchmark assumptions in metadata.",
+    "Official daily vessel-activity rows are repeated across their calendar day; non-reporting days use explicit linear interpolation.",
+    "Aggregate shore-power opportunity is capped by the declared terminal capacity and modeled as vessels-at-berth multiplied by the declared mean auxiliary demand per vessel."
+  ],
+  "intended_use": "Leakage-safe comparison of PPO, SAC, TD3, DQN and constrained MPC with actual daily port workload signals plus public hourly grid data.",
+  "environment_parameters": {
+    "crane_capacity_teu_per_hour": 1850.0,
+    "yard_capacity_teu_per_hour": 2050.0,
+    "shore_demand_kw": 6800.0,
+    "base_load_kw": 2200.0,
+    "load_kw_per_teu": 0.62,
+    "crane_load_kw": 2900.0,
+    "yard_load_kw": 1250.0,
+    "grid_capacity_kw": 17000.0,
+    "fuel_kwh_per_liter": 3.8,
+    "fuel_carbon_kg_per_liter": 2.68,
+    "delay_cost_cny_per_minute": 18.0,
+    "delay_limit_minutes": 120.0,
+    "battery_capacity_kwh": 18000.0,
+    "battery_power_kw": 5000.0,
+    "battery_initial_soc": 0.5,
+    "battery_min_soc": 0.1,
+    "battery_max_soc": 0.9,
+    "battery_charge_efficiency": 0.95,
+    "battery_discharge_efficiency": 0.95,
+    "battery_degradation_cny_per_kwh": 0.18,
+    "terminal_soc_tolerance": 0.05,
+    "vessel_auxiliary_demand_kw": 650.0,
+    "shore_power_available_ratio": 1.0
+  },
+  "split_policy": {
+    "train": "2020-01-01 through 2022-12-31",
+    "validation": "2023-01-01 through 2023-12-31",
+    "test": "2024-01-01 through 2024-12-31"
+  },
+  "public_source_evidence": {
+    "base_dataset_package_sha256": "c26b38eaa39a428bee24ca0e8fbd829de895cd84233c9f10310e16e64dd925e6",
+    "vessel_activity_pdf_count": 5,
+    "vessel_activity_daily_rows": 1238,
+    "vessel_activity_reported_calendar_days": 1238,
+    "vessel_activity_total_calendar_days": 1828,
+    "vessel_activity_reported_day_coverage": 0.677243,
+    "vessel_activity_source_csv": "backend/app/data/source_snapshots/port_la_vessel_activity_2020_2024.csv",
+    "vessel_activity_source_csv_sha256": "51f566025ff30b352f7ad5fd95871f7925c7f5b288066bba99b4ff16510d9afd",
+    "pdf_sources": [
+      {
+        "year": 2020,
+        "url": "https://kentico.portoflosangeles.org/getmedia/0d0d0edf-642c-4c36-a19e-17a3ab9f7fbc/Port-of-Los-Angeles-Container-Vessel-Activity-Summary-2020",
+        "pdf_sha256": "6683841fdee3d67662f7a28f16ee2e4b28bddd6adc6a3e54578953502d7d8f4b",
+        "pdf_bytes": 224189,
+        "derived_daily_rows": 249,
+        "first_date": "2020-01-02",
+        "last_date": "2020-12-31",
+        "declared_source_corrections": [
+          {
+            "year": "2020",
+            "source_value": "6/17/20202",
+            "corrected_value": "6/17/2020",
+            "reason": "PDF year typo; the row is ordered between 6/16/2020 and 6/18/2020."
+          }
+        ]
+      },
+      {
+        "year": 2021,
+        "url": "https://kentico.portoflosangeles.org/getmedia/ac55745f-1d72-4b4f-b1c3-8984a3bbee48/Port-of-Los-Angeles-Container-Vessel-Activity-Summary-2021",
+        "pdf_sha256": "da042c3598956f77c16e843327d47244a3322c811ff3f0965bfbedc84b58edac",
+        "pdf_bytes": 217416,
+        "derived_daily_rows": 245,
+        "first_date": "2021-01-04",
+        "last_date": "2021-12-30",
+        "declared_source_corrections": []
+      },
+      {
+        "year": 2022,
+        "url": "https://kentico.portoflosangeles.org/getmedia/cc5f5153-37b6-4563-bfa3-2b8b55997758/Port-of-Los-Angeles-Container-Vessel-Activity-Summary-2022",
+        "pdf_sha256": "e538f9e21091e6d25183d42574fa4e7444926a60f0176667f2270d17eec7b366",
+        "pdf_bytes": 140817,
+        "derived_daily_rows": 248,
+        "first_date": "2022-01-03",
+        "last_date": "2022-12-30",
+        "declared_source_corrections": [
+          {
+            "year": "2022",
+            "source_value": "6.8.33",
+            "corrected_value": "6.833",
+            "reason": "Malformed decimal in the 9/6/2022 average-days-at-berth cell."
+          },
+          {
+            "year": "2022",
+            "source_value": "12/12/2012",
+            "corrected_value": "12/12/2022",
+            "reason": "PDF year typo; the row is ordered between 12/9/2022 and 12/13/2022."
+          }
+        ]
+      },
+      {
+        "year": 2023,
+        "url": "https://kentico.portoflosangeles.org/getmedia/f936a4b4-7e56-46ad-9c04-b47623eff754/Port-of-Los-Angeles-Container-Vessel-Activity-Summary-2023",
+        "pdf_sha256": "a5c5b3287b51bb50c984b838e745e86987bf591f6ca3999b9e420a5a46c35cec",
+        "pdf_bytes": 519530,
+        "derived_daily_rows": 247,
+        "first_date": "2023-01-03",
+        "last_date": "2023-12-29",
+        "declared_source_corrections": [
+          {
+            "year": "2023",
+            "source_value": "710/2023",
+            "corrected_value": "7/10/2023",
+            "reason": "PDF date separator omission; the row is ordered after 7/7/2023."
+          }
+        ]
+      },
+      {
+        "year": 2024,
+        "url": "https://kentico.portoflosangeles.org/getmedia/d4f44790-0ed5-49c8-abfb-5c70386d7135/Port-of-Los-Angeles-Container-Vessel-Activity-Summary-2024",
+        "pdf_sha256": "b1c42f6ef5b6ce3a625ac77f56d0a2ba8c4146501864ae198b44ffbe59bfea30",
+        "pdf_bytes": 320676,
+        "derived_daily_rows": 249,
+        "first_date": "2024-01-02",
+        "last_date": "2024-12-31",
+        "declared_source_corrections": []
+      }
+    ]
+  },
+  "quality": {
+    "rows": 43848,
+    "start": "2020-01-01T00:00:00Z",
+    "end": "2024-12-31T23:00:00Z",
+    "missing_cells": 0,
+    "duplicate_timestamps": 0,
+    "csv_sha256": "a1f8f0b0f5441b3755dbf91a2b0b7acb1ea226bb83a8427c64da49a3ecdfb6ec"
+  }
+}

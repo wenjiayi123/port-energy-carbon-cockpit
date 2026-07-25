@@ -7,7 +7,7 @@ regulatory assurance, or evidence of RL convergence.
 
 ## Held-out result
 
-- Split: `2025-01, 2025-01, 2025-01, 2025-01, 2025-02, 2025-02, 2025-02, 2025-02, 2025-03, 2025-03, 2025-03, 2025-03, 2025-04, 2025-04, 2025-04, 2025-04, 2025-05, 2025-05, 2025-05, 2025-05, 2025-06, 2025-06, 2025-06, 2025-06, 2025-07, 2025-07, 2025-07, 2025-07, 2025-08, 2025-08, 2025-08, 2025-08, 2025-09, 2025-09, 2025-09, 2025-09, 2025-10, 2025-10, 2025-10, 2025-10, 2025-11, 2025-11, 2025-11, 2025-11, 2025-12, 2025-12, 2025-12, 2025-12`
+- Split: `2025-01 through 2025-12`
 - Test coverage: `1152` hourly simulation steps
 - Primary comparator: full shore power with fixed crane/yard resources
 - MPC energy reduction vs strong comparator: `8.393%`
@@ -22,8 +22,9 @@ regulatory assurance, or evidence of RL convergence.
 
 ## Harder validation-calibrated comparator
 
-The static crane/yard ratios were selected from 9 candidates on the 2024
-validation split only, then frozen before the 2025 test. Against that comparator,
+The static crane/yard ratios were selected from 9 candidates on the
+`2024-01 through 2024-12` validation split only, then frozen before the
+`2025-01 through 2025-12` test. Against that comparator,
 MPC reduces energy by `2.518%`, carbon by
 `2.835%`, and cost by
 `2.081%`; throughput changes by
@@ -56,7 +57,7 @@ excluded from resume-safe metrics.
 ## Evidence
 
 - Dataset package SHA-256: `c26b38eaa39a428bee24ca0e8fbd829de895cd84233c9f10310e16e64dd925e6`
-- Environment SHA-256: `763afb5bbadcc6908d188a6f9bf46127171439124438196de66cb38b5d77d461`
+- Environment SHA-256: `cb4fe5affc011ce042ea8d61585aa1f93306670f592c6a06e14645dc224ee643`
 - Report status: `reproducible_offline_control_benchmark`
 - RL convergence/superiority: not claimed in this report
 

@@ -1,6 +1,6 @@
 {
   "report_version": "3.0",
-  "generated_at": "2026-07-24T11:22:40.297309Z",
+  "generated_at": "2026-07-25T15:21:35.523398Z",
   "status": "reproducible_offline_control_benchmark",
   "evidence_label": "OFFLINE_SCENARIO_BENCHMARK_NOT_FIELD_KPI",
   "dataset": {
@@ -120,11 +120,11 @@
       "storage": 0.08
     },
     "episode_hours": 24,
-    "parallel_workers": 4,
+    "parallel_workers": 2,
     "render_during_evaluation": false,
     "code_sha256": {
-      "backend/app/rl/environment.py": "763afb5bbadcc6908d188a6f9bf46127171439124438196de66cb38b5d77d461",
-      "backend/app/rl/benchmark.py": "dca083a664ac18be2ca912fad175579591dd38ad63c38650a35724ad1f5bd03a"
+      "backend/app/rl/environment.py": "cb4fe5affc011ce042ea8d61585aa1f93306670f592c6a06e14645dc224ee643",
+      "backend/app/rl/benchmark.py": "8e053d7b7c99366093a7bc34c78e3a73be87a8d97c3d09c137919050a6abf904"
     }
   },
   "validation": {
@@ -28769,7 +28769,7 @@
     "Port throughput and EIA California commercial electricity prices are official monthly public data; LADWP time-of-use periods shape the intraday scenario, but the resulting series is not a terminal invoice.",
     "Hourly consumed-electricity carbon intensity is taken from the EIA Hourly Electric Grid Monitor and is not a marginal-emissions signal.",
     "FX, fuel price, equipment parameters, hourly profile, and safety limits are declared scenario assumptions.",
-    "No terminal meter, TOS, AIS, weather, battery telemetry, or field outcome is used.",
+    "Operational fields are limited to the sources declared in dataset metadata; no terminal meter, TOS, equipment telemetry, or field outcome is implied.",
     "The strong fixed-resource denominator is a declared comparator, not measured terminal practice."
   ]
 }

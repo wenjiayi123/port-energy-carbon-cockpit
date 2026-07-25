@@ -26,6 +26,9 @@ tmp/
 *.pid
 *.zip
 *.tar.gz
+!reports/rl_tuning_ppo_10k_artifacts/*.zip
+!reports/rl_tuning_vessel_activity_10k_artifacts/*.zip
+!reports/rl_td3_vessel_activity_100k/*.zip
 frontend/public/assets/*.tmp
 
 # Private/submission working material is not part of the open-source tree

@@ -180,6 +180,7 @@ export function App() {
   const [panelNotice, setPanelNotice] = useState('等待操作。');
   const [apiHealth, setApiHealth] = useState<Record<string, any> | null>(null);
   const [rlStatus, setRlStatus] = useState<Record<string, any> | null>(null);
+  const [rlCapabilities, setRlCapabilities] = useState<Record<string, any> | null>(null);
   const [modelRegistry, setModelRegistry] = useState<Record<string, any> | null>(null);
   const [policyTest, setPolicyTest] = useState<Record<string, any> | null>(null);
   const [sailingStatus, setSailingStatus] = useState<Record<string, any> | null>(null);
@@ -250,6 +251,15 @@ export function App() {
   const carbonStepSaving = (activeTraditionalPoint?.carbon_kg ?? 0) - (activeMarlPoint?.carbon_kg ?? 0);
   const delayStepSaving = (activeTraditionalPoint?.delay_minutes ?? 0) - (activeMarlPoint?.delay_minutes ?? 0);
   const rewardWeights = (rlStatus?.config?.reward_weights ?? {}) as Record<string, number>;
+  const algorithmMatrix = Array.isArray(rlCapabilities?.algorithms)
+    ? rlCapabilities.algorithms as Array<Record<string, any>>
+    : [
+      { id: 'ppo', name: 'PPO', family: 'reinforcement_learning', action_space: 'continuous' },
+      { id: 'sac', name: 'SAC', family: 'reinforcement_learning', action_space: 'continuous' },
+      { id: 'td3', name: 'TD3', family: 'reinforcement_learning', action_space: 'continuous' },
+      { id: 'dqn', name: 'DQN', family: 'reinforcement_learning', action_space: '81 discrete' },
+      { id: 'mpc', name: 'MPC', family: 'control_theory', action_space: '27-action beam search' },
+    ];
   const shorePowerGain = (marl?.shore_power_usage_rate ?? 0) - (traditional?.shore_power_usage_rate ?? 0);
   const carbonReductionTon = ((traditional?.total_carbon_kg ?? 0) - (marl?.total_carbon_kg ?? 0)) / 1000;
   const shoreWindowCards = marlTrajectory.map((point, index) => {
@@ -911,8 +921,12 @@ export function App() {
       setPanelBusy(true);
     }
     try {
+      const capabilitiesPromise = fetchJson('/api/rl/capabilities')
+        .then((payload) => setRlCapabilities(payload))
+        .catch(() => undefined);
       const data = await fetchJson('/api/rl/train/status');
       setRlStatus(data);
+      await capabilitiesPromise;
       if (!silent) {
         setPanelNotice(`训练状态：${data.summary ?? data.status ?? '已刷新'}`);
       }
@@ -943,7 +957,8 @@ export function App() {
             objective_id: objectiveId,
             objective_label: objectiveId === 'carbon_min' ? '碳排最低目标' : '成本与碳排均衡',
             algorithm,
-            dataset_id: 'port_la_2020_2025_hourly',
+            scenario: 'port_la_vessel_activity_benchmark',
+            dataset_id: 'port_la_2020_2024_vessel_activity_hourly',
             total_steps: 100000,
             seed: 20260720,
           },
@@ -980,7 +995,10 @@ export function App() {
     try {
       const data = await fetchJson('/api/rl/simulate', {
         method: 'POST',
-        body: JSON.stringify({ strategy_id: 'auto:latest', source: 'topbar_marl_panel' }),
+        body: JSON.stringify({
+          strategy_id: rlStatus?.job_id ?? 'auto:latest',
+          source: 'topbar_marl_panel',
+        }),
       });
       setPolicyTest(data);
       setPanelNotice(`策略测试完成：减排 ${formatNumber(data.metrics?.carbon_reduction_pct, 1)}%，安全越界 ${data.metrics?.safety_violations ?? 0}。`);
@@ -1005,10 +1023,11 @@ export function App() {
             objective_id: 'shore_power_priority',
             objective_label: '岸电优先目标',
             algorithm: 'sac',
-            dataset_id: 'port_la_2020_2025_hourly',
+            scenario: 'port_la_vessel_activity_benchmark',
+            dataset_id: 'port_la_2020_2024_vessel_activity_hourly',
             total_steps: 100000,
             seed: 20260720,
-            reward_weights: { shore_power: 0.44, carbon: 0.24, delay: 0.12, safety: 0.20 },
+            reward_weights: { shore_power: 0.44, carbon: 0.24, delay: 0.12, safety: 0.20, storage: 0.08 },
           },
         }),
       });
@@ -1306,6 +1325,32 @@ export function App() {
                   <span>注册阶段 <b>{latestRegisteredPolicy?.stage ?? '未注册'}</b></span>
                   <span>生产资格 <b>{latestRegisteredPolicy?.production_eligible ? '允许' : '禁止'}</b></span>
                 </div>
+                <section className="algorithm-matrix-board" aria-label="五算法训练矩阵">
+                  <header>
+                    <div>
+                      <span>训练中心 · 五算法矩阵</span>
+                      <small>4 RL ALGORITHMS + 1 CONTROL BASELINE</small>
+                    </div>
+                    <b>{rlCapabilities?.runtime?.available ? `SB3 ${rlCapabilities.runtime.stable_baselines3 ?? 'ready'}` : '运行时核验中'}</b>
+                  </header>
+                  <div>
+                    {algorithmMatrix.map((algorithm) => (
+                      <article className={algorithm.family === 'control_theory' ? 'control' : ''} key={algorithm.id}>
+                        <span>{algorithm.family === 'control_theory' ? '控制基线' : '强化学习'}</span>
+                        <b>{algorithm.name}</b>
+                        <small>{algorithm.action_space}</small>
+                        <em>{algorithm.defaults?.total_steps ? `${Number(algorithm.defaults.total_steps).toLocaleString()} default steps` : 'rolling optimization'}</em>
+                      </article>
+                    ))}
+                  </div>
+                  <footer>
+                    <span>训练数据 <b>{rlStatus?.config?.dataset_id ?? 'port_la_2020_2024_vessel_activity_hourly'}</b></span>
+                    <span>观测 <b>{rlStatus?.config?.observation_count ?? 25} 维</b></span>
+                    <span>动作 <b>连续 4 / DQN 81</b></span>
+                    <span>训练渲染 <b>OFF</b></span>
+                    <span>测试回放 <b>HELD-OUT ONLY</b></span>
+                  </footer>
+                </section>
                 <div className="training-monitor-grid">
                   <div className="training-console">
                     <div className="training-console-head">

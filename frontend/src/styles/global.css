@@ -3180,6 +3180,112 @@ h1 {
   grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
 }
 
+.algorithm-matrix-board {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(23, 195, 178, 0.34);
+  border-radius: 9px;
+  background:
+    radial-gradient(circle at 86% 12%, rgba(23, 195, 178, 0.12), transparent 30%),
+    rgba(5, 13, 18, 0.82);
+}
+
+.algorithm-matrix-board > header,
+.algorithm-matrix-board > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.algorithm-matrix-board > header span,
+.algorithm-matrix-board > header small {
+  display: block;
+}
+
+.algorithm-matrix-board > header span {
+  color: #f8fbfb;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.algorithm-matrix-board > header small,
+.algorithm-matrix-board > header b {
+  color: #17c3b2;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.algorithm-matrix-board > div {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.algorithm-matrix-board article {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(23, 195, 178, 0.24);
+  border-radius: 8px;
+  background: rgba(9, 29, 35, 0.78);
+}
+
+.algorithm-matrix-board article.control {
+  border-color: rgba(247, 181, 56, 0.42);
+  background: rgba(55, 40, 12, 0.42);
+}
+
+.algorithm-matrix-board article span,
+.algorithm-matrix-board article small,
+.algorithm-matrix-board article em {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.algorithm-matrix-board article span {
+  color: #789ba7;
+  font-size: 8px;
+}
+
+.algorithm-matrix-board article b {
+  display: block;
+  margin: 4px 0;
+  color: #eafcff;
+  font-size: 16px;
+}
+
+.algorithm-matrix-board article small {
+  color: #38dbb1;
+  font-size: 9px;
+}
+
+.algorithm-matrix-board article em {
+  margin-top: 4px;
+  color: #9fb2bd;
+  font-size: 8px;
+  font-style: normal;
+}
+
+.algorithm-matrix-board > footer {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.algorithm-matrix-board > footer span {
+  padding: 4px 7px;
+  border: 1px solid rgba(108, 139, 154, 0.2);
+  border-radius: 6px;
+  color: #789ba7;
+  font-size: 9px;
+}
+
+.algorithm-matrix-board > footer b {
+  color: #dffbf7;
+}
+
 .training-console,
 .policy-test-console {
   display: grid;
@@ -5591,6 +5697,21 @@ input[type="range"] {
   padding: 0 8px;
 }
 
+.training-config-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #f7b538;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.training-config-label small {
+  color: #9fb2bd;
+  font-size: 9px;
+}
+
 .training-summary-panel {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5631,6 +5752,84 @@ input[type="range"] {
   color: #bddbd6;
   font-size: 10px;
   font-style: normal;
+}
+
+.xiaoyi-algorithm-advisor {
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid rgba(247, 181, 56, 0.34);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(67, 44, 8, 0.32), rgba(8, 17, 22, 0.66));
+}
+
+.xiaoyi-algorithm-advisor header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.xiaoyi-algorithm-advisor header span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #f7d58d;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.xiaoyi-algorithm-advisor header b {
+  color: #9fb2bd;
+  font-size: 9px;
+}
+
+.xiaoyi-algorithm-advisor > div {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.xiaoyi-algorithm-advisor button {
+  min-width: 0;
+  min-height: 42px;
+  padding: 5px;
+  border: 1px solid rgba(108, 139, 154, 0.24);
+  border-radius: 7px;
+  background: rgba(7, 24, 31, 0.78);
+  color: #dffbf7;
+  cursor: pointer;
+}
+
+.xiaoyi-algorithm-advisor button.active {
+  border-color: rgba(247, 181, 56, 0.8);
+  background: rgba(247, 181, 56, 0.16);
+  box-shadow: 0 0 14px rgba(247, 181, 56, 0.12);
+}
+
+.xiaoyi-algorithm-advisor button b,
+.xiaoyi-algorithm-advisor button small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xiaoyi-algorithm-advisor button b {
+  font-size: 10px;
+}
+
+.xiaoyi-algorithm-advisor button small {
+  margin-top: 3px;
+  color: #7fa5b0;
+  font-size: 8px;
+}
+
+.xiaoyi-algorithm-advisor p {
+  margin: 0;
+  color: #bddbd6;
+  font-size: 9px;
+  line-height: 1.45;
 }
 
 .training-config-panel,
@@ -8242,6 +8441,10 @@ input[type="range"] {
   }
 
   .action-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .algorithm-matrix-board > div {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
