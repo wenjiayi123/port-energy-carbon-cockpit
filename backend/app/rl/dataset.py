@@ -301,6 +301,8 @@ class PortDataset:
         return list(range(len(frame)))
 
     def describe(self) -> dict[str, Any]:
+        from app.rl.landing_readiness import assess_dataset_landing_readiness
+
         return {
             "id": self.dataset_id,
             "path": portable_dataset_reference(self.csv_path),
@@ -317,6 +319,7 @@ class PortDataset:
             "operational_feature_coverage": self.operational_feature_coverage(),
             "quality": self.quality_report(),
             "drift": self.drift_report(),
+            "landing_readiness": assess_dataset_landing_readiness(self),
             "valid": True,
         }
 

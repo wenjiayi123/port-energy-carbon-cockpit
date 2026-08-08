@@ -4,6 +4,38 @@ All notable project changes are documented here.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-08
+
+### Added
+
+- Per-adapter signed port snapshot envelopes with SHA-256 payload integrity,
+  freshness, units, schema, monotonic sequence and replay protection.
+- Persisted read-only integration readiness derived from validated evidence,
+  with raw operational values excluded from local state.
+- Dataset landing-readiness grading that separates expanded CSV rows from
+  independent official source anchors and terminal calibration evidence.
+- Causal persistence forecasts for all new training/evaluation jobs, preventing
+  future held-out rows from entering observations or planning.
+- Six-step risk-aware MPC deployment safety layer, paired bootstrap confidence
+  intervals, CVaR tail metrics and deterministic stress tests.
+- Tamper-evident mutation audit hash chaining, request body limits and a
+  per-process rate-limit backstop.
+- Patched frontend transitive dependency overrides, an audited cryptography
+  extra and an optional neural-RL runtime separated from the integration plane.
+
+### Changed
+
+- `auto:latest` now fails closed unless a substantial policy has persisted
+  `verified` admission evidence; blocked policies cannot silently reach the dashboard.
+- Policy admission now checks causal forecasting, at least 30 held-out windows,
+  confidence-bound non-regression and carbon/cost tail-risk non-regression.
+- The cockpit exposes landing-data grade and live adapter readiness separately
+  from the existing offline data-quality score.
+- The original 0.2.0 reports, learner artifacts and resume-safe metrics remain
+  frozen and independently verifiable.
+
+## [0.2.0] - 2026-07-25
+
 ### Added
 
 - Port LA 2020–2024 vessel-activity enhanced package with 1,238 official daily rows,

@@ -182,6 +182,8 @@ export function App() {
   const [rlStatus, setRlStatus] = useState<Record<string, any> | null>(null);
   const [rlCapabilities, setRlCapabilities] = useState<Record<string, any> | null>(null);
   const [modelRegistry, setModelRegistry] = useState<Record<string, any> | null>(null);
+  const [integrationStatus, setIntegrationStatus] = useState<Record<string, any> | null>(null);
+  const [auditStatus, setAuditStatus] = useState<Record<string, any> | null>(null);
   const [policyTest, setPolicyTest] = useState<Record<string, any> | null>(null);
   const [sailingStatus, setSailingStatus] = useState<Record<string, any> | null>(null);
   const [replayStep, setReplayStep] = useState(0);
@@ -546,7 +548,7 @@ export function App() {
     return {
       id: `replay-node-${index}-${Date.now()}`,
       autoCloseMs: 3800,
-      eyebrow: `CAUSAL TRACE · STEP ${marlPoint?.step ?? index + 1}`,
+      eyebrow: `HELD-OUT TRACE · STEP ${marlPoint?.step ?? index + 1}`,
       title: `${marlPoint?.time ?? '--'} · ${eventLabel(marlPoint?.event)}`,
       subtitle: marlPoint?.decision_reason ?? '正在读取当前调度节点的决策原因。',
       algorithm: `${currentRlAlgorithm} Policy · Gymnasium step(action)`,
@@ -608,18 +610,22 @@ export function App() {
     let active = true;
 
     async function refreshEngineeringSignals() {
-      const [health, linkage, rl, sailing, registry] = await Promise.all([
+      const [health, linkage, rl, sailing, registry, integration, audit] = await Promise.all([
         fetchJson('/api/health').catch(() => null),
         fetchJson('/api/linkage/health').catch(() => null),
         fetchJson('/api/rl/train/status').catch(() => null),
         fetchJson('/api/sailing/status').catch(() => null),
         fetchJson('/api/rl/registry').catch(() => null),
+        fetchJson('/api/integration/status').catch(() => null),
+        fetchJson('/api/audit/integrity').catch(() => null),
       ]);
       if (!active) return;
       setApiHealth({ health, linkage, rl, sailing, registry });
       if (rl) setRlStatus(rl);
       if (sailing) setSailingStatus(sailing);
       if (registry) setModelRegistry(registry);
+      if (integration) setIntegrationStatus(integration);
+      if (audit) setAuditStatus(audit);
     }
 
     void refreshEngineeringSignals();
@@ -790,17 +796,21 @@ export function App() {
           break;
         }
         case 'health': {
-          const [health, linkage, rl, sailing, registry] = await Promise.all([
+          const [health, linkage, rl, sailing, registry, integration, audit] = await Promise.all([
             fetchJson('/api/health'),
             fetchJson('/api/linkage/health'),
             fetchJson('/api/rl/train/status'),
             fetchJson('/api/sailing/status'),
             fetchJson('/api/rl/registry'),
+            fetchJson('/api/integration/status'),
+            fetchJson('/api/audit/integrity'),
           ]);
           setApiHealth({ health, linkage, rl, sailing, registry });
           setRlStatus(rl);
           setSailingStatus(sailing);
           setModelRegistry(registry);
+          setIntegrationStatus(integration);
+          setAuditStatus(audit);
           notice = `告警与健康状态已刷新：${linkage.summary?.xiaoyi ?? '小懿待检查'} / ${linkage.summary?.rl ?? 'RL待检查'}。`;
           setPanelNotice(notice);
           break;
@@ -1109,17 +1119,21 @@ export function App() {
   async function runApiCheck() {
     setPanelBusy(true);
     try {
-      const [health, linkage, rl, sailing, registry] = await Promise.all([
+      const [health, linkage, rl, sailing, registry, integration, audit] = await Promise.all([
         fetchJson('/api/health'),
         fetchJson('/api/linkage/health'),
         fetchJson('/api/rl/train/status'),
         fetchJson('/api/sailing/status'),
         fetchJson('/api/rl/registry'),
+        fetchJson('/api/integration/status'),
+        fetchJson('/api/audit/integrity'),
       ]);
       setApiHealth({ health, linkage, rl, sailing, registry });
       setRlStatus(rl);
       setSailingStatus(sailing);
       setModelRegistry(registry);
+      setIntegrationStatus(integration);
+      setAuditStatus(audit);
       setPanelNotice(`API健康检查完成：${linkage.summary?.xiaoyi ?? '小懿待检查'} / ${linkage.summary?.rl ?? 'RL待检查'} / ${linkage.summary?.sailing ?? '航行模拟器待检查'}`);
     } catch (error) {
       setPanelNotice(`API健康检查失败：${String(error)}`);
@@ -1155,6 +1169,8 @@ export function App() {
       <PortCommandCenter
         snapshot={snapshot}
         rlStatus={rlStatus}
+        integrationStatus={integrationStatus}
+        auditIntegrityOk={auditStatus?.ok ?? null}
         greenPreference={greenPreference}
         carbonPrice={carbonPrice}
         replayPlaying={replayPlaying}
@@ -1463,6 +1479,7 @@ export function App() {
                     <span>减排价值 <b>{formatNumber((carbonMarket?.abatement_value_cny ?? 0) / 10000, 2)} 万</b></span>
                     <span>碳成本节省 <b>{formatNumber((carbonMarket?.carbon_cost_saving_cny ?? 0) / 10000, 2)} 万</b></span>
                     <span>数据质量 <b>{snapshot?.data_quality.score ?? 0}/100 · {snapshot?.data_quality.grade ?? '--'}</b></span>
+                    <span>落地数据等级 <b>{snapshot?.data_quality.landing_readiness?.landing_grade ?? '--'} · {snapshot?.data_quality.landing_readiness?.production_training_ready ? '可训练' : '未就绪'}</b></span>
                     <span>分布偏移 <b>{snapshot?.data_drift.status ?? '待检查'}</b></span>
                     <span>核算方法 <b>{snapshot?.carbon_model.scope2_method ?? '--'}</b></span>
                     <span>生产执行 <b>{snapshot?.governance.production_dispatch_enabled ? '已启用' : '已禁用'}</b></span>
@@ -1648,6 +1665,9 @@ export function App() {
                       <span>训练状态 <b>{rlStatus?.summary ?? rlStatus?.status ?? '待读取'}</b></span>
                       <span>模型注册表 <b>{modelRegistry?.count ?? 0} 个制品</b></span>
                       <span>最新阶段 <b>{latestRegisteredPolicy?.stage ?? '未注册'}</b></span>
+                      <span>只读实港快照 <b>{integrationStatus?.read_only_shadow_ready ? '全部就绪' : `${integrationStatus?.ready_adapter_count ?? 0}/${integrationStatus?.required_adapter_count ?? 6}`}</b></span>
+                      <span>快照完整性 <b>{integrationStatus?.missing_adapters?.length ? '失败关闭' : '签名有效'}</b></span>
+                      <span>审计链 <b>{auditStatus?.ok ? '完整' : '失败关闭'}</b></span>
                       <span>生产调度 <b>{modelRegistry?.production_dispatch_enabled ? '已启用' : '已禁用'}</b></span>
                     </div>
                   </div>

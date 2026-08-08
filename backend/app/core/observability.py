@@ -45,7 +45,7 @@ class RequestMetrics:
         lines = [
             "# HELP energy_carbon_api_info API build information.",
             "# TYPE energy_carbon_api_info gauge",
-            'energy_carbon_api_info{version="0.2.0"} 1',
+            'energy_carbon_api_info{version="0.3.0"} 1',
             "# HELP energy_carbon_api_uptime_seconds Process uptime.",
             "# TYPE energy_carbon_api_uptime_seconds gauge",
             f"energy_carbon_api_uptime_seconds {time.time() - self.started_at:.6f}",

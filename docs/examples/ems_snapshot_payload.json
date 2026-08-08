@@ -1,0 +1,7 @@
+{
+  "grid_carbon_kg_per_kwh": 0.31,
+  "electricity_price_per_kwh": 0.62,
+  "fuel_price_per_liter": 8.1,
+  "grid_available_ratio": 0.98,
+  "renewable_power_available_kw": 1250.0
+}

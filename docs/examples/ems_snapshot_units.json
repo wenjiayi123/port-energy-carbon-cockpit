@@ -1,0 +1,7 @@
+{
+  "grid_carbon_kg_per_kwh": "kgCO2e/kWh",
+  "electricity_price_per_kwh": "currency/kWh",
+  "fuel_price_per_liter": "currency/liter",
+  "grid_available_ratio": "ratio",
+  "renewable_power_available_kw": "kW"
+}

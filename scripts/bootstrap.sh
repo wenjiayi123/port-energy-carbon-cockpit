@@ -16,8 +16,8 @@ fi
 
 "$PYTHON_BIN" -m venv backend/.venv
 source backend/.venv/bin/activate
-python -m pip install --upgrade "pip>=26.1.2"
-python -m pip install -e "backend[dev]"
+python -m pip install --upgrade "pip==26.2.1"
+python -m pip install -e "backend[dev,rl]"
 
 cd frontend
 bash ../scripts/run_frontend_command.sh install --frozen-lockfile

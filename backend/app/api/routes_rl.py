@@ -5,6 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Body, HTTPException
 
 from app.rl.dataset import DEFAULT_DATASET_ID, PortDataset, registered_dataset_id
+from app.rl.landing_readiness import assess_dataset_landing_readiness
 from app.rl.policy_selection import resolve_requested_strategy
 from app.rl.scenarios import resolve_training_scenario
 from app.rl.training import training_service, utc_now
@@ -53,6 +54,15 @@ def validate_dataset(payload: dict[str, Any] = Body(default={})) -> dict[str, An
     try:
         dataset = PortDataset.load(_registered_api_dataset(payload))
         return {"ok": True, "dataset": dataset.describe()}
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/rl/datasets/{dataset_id}/landing-readiness")
+def dataset_landing_readiness(dataset_id: str) -> dict[str, Any]:
+    try:
+        dataset = PortDataset.load(registered_dataset_id(dataset_id))
+        return assess_dataset_landing_readiness(dataset)
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -142,16 +152,23 @@ def simulate(payload: dict[str, Any] = Body(default={})) -> dict[str, Any]:
 def verify_policy(payload: dict[str, Any] = Body(default={})) -> dict[str, Any]:
     try:
         evaluation = training_service.evaluate(
-            resolve_requested_strategy(payload.get("strategy_id"))
+            resolve_requested_strategy(payload.get("strategy_id"), require_verified=False)
         )
     except (FileNotFoundError, RuntimeError) as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     metrics = evaluation["metrics"]
+    uncertainty = evaluation.get("uncertainty") or {}
     checks = [
         {"name": "held_out_test_split", "passed": evaluation["split"] == "test"},
+        {
+            "name": "causal_forecast_protocol",
+            "passed": evaluation["policy"].get("forecast_protocol")
+            == "causal_persistence_v1",
+        },
         {"name": "dataset_hash_recorded", "passed": bool(evaluation["policy"]["dataset_sha256"])},
         {"name": "dataset_quality_gate", "passed": evaluation["dataset_quality"]["status"] == "pass"},
         {"name": "artifact_hash_recorded", "passed": bool(evaluation["policy"]["artifact_sha256"])},
+        {"name": "minimum_held_out_windows", "passed": metrics["test_episodes"] >= 30},
         {"name": "grid_peak_constraint", "passed": metrics["safety_violations"] == 0},
         {"name": "carbon_non_regression", "passed": metrics["carbon_reduction_pct"] >= 0},
         {"name": "cost_non_regression", "passed": metrics["cost_saving_pct"] >= 0},
@@ -162,6 +179,28 @@ def verify_policy(payload: dict[str, Any] = Body(default={})) -> dict[str, Any]:
         {
             "name": "fixed_baseline_cost_non_regression",
             "passed": metrics["fixed_baseline_cost_saving_pct"] >= 0,
+        },
+        {
+            "name": "carbon_ci95_non_regression",
+            "passed": (
+                uncertainty.get("fixed_baseline_carbon_reduction_ci95") or {}
+            ).get("ci95_low_pct", -1) >= 0,
+        },
+        {
+            "name": "cost_ci95_non_regression",
+            "passed": (
+                uncertainty.get("fixed_baseline_cost_reduction_ci95") or {}
+            ).get("ci95_low_pct", -1) >= 0,
+        },
+        {
+            "name": "carbon_tail_risk_non_regression",
+            "passed": uncertainty.get("policy_carbon_cvar95_kg", float("inf"))
+            <= uncertainty.get("fixed_baseline_carbon_cvar95_kg", float("-inf")),
+        },
+        {
+            "name": "cost_tail_risk_non_regression",
+            "passed": uncertainty.get("policy_cost_cvar95", float("inf"))
+            <= uncertainty.get("fixed_baseline_cost_cvar95", float("-inf")),
         },
         {"name": "manual_dispatch_boundary", "passed": True},
     ]

@@ -26,7 +26,9 @@ to command production equipment.
 | Repudiation | Request IDs and mutation audit JSONL | Central append-only logging and retention |
 | Unsafe automated dispatch | Production eligibility hard-coded false | Human approval plus independent interlock |
 | Dependency compromise | Pinned actions, audits, CodeQL, Dependabot, Scorecard | Protected branches and signed releases |
-| Denial of service | Body limit and proxy timeouts | Rate limiting, quotas, autoscaling, and WAF |
+| Denial of service | Body limit and per-process sliding-window backstop | Distributed quotas, autoscaling, reverse-proxy timeouts, and WAF |
+| Snapshot spoofing or replay | Per-adapter HMAC, payload hash, freshness, snapshot ID and monotonic sequence | Managed key rotation, source mTLS and port SIEM correlation |
+| Local audit alteration | SHA-256 chained mutation records and integrity endpoint | Port-owned append-only/WORM export and retention policy |
 
 ## Logging rules
 

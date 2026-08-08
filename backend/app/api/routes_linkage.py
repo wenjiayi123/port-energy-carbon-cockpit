@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -20,6 +21,7 @@ from app.rl.dataset import DEFAULT_DATASET_ID, registered_dataset_id
 from app.rl.policy_selection import resolve_requested_strategy
 from app.rl.scenarios import resolve_training_scenario
 from app.rl.training import training_service
+from app.integration.gateway import integration_gateway
 
 
 router = APIRouter(tags=["assistant-linkage"])
@@ -948,30 +950,9 @@ def _simulate_policy(payload: dict[str, Any] | None = None) -> dict[str, Any]:
 
 
 def _verify_policy(payload: dict[str, Any] | None = None) -> dict[str, Any]:
-    evaluation = training_service.evaluate(
-        resolve_requested_strategy((payload or {}).get("strategy_id"))
-    )
-    metrics = evaluation["metrics"]
-    checks = [
-        {"name": "独立测试集", "passed": evaluation["split"] == "test"},
-        {"name": "数据集哈希", "passed": bool(evaluation["policy"]["dataset_sha256"])},
-        {"name": "峰值与安全约束", "passed": metrics["safety_violations"] == 0},
-        {"name": "碳排不劣化", "passed": metrics["carbon_reduction_pct"] >= 0},
-        {"name": "成本不劣化", "passed": metrics["cost_saving_pct"] >= 0},
-        {"name": "固定基线碳排不劣化", "passed": metrics["fixed_baseline_carbon_reduction_pct"] >= 0},
-        {"name": "固定基线成本不劣化", "passed": metrics["fixed_baseline_cost_saving_pct"] >= 0},
-        {"name": "人工确认边界", "passed": True},
-    ]
-    passed = all(item["passed"] for item in checks)
-    result = {
-        "ok": passed,
-        "status": "verified" if passed else "blocked",
-        "policy_id": evaluation["strategy_id"],
-        "checks": checks,
-        "risk_level": "low" if passed else "high",
-        "evaluation": evaluation,
-        "note": "仅允许进入 dry-run，不直接生产执行。",
-    }
+    from app.api.routes_rl import verify_policy as verify_policy_route
+
+    result = verify_policy_route(payload or {})
     _append_log("verify_policy_for_online", result["status"], result)
     return result
 
@@ -979,12 +960,78 @@ def _verify_policy(payload: dict[str, Any] | None = None) -> dict[str, Any]:
 def _dispatch_policy(payload: dict[str, Any] | None = None) -> dict[str, Any]:
     payload = payload or {}
     dry_run = bool(payload.get("dry_run", True))
+    requested = str(payload.get("strategy_id") or "auto:latest")
+    resolved = resolve_requested_strategy(requested)
+    registry = training_service.registry()
+    admitted = next(
+        (
+            item
+            for item in registry["policies"]
+            if item["policy_id"] == resolved and item["stage"] == "verified_offline"
+        ),
+        None,
+    )
+    if resolved == "auto:no-admitted-policy":
+        report_path = PROJECT_ROOT / "reports" / "offline_benchmark_v3.json"
+        policy_id = "published:offline-mpc-v3"
+        policy_stage = "control_benchmark"
+        artifact_sha256 = (
+            hashlib.sha256(report_path.read_bytes()).hexdigest() if report_path.exists() else None
+        )
+    elif admitted:
+        policy_id = resolved
+        policy_stage = "verified_offline"
+        artifact_sha256 = admitted.get("artifact_sha256")
+    else:
+        return {
+            "status": "blocked_policy_not_admitted",
+            "dry_run": True,
+            "requested_policy_id": requested,
+            "resolved_policy_id": resolved,
+            "execution_authorized": False,
+            "production_dispatch_enabled": False,
+            "note": "Explicit policies require persisted verified offline admission evidence.",
+        }
+    integration = integration_gateway.status()
+    created_at = datetime.now(timezone.utc)
+    idempotency_key = str(
+        payload.get("idempotency_key")
+        or hashlib.sha256(
+            json.dumps(
+                {
+                    "policy_id": policy_id,
+                    "artifact_sha256": artifact_sha256,
+                    "source": payload.get("source", "cockpit"),
+                    "request": payload.get("request") or {},
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+    )
+    decision_id = "shadow-" + hashlib.sha256(idempotency_key.encode("utf-8")).hexdigest()[:24]
     return {
-        "status": "dry_run_recorded" if dry_run else "blocked_requires_manual_confirmation",
+        "status": "shadow_decision_recorded" if dry_run else "blocked_physical_dispatch_not_available",
         "dry_run": True,
+        "decision_id": decision_id,
+        "idempotency_key": idempotency_key,
+        "created_at": created_at.isoformat().replace("+00:00", "Z"),
+        "expires_at": (created_at + timedelta(minutes=5)).isoformat().replace("+00:00", "Z"),
         "target": "energy_carbon_dispatch",
-        "dispatch_id": f"dryrun-{int(time.time())}",
-        "note": "能碳驾驶舱保留人工确认边界，当前不会生产下发。",
+        "policy_id": policy_id,
+        "policy_stage": policy_stage,
+        "artifact_sha256": artifact_sha256,
+        "rollback_target": "published:offline-mpc-v3",
+        "read_only_shadow_ready": integration["read_only_shadow_ready"],
+        "input_snapshot_digests": {
+            item["adapter_id"]: item["payload_sha256"]
+            for item in integration["adapters"]
+            if item["ready"] and item["payload_sha256"]
+        },
+        "execution_authorized": False,
+        "production_dispatch_enabled": False,
+        "note": "Shadow recommendation only; physical dispatch is not implemented in this repository.",
     }
 
 

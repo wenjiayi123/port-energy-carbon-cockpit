@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 import time
 
 import pytest
@@ -18,10 +19,15 @@ from app.rl.environment import (
     PortEnergyDispatchEnv,
     encode_continuous_controls,
 )
+from app.rl.landing_readiness import assess_dataset_landing_readiness
+from app.rl.robust import CausalForecastPortEnv, RiskAwareMPCPolicy, paired_bootstrap_interval
 from app.rl.scenarios import deployment_contract, scenario_items
 from app.rl.training import TrainingService
 from app.rl.tuning import load_search_space
 from app.services.dispatch_simulator import DispatchSimulator
+
+
+SB3_AVAILABLE = importlib.util.find_spec("stable_baselines3") is not None
 
 
 def test_training_environment_never_renders_and_test_environment_does() -> None:
@@ -36,6 +42,33 @@ def test_training_environment_never_renders_and_test_environment_does() -> None:
     for _ in range(4):
         test_env.step(test_env.action_space.sample())
     assert len(test_env.render() or []) == 4
+
+
+def test_causal_forecast_wrapper_never_reads_a_later_held_out_row() -> None:
+    env = CausalForecastPortEnv(
+        dataset="port_la_2020_2024_vessel_activity_hourly",
+        split="test",
+        episode_hours=2,
+        render_mode=None,
+    )
+    env.reset(seed=7, options={"row_index": 0})
+    current_timestamp = str(env._row()["timestamp_utc"])
+    assert str(env._row_at(1)["timestamp_utc"]) == current_timestamp
+    assert str(env._row_at(3)["timestamp_utc"]) == current_timestamp
+
+    policy = RiskAwareMPCPolicy(horizon=2, beam_width=2)
+    controls = policy.predict(env)
+    assert policy.last_certificate["future_test_rows_accessed"] is False
+    env.step(encode_continuous_controls(controls))
+    assert str(env._row()["timestamp_utc"]) != current_timestamp
+
+
+def test_paired_bootstrap_is_deterministic_and_reports_window_count() -> None:
+    first = paired_bootstrap_interval([80.0, 90.0, 100.0], [100.0, 100.0, 100.0], samples=500)
+    second = paired_bootstrap_interval([80.0, 90.0, 100.0], [100.0, 100.0, 100.0], samples=500)
+    assert first == second
+    assert first["estimate_pct"] == 10.0
+    assert first["paired_windows"] == 3
 
 
 def test_algorithm_and_observation_contracts_match_executable_spaces() -> None:
@@ -129,6 +162,15 @@ def test_vessel_activity_dataset_extends_observation_without_changing_actions() 
     assert len(observation) == 25
     assert info["environment_id"] == "PortEnergyDispatchEnv-v2"
     assert discrete.action_space.n == 81
+
+    readiness = assess_dataset_landing_readiness(dataset)
+    assert readiness["row_volume"] == 43_848
+    assert readiness["independent_operational_anchors"] == 1_238
+    assert readiness["modeled_rows_per_operational_anchor"] == pytest.approx(35.418)
+    assert readiness["offline_research_ready"] is True
+    assert readiness["production_training_ready"] is False
+    assert readiness["landing_grade"] == "D"
+    assert "missing_live_deployment_observations" in readiness["blockers"]
 
 
 def test_vessel_activity_controls_aggregate_shore_power_opportunity() -> None:
@@ -357,11 +399,12 @@ def test_dataset_cache_invalidates_when_package_changes(tmp_path) -> None:
     assert second.frame.iloc[-1]["total_teu"] == pytest.approx(3.0)
 
 
-def test_auto_strategy_selection_skips_newer_smoke_runs(tmp_path, monkeypatch) -> None:
+def test_auto_strategy_selection_skips_smoke_and_blocked_runs(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(policy_selection, "RUNS_DIR", tmp_path)
-    for run_id, steps in (
-        ("rl-20260725-120000-substantial", 100_000),
-        ("rl-20260726-001000-smoke", 32),
+    for run_id, steps, verification_status in (
+        ("rl-20260725-120000-substantial", 100_000, "verified"),
+        ("rl-20260726-001000-smoke", 32, "verified"),
+        ("rl-20260727-001000-blocked", 100_000, "blocked"),
     ):
         run_dir = tmp_path / run_id
         run_dir.mkdir()
@@ -377,12 +420,42 @@ def test_auto_strategy_selection_skips_newer_smoke_runs(tmp_path, monkeypatch) -
             ),
             encoding="utf-8",
         )
+        (run_dir / "verification.json").write_text(
+            json.dumps({"status": verification_status}), encoding="utf-8"
+        )
 
     assert policy_selection.resolve_requested_strategy("auto:latest") == (
         "rl-20260725-120000-substantial"
     )
     assert policy_selection.resolve_requested_strategy("explicit-policy") == (
         "explicit-policy"
+    )
+
+
+def test_auto_strategy_selection_fails_closed_without_verified_policy(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setattr(policy_selection, "RUNS_DIR", tmp_path)
+    run_dir = tmp_path / "rl-20260727-001000-blocked"
+    run_dir.mkdir()
+    (run_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "job_id": run_dir.name,
+                "status": "completed",
+                "step": 100_000,
+                "artifact_path": str(run_dir / "model.zip"),
+                "artifact_sha256": "recorded",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (run_dir / "verification.json").write_text(
+        json.dumps({"status": "blocked"}), encoding="utf-8"
+    )
+
+    assert policy_selection.resolve_requested_strategy("auto:latest") == (
+        "auto:no-admitted-policy"
     )
 
 
@@ -414,6 +487,10 @@ def test_dashboard_admission_rejects_safe_but_underperforming_policy() -> None:
 
 
 @pytest.mark.parametrize("algorithm", ["ppo", "sac", "td3", "dqn"])
+@pytest.mark.skipif(
+    not SB3_AVAILABLE,
+    reason="neural RL runtime is unavailable on unsupported Intel macOS hosts",
+)
 def test_each_rl_algorithm_executes_real_learner_steps(
     tmp_path, monkeypatch, algorithm: str
 ) -> None:

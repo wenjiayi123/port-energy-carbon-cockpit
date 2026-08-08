@@ -19,7 +19,8 @@ uniformly spaced 24-hour windows from validation and test and persists every sta
 `PortEnergyDispatchEnv-v1` exposes 19 normalized observations:
 
 1. current demand, grid carbon and electricity price;
-2. three-hour-ahead demand, carbon and price forecasts;
+2. three-hour demand, carbon and price forecast features; v0.3.0 new runs use a
+   causal persistence forecast and never fill them from later held-out rows;
 3. queue, grid headroom, storage SOC and prior storage action;
 4. cyclical hour and month encodings;
 5. import/export cargo shares;

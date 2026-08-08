@@ -9,6 +9,7 @@ def resolve_requested_strategy(
     strategy_id: str | None,
     *,
     minimum_steps: int = 5_000,
+    require_verified: bool = True,
 ) -> str:
     requested = str(strategy_id or "auto:latest")
     if requested != "auto:latest":
@@ -24,5 +25,13 @@ def resolve_requested_strategy(
             continue
         if not manifest.get("artifact_path") or not manifest.get("artifact_sha256"):
             continue
+        if require_verified:
+            verification_path = manifest_path.parent / "verification.json"
+            try:
+                verification = json.loads(verification_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError, TypeError):
+                continue
+            if verification.get("status") != "verified":
+                continue
         return str(manifest["job_id"])
-    return requested
+    return "auto:no-admitted-policy" if require_verified else requested

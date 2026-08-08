@@ -29,6 +29,7 @@ from app.rl.environment import (
     encode_continuous_controls,
     observation_keys_for_environment,
 )
+from app.rl.robust import CausalForecastPortEnv, cvar, paired_bootstrap_interval
 
 
 RUNS_DIR = Path(__file__).resolve().parents[1] / "data" / "runs"
@@ -120,6 +121,7 @@ class TrainingService:
             "validation_split": "validation",
             "test_split": "test",
             "render_during_training": False,
+            "forecast_protocol": "causal_persistence_v1",
             "runtime_versions": self._runtime_versions(),
             "environment_id": dataset.environment_id,
             "observation_count": len(observation_keys_for_environment(dataset.environment_id)),
@@ -348,6 +350,8 @@ class TrainingService:
                 stage = "candidate"
             elif safety_violations != 0 or drift.get("status") == "high_shift":
                 stage = "blocked"
+            elif verification.get("status") == "blocked":
+                stage = "blocked"
             elif verification.get("status") == "verified":
                 stage = "verified_offline"
             else:
@@ -398,6 +402,11 @@ class TrainingService:
             None if algorithm == "mpc" else self._load_model(algorithm, manifest["artifact_path"])
         )
         dataset = PortDataset.load(config["data_file"])
+        environment_class = (
+            CausalForecastPortEnv
+            if config.get("forecast_protocol") == "causal_persistence_v1"
+            else PortEnergyDispatchEnv
+        )
         learned_totals: list[dict[str, Any]] = []
         baseline_totals: list[dict[str, Any]] = []
         fixed_totals: list[dict[str, Any]] = []
@@ -411,7 +420,7 @@ class TrainingService:
                 if dataset.temporal_mode == "sequential_rows"
                 else config["episode_hours"]
             )
-            learned = PortEnergyDispatchEnv(
+            learned = environment_class(
                 dataset=config["data_file"],
                 split="test",
                 action_mode=action_mode,
@@ -419,7 +428,7 @@ class TrainingService:
                 episode_hours=evaluation_hours,
                 render_mode="trajectory",
             )
-            baseline = PortEnergyDispatchEnv(
+            baseline = environment_class(
                 dataset=config["data_file"],
                 split="test",
                 action_mode="continuous",
@@ -427,7 +436,7 @@ class TrainingService:
                 episode_hours=evaluation_hours,
                 render_mode="trajectory",
             )
-            fixed = PortEnergyDispatchEnv(
+            fixed = environment_class(
                 dataset=config["data_file"],
                 split="test",
                 action_mode="continuous",
@@ -486,6 +495,27 @@ class TrainingService:
             "test_episodes": len(learned_totals),
             "test_steps": int(sum(item["steps"] for item in learned_totals)),
         }
+        uncertainty = {
+            "fixed_baseline_carbon_reduction_ci95": paired_bootstrap_interval(
+                [float(item["carbon_kg"]) for item in learned_totals],
+                [float(item["carbon_kg"]) for item in fixed_totals],
+            ),
+            "fixed_baseline_cost_reduction_ci95": paired_bootstrap_interval(
+                [float(item["cost"]) for item in learned_totals],
+                [float(item["cost"]) for item in fixed_totals],
+                seed=20260809,
+            ),
+            "policy_carbon_cvar95_kg": cvar(
+                [float(item["carbon_kg"]) for item in learned_totals]
+            ),
+            "fixed_baseline_carbon_cvar95_kg": cvar(
+                [float(item["carbon_kg"]) for item in fixed_totals]
+            ),
+            "policy_cost_cvar95": cvar([float(item["cost"]) for item in learned_totals]),
+            "fixed_baseline_cost_cvar95": cvar(
+                [float(item["cost"]) for item in fixed_totals]
+            ),
+        }
         result = {
             "status": "tested",
             "strategy_id": manifest["job_id"],
@@ -497,8 +527,23 @@ class TrainingService:
                 "dataset_id": config["dataset_id"],
                 "data_file": config["data_file"],
                 "dataset_sha256": config["dataset_sha256"],
+                "forecast_protocol": config.get("forecast_protocol", "legacy_future-row_oracle"),
             },
             "metrics": metrics,
+            "uncertainty": uncertainty,
+            "per_episode_metrics": [
+                {
+                    "period": item["period"],
+                    "steps": item["steps"],
+                    "carbon_kg": item["carbon_kg"],
+                    "cost": item["cost"],
+                    "peak_kw": item["peak_kw"],
+                    "processed_teu": item["processed_teu"],
+                    "delay_minutes": item["delay_minutes"],
+                    "safety_violations": item["safety_violations"],
+                }
+                for item in learned_totals
+            ],
             "policy_totals": policy,
             "control_baseline_totals": control,
             "fixed_dispatch_baseline": {
@@ -630,7 +675,7 @@ class TrainingService:
 
             with self._lock:
                 config = dict(self._job["config"])
-            env = PortEnergyDispatchEnv(
+            env = CausalForecastPortEnv(
                 dataset=config["data_file"],
                 split="train",
                 action_mode="discrete" if config["algorithm"] == "dqn" else "continuous",
@@ -788,7 +833,7 @@ class TrainingService:
             self._persist_state()
 
     def _validation_rollout(self, model: Any, config: dict[str, Any], step: int) -> dict[str, Any]:
-        env = PortEnergyDispatchEnv(
+        env = CausalForecastPortEnv(
             dataset=config["data_file"],
             split=config["validation_split"],
             action_mode="discrete" if config["algorithm"] == "dqn" else "continuous",
@@ -891,6 +936,10 @@ class TrainingService:
         return classes[algorithm].load(artifact_path, device="cpu")
 
     def _resolve_manifest(self, strategy_id: str) -> dict[str, Any]:
+        if strategy_id == "auto:no-admitted-policy":
+            raise FileNotFoundError(
+                "No substantial policy with persisted verified admission evidence is available"
+            )
         if strategy_id == "auto:latest":
             items = self.strategies()
             if not items:

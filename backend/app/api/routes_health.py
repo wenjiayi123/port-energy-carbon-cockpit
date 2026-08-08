@@ -6,6 +6,8 @@ from fastapi.responses import PlainTextResponse
 
 from app.core.config import settings
 from app.core.observability import request_metrics
+from app.core.security import verify_audit_chain
+from app.integration.gateway import integration_gateway
 from app.rl.dataset import DEFAULT_DATASET_ID, PortDataset
 from app.rl.training import RUNS_DIR
 
@@ -17,7 +19,7 @@ def health_check() -> dict[str, str]:
     return {
         "status": "ok",
         "service": "energy-carbon-dispatch-cockpit",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "mode": "offline_benchmark",
     }
 
@@ -45,6 +47,8 @@ def readiness(response: Response) -> dict[str, object]:
     checks["run_storage"] = {
         "ok": run_directory.is_dir() and os.access(run_directory, os.R_OK | os.W_OK | os.X_OK)
     }
+    audit = verify_audit_chain()
+    checks["audit_chain"] = {"ok": bool(audit["ok"]), **audit}
     try:
         import stable_baselines3  # noqa: F401
 
@@ -59,7 +63,14 @@ def readiness(response: Response) -> dict[str, object]:
         "checks": checks,
         "auth_mode": settings.api_auth_mode,
         "production_dispatch_enabled": False,
+        "port_operation_mode": settings.port_operation_mode,
+        "read_only_port_integration": integration_gateway.status(),
     }
+
+
+@router.get("/audit/integrity")
+def audit_integrity() -> dict[str, object]:
+    return verify_audit_chain()
 
 
 @router.get("/metrics", response_class=PlainTextResponse)

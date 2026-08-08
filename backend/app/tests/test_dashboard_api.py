@@ -225,6 +225,24 @@ def test_http_dataset_inputs_cannot_read_arbitrary_server_paths() -> None:
     assert "registered dataset ID" in training.json()["detail"]
 
 
+def test_dispatch_endpoint_emits_idempotent_shadow_packet_and_rollback_target() -> None:
+    payload = {
+        "strategy_id": "auto:latest",
+        "dry_run": True,
+        "idempotency_key": "operator-shift-20260808-decision-001",
+    }
+    first = client.post("/api/rl/dispatch", json=payload)
+    second = client.post("/api/rl/dispatch", json=payload)
+
+    assert first.status_code == 200
+    assert first.json()["status"] == "shadow_decision_recorded"
+    assert first.json()["decision_id"] == second.json()["decision_id"]
+    assert first.json()["execution_authorized"] is False
+    assert first.json()["production_dispatch_enabled"] is False
+    assert first.json()["rollback_target"] == "published:offline-mpc-v3"
+    assert first.json()["artifact_sha256"]
+
+
 def test_strategy_ids_reject_path_traversal() -> None:
     response = client.post("/api/rl/simulate", json={"strategy_id": "../../outside"})
 

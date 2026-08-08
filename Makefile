@@ -1,4 +1,4 @@
-.PHONY: bootstrap validate backend frontend demo test build data-deps data-enhanced benchmark benchmark-enhanced tune-enhanced-short verify-benchmark verify-benchmark-enhanced docker-up docker-down
+.PHONY: bootstrap validate backend frontend demo test build data-deps data-enhanced benchmark benchmark-enhanced landing-benchmark tune-enhanced-short verify-benchmark verify-benchmark-enhanced verify-landing-benchmark docker-up docker-down
 
 bootstrap:
 	bash scripts/bootstrap.sh
@@ -33,6 +33,9 @@ data-enhanced: data-deps
 benchmark-enhanced:
 	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.benchmark run --dataset port_la_2020_2024_vessel_activity_hourly --output reports/offline_benchmark_vessel_activity_v1
 
+landing-benchmark:
+	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.landing_benchmark run
+
 tune-enhanced-short:
 	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.tuning --algorithm all --dataset port_la_2020_2024_vessel_activity_hourly --steps 10000 --final-seeds 11,29,47 --output reports/rl_tuning_vessel_activity_10k.json
 
@@ -41,6 +44,9 @@ verify-benchmark:
 
 verify-benchmark-enhanced:
 	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.benchmark verify reports/offline_benchmark_vessel_activity_v1.json
+
+verify-landing-benchmark:
+	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.landing_benchmark verify reports/port_landing_benchmark_v4.json
 
 docker-up:
 	docker compose up --build

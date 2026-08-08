@@ -1,6 +1,6 @@
 [project]
 name = "energy-carbon-dispatch-backend"
-version = "0.2.0"
+version = "0.3.0"
 description = "Auditable offline energy-carbon dispatch and reinforcement-learning benchmark API."
 requires-python = ">=3.11"
 dependencies = [
@@ -16,20 +16,25 @@ dependencies = [
   "openpyxl>=3.1.5,<4",
   "pyyaml>=6.0.0",
   "gymnasium==1.0.0",
-  "stable-baselines3==2.4.1",
-  "torch>=2.13,<3; platform_system != 'Darwin' or platform_machine != 'x86_64'",
 ]
 
 [project.optional-dependencies]
 dev = [
   "pytest>=8.2.0",
-  "httpx>=0.27.0",
+  "httpx2==2.9.1",
   "ruff>=0.6.0",
   "pip-audit>=2.9,<3",
 ]
 data = [
   "pdfplumber==0.11.9",
-  "cryptography==48.0.1",
+  "cryptography==50.0.0",
+]
+rl = [
+  # PyTorch stopped publishing patched Intel-macOS wheels after 2.2.2. Keep
+  # neural training off that unsupported host; causal MPC and replay remain
+  # available, while Linux/Apple Silicon use the audited learner runtime.
+  "stable-baselines3==2.4.1; platform_system != 'Darwin' or platform_machine != 'x86_64'",
+  "torch>=2.13,<3; platform_system != 'Darwin' or platform_machine != 'x86_64'",
 ]
 
 [project.scripts]

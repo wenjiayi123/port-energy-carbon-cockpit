@@ -7,8 +7,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 COPY pyproject.toml /app/pyproject.toml
 COPY app /app/app
-RUN python -m pip install --no-cache-dir --upgrade "pip>=26.1.2" \
-    && python -m pip install --no-cache-dir . \
+RUN python -m pip install --no-cache-dir --upgrade "pip==26.2.1" \
+    && python -m pip install --no-cache-dir '.[rl]' \
     && groupadd --gid 10001 app \
     && useradd --uid 10001 --gid app --no-create-home --shell /usr/sbin/nologin app \
     && mkdir -p /app/app/data/runs /app/app/data/audit \

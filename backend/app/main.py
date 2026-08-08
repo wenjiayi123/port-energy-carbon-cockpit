@@ -3,19 +3,24 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes_dashboard import router as dashboard_router
 from app.api.routes_health import router as health_router
+from app.api.routes_integration import router as integration_router
 from app.api.routes_linkage import router as linkage_router
 from app.api.routes_optimization import router as optimization_router
 from app.api.routes_rl import router as rl_router
 from app.api.routes_scenarios import router as scenarios_router
 from app.core.config import settings
-from app.core.security import SecurityObservabilityMiddleware
+from app.core.security import RequestBodyLimitMiddleware, SecurityObservabilityMiddleware
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Energy Carbon Dispatch Cockpit API",
-        version="0.2.0",
+        version="0.3.0",
         description="API for offline energy-carbon benchmarking, RL training, and held-out policy evaluation.",
+    )
+    app.add_middleware(
+        RequestBodyLimitMiddleware,
+        max_body_size=settings.max_request_body_bytes,
     )
     app.add_middleware(SecurityObservabilityMiddleware)
     app.add_middleware(
@@ -27,6 +32,7 @@ def create_app() -> FastAPI:
         expose_headers=["X-Request-ID"],
     )
     app.include_router(health_router, prefix="/api")
+    app.include_router(integration_router, prefix="/api")
     app.include_router(dashboard_router, prefix="/api/dashboard")
     app.include_router(optimization_router, prefix="/api/optimization")
     app.include_router(scenarios_router, prefix="/api/scenarios")

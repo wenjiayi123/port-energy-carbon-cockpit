@@ -5,6 +5,12 @@ unreviewed production dispatch. The production contract is
 `PortEnergyDispatchEnv-v3`; it fails closed until every required feed and
 operator gate is present.
 
+Version 0.3.0 turns the former adapter checklist into executable evidence.
+Each source emits a `port-snapshot.v1` envelope. Readiness requires a valid
+per-adapter HMAC-SHA256 signature, canonical payload SHA-256, required fields
+and units, an increasing sequence number, a unique snapshot ID and source-specific
+freshness. Only digests and lineage metadata are persisted locally.
+
 ## What stays unchanged
 
 All ports use the same five executable methods:
@@ -59,7 +65,7 @@ universal wind, wave or visibility shutdown thresholds.
 
 1. Copy one live template in `configs/ports.yaml` and set the port ID,
    timezone, currency and local regulatory profile.
-2. Export immutable hourly snapshots from the TOS, EMS, berth/vessel,
+2. Configure independently rotated snapshot keys and export immutable snapshots from the TOS, EMS, berth/vessel,
    equipment, weather/navigation and shore-power registries.
 3. Map the snapshot with `scripts/prepare_port_dataset.py`. Sequential data
    must include a real timestamp column and source URLs.
@@ -79,6 +85,46 @@ universal wind, wave or visibility shutdown thresholds.
    the field test.
 10. Enable production dispatch only through a separately reviewed connector;
     changing a scenario file alone never authorizes a physical command.
+
+Shadow-mode environment example:
+
+```bash
+APP_ENV=production
+API_AUTH_MODE=api_key
+PORT_OPERATION_MODE=shadow
+LIVE_PORT_ID=port_singapore_live_template
+PORT_SNAPSHOT_KEYS_JSON={"terminal_operating_system":"<32+ chars>","energy_management_system":"<32+ chars>"}
+```
+
+The abbreviated key map above is illustrative; shadow startup and readiness
+require independently managed keys and accepted evidence for every required
+data adapter. Never commit the JSON secret map.
+
+An adapter can build an envelope without putting its secret on the command line:
+
+```bash
+export PORT_SNAPSHOT_SIGNING_SECRET="$(openssl rand -hex 32)"
+PYTHONPATH=backend backend/.venv/bin/python scripts/sign_port_snapshot.py \
+  --adapter energy_management_system \
+  --port-id port_singapore_live_template \
+  --source-system terminal-ems-primary \
+  --source-record-id EMS-20260808-0001 \
+  --snapshot-id EMS-20260808T080000Z-0001 \
+  --sequence 1 \
+  --observed-at 2026-08-08T08:00:00Z \
+  --payload docs/examples/ems_snapshot_payload.json \
+  --units docs/examples/ems_snapshot_units.json \
+  --output /tmp/ems-envelope.json
+
+curl --fail-with-body \
+  -H "X-API-Key: $OPERATOR_API_KEY" \
+  -H "Content-Type: application/json" \
+  --data-binary @/tmp/ems-envelope.json \
+  http://127.0.0.1:8808/api/integration/snapshots
+```
+
+The example values demonstrate the schema only; they are not bundled evidence
+and must never be described as a connected terminal measurement.
 
 Example mapper:
 

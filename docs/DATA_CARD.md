@@ -1,5 +1,13 @@
 # Data card: Port of Los Angeles public dispatch benchmarks
 
+> v0.3.0 protocol erratum: the frozen v0.2.0 environment populated its
+> three-hour forecast features and MPC look-ahead from later rows inside the
+> evaluation window. Those reports are preserved as legacy perfect-forecast
+> scenario evidence. All new training and the v4 landing benchmark use
+> `causal_persistence_v1`, which cannot read a later held-out row at decision
+> time. The frozen dataset metadata is not rewritten because doing so would
+> invalidate its published package SHA-256.
+
 ## Intended use
 
 This package supports reproducible offline comparison of four reinforcement-learning learners

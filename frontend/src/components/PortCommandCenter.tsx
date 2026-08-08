@@ -34,6 +34,8 @@ export interface OperationalRuntimeState {
 interface PortCommandCenterProps {
   snapshot: DashboardSnapshot | null;
   rlStatus: Record<string, any> | null;
+  integrationStatus: Record<string, any> | null;
+  auditIntegrityOk: boolean | null;
   greenPreference: number;
   carbonPrice: number;
   replayPlaying: boolean;
@@ -115,6 +117,8 @@ function Bi({ zh, en, className = '' }: BilingualCopy & { className?: string }) 
 export function PortCommandCenter({
   snapshot,
   rlStatus,
+  integrationStatus,
+  auditIntegrityOk,
   greenPreference,
   carbonPrice,
   replayPlaying,
@@ -241,9 +245,9 @@ export function PortCommandCenter({
     { zh: '累计能耗', en: 'Energy consumption', value: fmt((marl?.total_energy_kwh ?? 0) / 1000, 1), unit: 'MWh', delta: { zh: `差值 ${fmt(energySaving / 1000, 1)} MWh`, en: 'vs baseline' }, icon: <BatteryCharging size={18} />, action: 'energy-load' },
     { zh: '碳排放', en: 'Carbon emissions', value: fmt((marl?.total_carbon_kg ?? 0) / 1000, 1), unit: 'tCO2e', delta: { zh: `差值 ${fmt(carbonSaving / 1000, 1)} t`, en: 'vs baseline' }, icon: <Leaf size={18} />, action: 'carbon-market' },
     { zh: '碳强度', en: 'Carbon intensity', value: fmt(marl?.carbon_intensity_kg_per_teu ?? 0, 2), unit: 'kgCO2e/TEU', delta: { zh: '环境计量结果', en: 'environment metric' }, icon: <Leaf size={18} />, action: 'carbon-market' },
-    { zh: '数据质量', en: 'Data quality', value: String(evidenceCoverage), unit: '%', delta: { zh: `${snapshot?.data_quality.grade ?? '--'} 级 · 已记录哈希`, en: 'quality gate + hash' }, icon: <RefreshCw size={18} />, action: 'renewable-mix' },
+    { zh: '数据质量', en: 'Data quality', value: String(evidenceCoverage), unit: '%', delta: { zh: `离线 ${snapshot?.data_quality.grade ?? '--'} · 落地 ${snapshot?.data_quality.landing_readiness?.landing_grade ?? '--'}`, en: 'offline quality · landing grade' }, icon: <RefreshCw size={18} />, action: 'renewable-mix' },
     { zh: '综合成本', en: 'Operating cost', value: fmt((marl?.total_cost_cny ?? 0) / 10000, 1), unit: '¥10K', delta: { zh: `差值 ¥${fmt(costSaving / 1000, 1)}K`, en: 'vs baseline' }, icon: <DollarSign size={18} />, action: 'cost-analysis' },
-  ], [carbonSaving, costSaving, energyLoad, energySaving, evidenceCoverage, handledTeu, marl, point?.crane_count, point?.time, trajectory]);
+  ], [carbonSaving, costSaving, energyLoad, energySaving, evidenceCoverage, handledTeu, marl, point?.crane_count, point?.time, snapshot?.data_quality.grade, snapshot?.data_quality.landing_readiness?.landing_grade, trajectory]);
 
   function toggleLayer(layer: MapLayer) {
     setLayerVisibility((layers) => ({ ...layers, [layer]: !layers[layer] }));
@@ -476,7 +480,7 @@ export function PortCommandCenter({
         </aside>
       </section>
 
-      <footer className="command-status-footer"><span><i />{onlineSystemCount}/{totalSystemCount} <Bi zh="系统在线" en="SYSTEMS ONLINE" /></span><span><Bi zh="模式" en="MODE" />: {snapshot?.governance.deployment_mode ?? '等待数据'}</span><span><Bi zh="策略" en="POLICY" />: {rlStatus?.policy_version ?? marl?.strategy ?? '等待策略'}</span><span><Bi zh="生产调度" en="PRODUCTION DISPATCH" />: {snapshot?.governance.production_dispatch_enabled ? 'ENABLED' : 'DISABLED'}</span><span><Bi zh="更新时间" en="UPDATED" /> {clockText}</span></footer>
+      <footer className="command-status-footer"><span><i />{onlineSystemCount}/{totalSystemCount} <Bi zh="系统在线" en="SYSTEMS ONLINE" /></span><span><Bi zh="实港快照" en="PORT FEEDS" />: {integrationStatus?.ready_adapter_count ?? 0}/{integrationStatus?.required_adapter_count ?? 6}</span><span><Bi zh="审计链" en="AUDIT CHAIN" />: {auditIntegrityOk === true ? 'INTACT' : 'FAIL-CLOSED'}</span><span><Bi zh="模式" en="MODE" />: {snapshot?.governance.deployment_mode ?? '等待数据'}</span><span><Bi zh="策略" en="POLICY" />: {rlStatus?.policy_version ?? marl?.strategy ?? '等待策略'}</span><span><Bi zh="生产调度" en="PRODUCTION DISPATCH" />: {snapshot?.governance.production_dispatch_enabled ? 'ENABLED' : 'DISABLED'}</span><span><Bi zh="更新时间" en="UPDATED" /> {clockText}</span></footer>
     </div>
   );
 }

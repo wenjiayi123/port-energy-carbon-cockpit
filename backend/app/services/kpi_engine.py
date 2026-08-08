@@ -12,6 +12,8 @@ from app.services.carbon_market import CarbonMarketService
 from app.services.carbon_calculator import CarbonCalculator
 from app.services.dispatch_simulator import DispatchSimulator
 from app.rl.dataset import PortDataset
+from app.rl.landing_readiness import assess_dataset_landing_readiness
+from app.integration.gateway import integration_gateway
 
 
 class KpiEngine:
@@ -44,6 +46,7 @@ class KpiEngine:
         try:
             dataset = PortDataset.load(dataset_path)
             data_quality = dataset.quality_report()
+            data_quality["landing_readiness"] = assess_dataset_landing_readiness(dataset)
             data_drift = dataset.drift_report()
         except (FileNotFoundError, ValueError) as exc:
             dataset = None
@@ -68,6 +71,7 @@ class KpiEngine:
         timeseries = self._timeseries_from_strategies(traditional, marl)
         alerts = self._build_alerts(marl, carbon_model, data_quality, data_drift)
         policy_status = str(simulation["rl_environment"]["status"])
+        integration_status = integration_gateway.status()
 
         return DashboardSnapshot(
             scenario_id="port_la_2025_public_benchmark",
@@ -117,11 +121,10 @@ class KpiEngine:
                 "policy_stage": "validated_offline" if policy_status == "trained_policy_test_evidence" else "control_benchmark",
                 "policy_evidence": policy_status,
                 "dataset_package_sha256": data_quality.get("evidence_hash", dataset_sha256),
+                "read_only_shadow_ready": integration_status["read_only_shadow_ready"],
                 "live_port_adapters": {
-                    "tos": "not_connected",
-                    "metering": "not_connected",
-                    "equipment_telemetry": "not_connected",
-                    "allowance_registry": "not_connected",
+                    item["adapter_id"]: "ready" if item["ready"] else "not_connected"
+                    for item in integration_status["adapters"]
                 },
             },
         )

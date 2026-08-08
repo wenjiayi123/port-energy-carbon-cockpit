@@ -18,10 +18,10 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-16b8a6.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776ab.svg)](backend/pyproject.toml)
 [![React](https://img.shields.io/badge/React-18-61dafb.svg)](frontend/package.json)
-[![Release](https://img.shields.io/badge/release-v0.2.0-f0b84b.svg)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-v0.3.0-f0b84b.svg)](CHANGELOG.md)
 [![Boundary](https://img.shields.io/badge/production_dispatch-disabled-ef8354.svg)](docs/PRODUCTION_READINESS.md)
 
-[快速开始 / Quick start](#快速开始--quick-start) · [系统架构 / Architecture](#系统架构--architecture) · [五类基线 / Baselines](#五类可执行基线--five-executable-baselines) · [数据契约 / Data](#替换港口数据--bring-your-own-port-data) · [可信边界 / Trust](#可信边界--trust-boundaries) · [参与贡献 / Contribute](CONTRIBUTING.md)
+[快速开始 / Quick start](#快速开始--quick-start) · [技术评审 / Review](docs/TECHNICAL_REVIEW_2026-08.md) · [系统架构 / Architecture](#系统架构--architecture) · [五类基线 / Baselines](#五类可执行基线--five-executable-baselines) · [数据契约 / Data](#替换港口数据--bring-your-own-port-data) · [可信边界 / Trust](#可信边界--trust-boundaries) · [参与贡献 / Contribute](CONTRIBUTING.md)
 
 </div>
 
@@ -34,17 +34,17 @@
     <th align="center">约束与吞吐<br /><sub>CONSTRAINTS &amp; THROUGHPUT</sub></th>
   </tr>
   <tr>
-    <td align="center"><strong>52,608 h + 1,238 d</strong><br />小时电网 + 官方逐日船舶活动</td>
+    <td align="center"><strong>43,848 h / 1,238 d</strong><br />建模小时 / 官方逐日锚点</td>
     <td align="center"><strong>48 × 24 h</strong><br />1,152小时步 / hourly steps</td>
-    <td align="center"><strong>−8.69%</strong><br />强固定资源基线 / strong fixed-resource baseline</td>
-    <td align="center"><strong>−7.85%</strong><br />同岸电机会 / same shore-power opportunity</td>
-    <td align="center"><strong>100% / 99.97%</strong><br />约束满足 / 吞吐保持<br /><sub>constraints / throughput retention</sub></td>
+    <td align="center"><strong>−8.79%</strong><br />95% CI [−9.25%, −8.39%]</td>
+    <td align="center"><strong>−8.09%</strong><br />因果留出评测 / causal held-out evaluation</td>
+    <td align="center"><strong>100% / 99.98%</strong><br />约束满足 / 吞吐保持<br /><sub>constraints / throughput retention</sub></td>
   </tr>
 </table>
 
 <p align="center">
-  <sub>所有主指标均由版本化公开数据、验证集冻结对照和SHA-256绑定代码复算；同时公开更严格基线下的边际收益与峰值权衡。</sub><br />
-  <sub>Every headline metric is recomputed from versioned public data, a validation-frozen comparator, and SHA-256-bound code—with the harder comparator and peak trade-off disclosed.</sub>
+  <sub>v0.3.0 主指标使用不读取未来测试行的因果持久性预测；旧 v0.2.0 指标和报告继续冻结保留。</sub><br />
+  <sub>v0.3.0 headline metrics use a causal persistence forecast that cannot read later test rows; the original v0.2.0 evidence remains frozen.</sub>
 </p>
 
 ![Port Energy-Carbon RL Cockpit verified overview](docs/assets/cockpit-overview-verified.png)
@@ -76,6 +76,8 @@ This project places port energy use, shore power, equipment allocation, delay, c
 | 算法矩阵 / Algorithm matrix | PPO、SAC、TD3、DQN 四种 RL 算法，加四步有限时域约束 MPC。 / Four RL algorithms—PPO, SAC, TD3, DQN—plus a constrained four-step finite-horizon MPC baseline. |
 | 训练边界 / Training boundary | `train` 无渲染拟合、`validation` 选型、完成后才在 `test` 生成轨迹。 / Non-rendering fit on `train`, selection on `validation`, and trajectory generation only during final `test` evaluation. |
 | 证据链 / Evidence chain | 配置、随机种子、CSV/元数据/组合包 SHA-256、回调指标、checkpoint、模型哈希、测试与验证结果。 / Config, seed, CSV/metadata/package SHA-256, callback metrics, checkpoints, model hash, evaluation, and verification evidence. |
+| 实港只读接入 / Read-only port integration | 六类 `port-snapshot.v1` 数据源必须通过逐源 HMAC、SHA-256、字段/单位、时效、序列与重放门禁。 / Six source families require per-adapter HMAC, SHA-256, schema/units, freshness, sequence and replay gates. |
+| 风险评测 / Risk evaluation | 因果预测、配对 bootstrap 95% 区间、CVaR95、压力场景、备用裕度与动作稳定性。 / Causal forecasts, paired bootstrap 95% intervals, CVaR95, stress cases, reserve margin and action stability. |
 | 碳核算 / Carbon accounting | 范围一辅助燃油与所在地法范围二分列；没有合同凭证时市场法范围二保持不可用。 / Scope 1 auxiliary fuel and location-based Scope 2 are separated; market-based Scope 2 remains unavailable without contractual instruments. |
 | 安全边界 / Safety boundary | 生产调度硬编码禁用；外部连接器可选；变更接口需要角色权限和人工确认。 / Production dispatch is hard-disabled; external connectors are optional; mutation routes require role gates and explicit confirmation. |
 
@@ -103,9 +105,11 @@ The governance panel separates the cockpit, real learner runtime, Xiaoyi AI, the
 ```mermaid
 flowchart LR
   subgraph Data["Data and provenance / 数据与血缘"]
+    LIVE["Signed read-only snapshots"]
     CSV["Canonical CSV"]
     META["Metadata, units, assumptions"]
     HASH["Schema + split + SHA-256 gates"]
+    LIVE --> HASH
     CSV --> HASH
     META --> HASH
   end
@@ -142,6 +146,7 @@ flowchart LR
 | 层 / Layer | 技术 / Technology | 职责 / Responsibility |
 | --- | --- | --- |
 | 数据层 / Data | Pandas, canonical CSV, JSON metadata | 字段、单位、来源、分区、质量与漂移校验 / schema, units, provenance, split, quality, drift |
+| 接入层 / Integration | Pydantic, HMAC-SHA256, atomic JSON state | 六源只读快照、时效、幂等、重放防护与就绪证据 / six-source read-only snapshots, freshness, idempotency, replay protection, readiness |
 | 环境层 / Environment | Gymnasium, NumPy | 逐小时负荷、资源、排放、成本、延误与安全约束 / hourly load, resources, emissions, cost, delay, safety |
 | 学习层 / Learning | Stable-Baselines3, PyTorch | 四种真实 learner、回调、暂停/恢复/停止与 checkpoint / four real learners, callbacks, controls, checkpoints |
 | 对照层 / Control | constrained beam-search MPC | 可解释非 RL 基线 / interpretable non-RL baseline |
@@ -160,6 +165,9 @@ flowchart LR
 
 四种 RL 算法均通过 Stable-Baselines3 的实际 `learn()` 路径运行；仓库测试对每个 learner 执行最小 smoke run。smoke run 只证明管线可执行，不代表策略已收敛或优于基线。<br>
 All four RL algorithms execute the actual Stable-Baselines3 `learn()` path, and the test suite performs a minimal smoke run for each learner. A smoke run proves pipeline executability—not convergence or superiority.
+
+v0.3.0 另加一个不计入“五类基线”数量的部署安全层：六步、宽度 8 的风险感知 MPC，在同一动作合同上联合惩罚低电网备用裕度、尾部排队、延误、SOC 偏离、动作跳变和电池投影量。它用于压力测试和策略资格审查，不会把原有 MPC 重新命名成新的训练算法。<br>
+v0.3.0 adds a deployment safety layer that is not counted as a sixth baseline: a six-step, width-8 risk-aware MPC over the same action contract. It penalizes low grid reserve, tail queues, delay, SOC deviation, action slew and battery projection. It qualifies policies rather than relabelling the published MPC.
 
 ### 环境状态与目标 / Environment state and objective
 
@@ -221,6 +229,8 @@ Monthly TEU is allocated to hours through a disclosed deterministic profile. LAD
 
 Across 48 deterministic held-out windows spanning 2025—1,152 simulated hourly steps—the four-step constrained MPC reduces energy by <strong>8.4%</strong>, carbon by <strong>8.7%</strong>, scenario cost by <strong>7.9%</strong>, and peak load by <strong>3.2%</strong> against the strong “full shore power + fixed fully staffed cargo resources” baseline. Mean equipment activation falls <strong>28.8%</strong>, throughput retention is <strong>99.97%</strong>, and constraint satisfaction is <strong>100%</strong>. Three predeclared objective-weight settings yield a carbon-improvement range of <strong>8.69%–8.74%</strong>. These are public-data offline scenario results, not measured terminal KPIs, and they do not show RL superiority over MPC. See the [benchmark report](reports/offline_benchmark_v3.md) for denominators, sample indices, limits, and hashes.
 
+以上 v0.2.0 指标继续作为冻结的 legacy perfect-forecast 情景证据：窗口内后续行曾作为确定性预测输入；它们不是 v0.3.0 的因果上线指标。The v0.2.0 metrics above remain frozen legacy perfect-forecast scenario evidence: later rows within a window were available as deterministic forecast inputs. They are not the v0.3.0 causal deployment metrics.
+
 报告同时给出更严格的对照：仅用 2024 验证集从 9 个静态资源配置中选择
 80%/80% 岸桥与场内车辆比例，冻结后在 2025 测试。MPC 相对该基线仍降低
 碳排 <strong>2.84%</strong>、能耗 <strong>2.52%</strong>、成本 <strong>2.08%</strong>，吞吐提高 <strong>0.85%</strong>，
@@ -229,16 +239,26 @@ Across 48 deterministic held-out windows spanning 2025—1,152 simulated hourly 
 
 The report also publishes a harder comparator: select an 80%/80% crane/yard-vehicle static configuration from nine candidates using only 2024 validation data, freeze it, and test in 2025. Against that comparator, MPC still reduces carbon by <strong>2.84%</strong>, energy by <strong>2.52%</strong>, and cost by <strong>2.08%</strong>, while increasing throughput by <strong>0.85%</strong>—but peak load rises <strong>3.38%</strong>. This result discloses marginal algorithm benefit and the multi-objective trade-off; it does not replace the full-resource redundancy scenario above.
 
-逐日船舶活动增强集的独立报告同样覆盖 48×24 个 2024 留出小时窗口：相对固定满配强基线，MPC 碳排降低 <strong>8.90%</strong>、情景成本降低 <strong>8.22%</strong>、吞吐保持 <strong>100.00%</strong>、约束满足 <strong>100%</strong>；相对验证集选择的 80%/80% 更严格基线，碳排仍降低 <strong>2.77%</strong>、成本降低 <strong>2.11%</strong>，但峰值增加 <strong>3.61%</strong>。见 [enhanced benchmark](reports/offline_benchmark_vessel_activity_v1.md)。
+逐日船舶活动增强集的原 v0.2.0 独立报告同样覆盖 48×24 个 2024 留出小时窗口：相对固定满配强基线，MPC 碳排降低 <strong>8.90%</strong>、情景成本降低 <strong>8.22%</strong>、吞吐保持 <strong>100.00%</strong>、约束满足 <strong>100%</strong>；相对验证集选择的 80%/80% 更严格基线，碳排仍降低 <strong>2.77%</strong>、成本降低 <strong>2.11%</strong>，但峰值增加 <strong>3.61%</strong>。见 [enhanced benchmark](reports/offline_benchmark_vessel_activity_v1.md)。该历史协议允许 MPC 读取窗口内后续行作为确定性预测，因此保留为 legacy perfect-forecast 场景证据，不再作为因果上线指标。
 
-The vessel-activity enhanced report evaluates 48×24 held-out hours from 2024. MPC reduces carbon by <strong>8.90%</strong> and scenario cost by <strong>8.22%</strong> versus the fixed full-resource comparator, with <strong>100.00%</strong> throughput retention and <strong>100%</strong> constraint satisfaction. Against the harder validation-selected 80%/80% comparator, carbon still falls <strong>2.77%</strong> and cost <strong>2.11%</strong>, while peak load rises <strong>3.61%</strong>. These remain offline scenario results.
+The original v0.2.0 vessel-activity report evaluates 48×24 held-out hours from 2024. MPC reduces carbon by <strong>8.90%</strong> and scenario cost by <strong>8.22%</strong> versus the fixed full-resource comparator, with <strong>100.00%</strong> throughput retention and <strong>100%</strong> constraint satisfaction. Against the harder validation-selected 80%/80% comparator, carbon still falls <strong>2.77%</strong> and cost <strong>2.11%</strong>, while peak load rises <strong>3.61%</strong>. That historical protocol lets MPC consume later rows within the window as a deterministic forecast; it remains preserved as legacy perfect-forecast scenario evidence, not the causal deployment metric.
+
+### v0.3.0 因果鲁棒性增量 / Causal robustness increment
+
+新的 [v4 港口落地评测](reports/port_landing_benchmark_v4.md) 保持相同 48×24 留出窗口，但在每个决策时刻禁止读取后续测试行。风险感知 MPC 相对固定满配强基线降低能耗 <strong>8.726%</strong>、碳排 <strong>8.792%</strong>、情景成本 <strong>8.094%</strong>、峰值 <strong>2.983%</strong>，吞吐变化 <strong>−0.017%</strong>、约束满足率 <strong>100%</strong>；碳排改善的配对 bootstrap 95% 区间为 <strong>8.387%–9.249%</strong>。
+
+相对同样使用因果持久性预测的旧 MPC，风险层把平均延误降低 <strong>43.880%</strong>、P95 队列降低 <strong>47.858%</strong>、动作总变差降低 <strong>25.444%</strong>，三类压力场景均保持 <strong>100%</strong> 零建模安全违规；代价是平均碳排增加 <strong>0.156%</strong>、成本增加 <strong>0.191%</strong>、峰值增加 <strong>0.394%</strong>，且电网降额压力下软备用裕度违约步数增加 <strong>7.692%</strong>。这是一组可审计的稳定性—效率权衡，不是全面优于旧 MPC 的宣传。
+
+The [v4 port-landing benchmark](reports/port_landing_benchmark_v4.md) keeps the same 48×24 held-out windows while making later test rows unavailable at each decision. Against fixed full resources, the risk-aware MPC reduces energy by <strong>8.726%</strong>, carbon by <strong>8.792%</strong>, scenario cost by <strong>8.094%</strong>, and peak by <strong>2.983%</strong>; throughput changes by <strong>−0.017%</strong>, constraint success is <strong>100%</strong>, and the paired-bootstrap 95% interval for carbon reduction is <strong>8.387%–9.249%</strong>.
+
+Against the causal legacy MPC, it reduces mean delay by <strong>43.880%</strong>, P95 queue by <strong>47.858%</strong>, and action total variation by <strong>25.444%</strong>, with zero modelled safety violations in all three stress families. The measured trade-off is <strong>+0.156%</strong> mean carbon, <strong>+0.191%</strong> cost, <strong>+0.394%</strong> peak, and <strong>+7.692%</strong> soft reserve-breach steps under grid derating. These negative entries are deliberately retained.
 
 ## 快速开始 / Quick start
 
 ### 本地开发 / Local development
 
-要求：Python 3.11+、Node.js 20+、pnpm。首次安装 PyTorch 可能需要数分钟。<br>
-Requirements: Python 3.11+, Node.js 20+, and pnpm. The first PyTorch installation may take several minutes.
+要求：Python 3.11+、Node.js 20+、pnpm。首次安装 PyTorch 可能需要数分钟。Intel macOS 已无受支持的新版 PyTorch wheel，因此该平台保留因果 MPC、回放与 API，但安装脚本不会启用神经网络训练；Linux 或 Apple Silicon 承担 PPO/SAC/TD3/DQN 训练。<br>
+Requirements: Python 3.11+, Node.js 20+, and pnpm. The first PyTorch installation may take several minutes. Patched current PyTorch wheels are unavailable for Intel macOS, so that host keeps causal MPC, replay and the API but does not enable neural training; use Linux or Apple Silicon for PPO/SAC/TD3/DQN.
 
 ```bash
 git clone https://github.com/wenjiayi123/port-energy-carbon-cockpit.git
@@ -301,6 +321,10 @@ cd ..
 make data-enhanced
 make benchmark-enhanced
 make verify-benchmark-enhanced
+
+# 复算不偷看未来测试行的 v4 指标 / recompute causal v4 evidence
+make landing-benchmark
+make verify-landing-benchmark
 ```
 
 API 启动训练需要 `confirm=true`。训练进度来自 `model.num_timesteps`、callback 指标和实际耗时；ETA 使用已测 step rate 推导，不使用固定时长计时器。<br>
@@ -352,6 +376,7 @@ cd backend
 | `/api/dashboard/snapshot` | GET | 当前公开 benchmark 与测试轨迹快照 / current benchmark and held-out snapshot |
 | `/api/rl/capabilities` | GET | 算法、数据、运行时与渲染边界 / algorithms, datasets, runtime, rendering boundary |
 | `/api/rl/datasets/validate` | POST | 注册数据集质量、分区与血缘校验 / registered-dataset quality, split, provenance validation |
+| `/api/rl/datasets/{id}/landing-readiness` | GET | 独立锚点、展开率、v3 字段、事件血缘与校准缺口 / source anchors, expansion, v3 fields, event lineage, calibration gaps |
 | `/api/rl/train/start` | POST | 预览或确认启动真实 learner / preview or confirm a real learner run |
 | `/api/rl/train/status` | GET | 实测 step、指标、速率、ETA 与状态 / measured steps, metrics, rate, ETA, state |
 | `/api/rl/train/{pause,resume,stop}` | POST | callback 边界的训练控制 / callback-bound training control |
@@ -361,6 +386,10 @@ cd backend
 | `/api/rl/dispatch` | POST | 仅生成 dry-run packet / produce a dry-run packet only |
 | `/api/scenarios` | GET | 国际港口模板、数据与适配器就绪状态 / port templates, dataset and adapter readiness |
 | `/api/scenarios/contract` | GET | v3 观测、动作、目标和硬约束 / v3 observations, actions, objectives and hard constraints |
+| `/api/integration/contract` | GET | 六源签名快照、字段与时效合同 / six-source signed-snapshot, field and freshness contract |
+| `/api/integration/status` | GET | 由已验证证据计算的只读 shadow 就绪状态 / evidence-derived read-only shadow readiness |
+| `/api/integration/snapshots` | POST | 接收并校验一个签名只读快照 / admit one signed read-only snapshot |
+| `/api/audit/integrity` | GET | 校验 mutation audit SHA-256 链 / verify the mutation-audit SHA-256 chain |
 | `/api/health/{live,ready}` | GET | 进程与依赖就绪检查 / process and dependency readiness |
 | `/api/metrics` | GET | Prometheus 文本指标 / Prometheus text metrics |
 
@@ -375,6 +404,8 @@ cd backend
 | 四种真实 RL learner | 可执行、可产出模型 / executable and artifact-producing | 默认策略已经收敛或优于 MPC / default convergence or superiority |
 | MPC 测试轨迹 | 默认可运行 / runnable by default | 生产调度建议已获批准 / production-approved recommendations |
 | 公开指标报告 | 2025 年 48 个均匀窗口、1,152 个留出仿真步、哈希可复算 / 48 uniformly spaced windows, 1,152 held-out simulation steps, hash verification | 码头实测 KPI、随机全量年度评估或 RL 收敛 / measured terminal KPI, random full-year evaluation, or RL convergence |
+| v4 因果评测 | 决策时不可读取后续测试行；公布置信区间、CVaR 与压力权衡 / later test rows unavailable; confidence, CVaR and stress trade-offs published | 真实港口 forecast 精度或生产风险率 / live-port forecast accuracy or production risk rate |
+| 实港快照网关 | 可执行 HMAC/SHA-256/时效/序列/重放门禁 / executable integrity, freshness, sequence and replay gates | 已取得港方接口或凭证 / possession of terminal endpoints or credentials |
 | 策略验证 | 离线、留出集 / offline and held-out | 安全认证、型式认可或法规核证 / safety certification or regulatory assurance |
 | 小懿 AI | 可选 HTTP 本地连接器 / optional local HTTP connector | 仓库自带外部知识库或云服务 / bundled external knowledge or cloud service |
 | Godot 航行模拟器 | 可选桌面进程连接器 / optional desktop process connector | 训练证据或生产控制通道 / training evidence or a production control channel |
@@ -386,14 +417,18 @@ Before a real-port integration, provide read-only TOS/EMS adapters, parameter ca
 ## 安全与供应链 / Security and supply chain
 
 - 生产模式拒绝无 `API_AUTH_MODE=api_key` 的启动，key 最少 24 字符；viewer/operator/admin 分级。
-- 变更请求写入 mutation-only JSONL 审计；所有请求有 request ID、结构化访问日志和基础安全头。
+- 变更请求写入 SHA-256 链式 mutation audit；所有请求有 request ID、结构化访问日志、主体指纹和基础安全头。
+- 请求体大小和单进程滑动窗口限流提供应用层后备防护；集群仍需 WAF/网关分布式配额。
+- 实港快照使用逐适配器 HMAC、payload SHA-256、递增序列、唯一 snapshot ID 与源级时效门禁。
 - HTTP 数据集参数限制在注册目录，策略 ID 使用格式白名单，避免路径穿越。
 - CI 包含 Ruff、backend/RL 测试、数据校验、前端构建、依赖审计与容器构建。
 - CodeQL、Dependency Review 与 OpenSSF Scorecard 在仓库公开后启用；私有预审阶段保持跳过，避免 GitHub Free 私有功能门槛造成假失败。
 - Actions 使用完整 commit SHA；Dependabot 按月分组，控制更新噪声。
 
 - Production refuses to start without `API_AUTH_MODE=api_key`; keys require at least 24 characters and support viewer/operator/admin roles.
-- Mutation requests are written to a JSONL audit stream; every request receives an ID, structured access log, and baseline security headers.
+- Mutation requests are SHA-256 hash-chained; every request receives an ID, structured access log, principal fingerprint, and baseline security headers.
+- Body limits and a per-process sliding-window limiter provide an application backstop; clustered deployments still need gateway/WAF quotas.
+- Port snapshots use per-adapter HMAC, payload SHA-256, monotonic sequence, unique snapshot ID and source freshness gates.
 - HTTP dataset references are confined to the registry and strategy IDs are format-allowlisted against path traversal.
 - CI covers Ruff, backend/RL tests, dataset validation, frontend build, dependency audits, and container builds.
 - CodeQL, Dependency Review, and OpenSSF Scorecard activate after the repository becomes public; they remain skipped during private review to avoid false failures from GitHub Free private-feature limits.

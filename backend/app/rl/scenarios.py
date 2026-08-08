@@ -111,6 +111,21 @@ def scenario_items() -> list[dict[str, Any]]:
                     "error": str(error),
                 }
         adapters = item.get("adapters") or {}
+        if item.get("mode") == "live_port_template":
+            from app.core.config import settings
+            from app.integration.gateway import integration_gateway
+
+            if settings.live_port_id == item.get("id"):
+                live_status = integration_gateway.status()
+                adapters = {
+                    evidence["adapter_id"]: bool(evidence["ready"])
+                    for evidence in live_status["adapters"]
+                }
+                adapters["identity_and_audit"] = bool(
+                    live_status["identity_and_audit_ready"]
+                )
+                item["live_adapter_evidence"] = live_status
+        item["adapters"] = adapters
         missing_adapters = [name for name in required_adapters if not bool(adapters.get(name))]
         production_ready = bool(
             item.get("environment_id") == contract["environment_id"]

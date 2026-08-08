@@ -1,5 +1,13 @@
 # Model card: PortEnergyDispatchEnv baselines
 
+## Forecast protocol update
+
+New v0.3.0 runs persist `forecast_protocol=causal_persistence_v1`. Observation
+and planning forecasts use only values available at the current timestamp;
+later validation/test rows are unavailable. Frozen v0.2.0 reports use the
+legacy perfect-forecast scenario and remain reproducible, but they are not
+causal deployment evidence.
+
 ## Models
 
 The benchmark exposes PPO, SAC, TD3, and DQN through Stable-Baselines3, plus a four-step
