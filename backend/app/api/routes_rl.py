@@ -9,7 +9,6 @@ from app.rl.dataset import (
     DEFAULT_DATASET_ID,
     load_registered_dataset,
     registered_dataset_id,
-    registered_dataset_path,
 )
 from app.rl.landing_readiness import assess_dataset_landing_readiness
 from app.rl.policy_selection import resolve_requested_strategy
@@ -29,7 +28,7 @@ def _registered_api_dataset(payload: dict[str, Any]) -> str:
 def _api_training_config(payload: dict[str, Any]) -> dict[str, Any]:
     config = dict(payload.get("config") or payload)
     config["dataset_id"] = _registered_api_dataset(config)
-    config["data_file"] = registered_dataset_path(config["dataset_id"])
+    config["data_file"] = config["dataset_id"]
     config.update(
         resolve_training_scenario(
             str(config.get("scenario") or "") or None,

@@ -6,6 +6,7 @@ import time
 
 import pytest
 
+import app.rl.dataset as dataset_module
 import app.rl.policy_selection as policy_selection
 import app.rl.training as training_module
 from app.rl.benchmark import select_validation_static_reference
@@ -202,7 +203,10 @@ def test_vessel_activity_controls_aggregate_shore_power_opportunity() -> None:
     assert info["shore_power_kwh"] == pytest.approx(expected_kw)
 
 
-def test_live_port_contract_is_fail_closed_and_v3_affects_dispatch(tmp_path) -> None:
+def test_live_port_contract_is_fail_closed_and_v3_affects_dispatch(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setattr(dataset_module, "DATASET_DIR", tmp_path)
     csv_path = tmp_path / "live_port.csv"
     columns = [
         "period",
@@ -324,7 +328,10 @@ def test_hyperparameter_search_contract_keeps_test_out_of_selection() -> None:
     assert set(search["algorithms"]) == {"ppo", "sac", "td3", "dqn"}
 
 
-def test_sequential_port_dataset_overrides_physical_model_without_code_changes(tmp_path) -> None:
+def test_sequential_port_dataset_overrides_physical_model_without_code_changes(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setattr(dataset_module, "DATASET_DIR", tmp_path)
     csv_path = tmp_path / "terminal_hourly.csv"
     header = (
         "period,split,loaded_import_teu,loaded_export_teu,total_teu,"
@@ -378,7 +385,8 @@ def test_sequential_port_dataset_overrides_physical_model_without_code_changes(t
     assert second["load_kw"] == pytest.approx(330.0)
 
 
-def test_dataset_cache_invalidates_when_package_changes(tmp_path) -> None:
+def test_dataset_cache_invalidates_when_package_changes(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(dataset_module, "DATASET_DIR", tmp_path)
     csv_path = tmp_path / "cache_check.csv"
     rows = [
         (

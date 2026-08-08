@@ -463,14 +463,38 @@ class PortDataset:
 
 
 def resolve_dataset_path(dataset: str | Path) -> Path:
-    value = Path(dataset)
-    if value.suffix.lower() == ".csv":
-        if value.is_absolute():
-            return value
-        project_root = Path(__file__).resolve().parents[3]
-        project_relative = project_root / value
-        return project_relative if project_relative.exists() else DATASET_DIR / value.name
-    return DATASET_DIR / f"{value.name}.csv"
+    """Resolve a dataset only through server-owned directory entries.
+
+    File paths are treated as compatibility references: only their basename is
+    used to select a registered file.  The caller-provided path is never opened,
+    so an absolute path or traversal cannot escape ``DATASET_DIR``.
+    """
+    raw = str(dataset).strip()
+    if not raw:
+        raise ValueError("Dataset reference must not be empty")
+    normalized_name = raw.replace("\\", "/").rsplit("/", 1)[-1]
+    value = Path(normalized_name)
+    if value.suffix and value.suffix.lower() != ".csv":
+        raise ValueError("Dataset reference must be a registered ID or CSV name")
+    dataset_id = value.stem if value.suffix else value.name
+    registered = _registered_dataset_files()
+    candidate = registered.get(dataset_id)
+    if candidate is None:
+        raise ValueError(f"Unknown registered dataset: {dataset_id}")
+    return candidate
+
+
+def _registered_dataset_files() -> dict[str, Path]:
+    """Return regular, non-symlink CSV files contained by the registry root."""
+    root = DATASET_DIR.resolve()
+    registered: dict[str, Path] = {}
+    for entry in DATASET_DIR.glob("*.csv"):
+        if not entry.is_file() or entry.is_symlink():
+            continue
+        candidate = entry.resolve()
+        if candidate.parent == root:
+            registered[candidate.stem] = candidate
+    return registered
 
 
 def registered_dataset_path(dataset: str) -> Path:
@@ -483,11 +507,7 @@ def registered_dataset_path(dataset: str) -> Path:
     raw = str(dataset).strip()
     if not raw or raw != Path(raw).name or "\\" in raw or Path(raw).suffix:
         raise ValueError("HTTP dataset references must use a registered dataset ID")
-    registered = {
-        candidate.stem: candidate.resolve()
-        for candidate in DATASET_DIR.glob("*.csv")
-        if candidate.is_file()
-    }
+    registered = _registered_dataset_files()
     candidate = registered.get(raw)
     if candidate is None:
         raise ValueError(f"Unknown registered dataset: {raw}")

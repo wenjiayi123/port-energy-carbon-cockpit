@@ -18,7 +18,7 @@ from fastapi import APIRouter, Body, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.services.kpi_engine import KpiEngine
-from app.rl.dataset import DEFAULT_DATASET_ID, registered_dataset_id, registered_dataset_path
+from app.rl.dataset import DEFAULT_DATASET_ID, registered_dataset_id
 from app.rl.policy_selection import resolve_requested_strategy
 from app.rl.scenarios import resolve_training_scenario
 from app.rl.training import training_service
@@ -674,7 +674,7 @@ def _build_training_config(instruction: str, payload: dict[str, Any] | None = No
         "objective_label": requested.get("objective_label") or profile["label"],
         "algorithm": requested.get("algorithm") or profile["algorithm"],
         "dataset_id": dataset_id,
-        "data_file": registered_dataset_path(dataset_id),
+        "data_file": dataset_id,
         **scenario,
         "asset_group": requested.get("asset_group") or "berth_shore_power_yard_truck",
         "horizon_min": selected("horizon_min", profile["horizon_min"]),
@@ -934,7 +934,7 @@ def _start_training(payload: dict[str, Any]) -> dict[str, Any]:
     except ValueError as exc:
         logger.info("Assistant training dataset rejected", exc_info=exc)
         raise HTTPException(status_code=422, detail="dataset_reference_invalid") from None
-    raw_config["data_file"] = registered_dataset_path(raw_config["dataset_id"])
+    raw_config["data_file"] = raw_config["dataset_id"]
     try:
         raw_config.update(
             resolve_training_scenario(

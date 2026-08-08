@@ -17,11 +17,9 @@ import numpy as np
 
 from app.rl.catalog import ALGORITHM_CATALOG, algorithm_items
 from app.rl.dataset import (
-    DATASET_DIR,
     DEFAULT_DATASET_ID,
     PortDataset,
     list_datasets,
-    portable_dataset_reference,
 )
 from app.rl.environment import (
     FixedDispatchPolicy,
@@ -93,11 +91,7 @@ class TrainingService:
             "algorithm": algorithm,
             "algorithm_family": ALGORITHM_CATALOG[algorithm]["family"],
             "dataset_id": dataset.dataset_id,
-            "data_file": (
-                dataset.dataset_id
-                if dataset.csv_path.resolve().parent == DATASET_DIR.resolve()
-                else portable_dataset_reference(dataset.csv_path)
-            ),
+            "data_file": dataset.dataset_id,
             "dataset_sha256": dataset.package_sha256,
             "dataset_csv_sha256": dataset.sha256,
             "dataset_metadata_sha256": dataset.metadata_sha256,

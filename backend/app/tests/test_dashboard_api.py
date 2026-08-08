@@ -109,9 +109,16 @@ def test_dataset_validation_endpoint_records_public_provenance() -> None:
     assert len(payload["sha256"]) == 64
     source_urls = payload["metadata"]["source_urls"]
     assert len(source_urls) >= 10
-    source_hosts = {urlsplit(url).hostname for url in source_urls}
-    assert source_hosts & {"www.eia.gov", "api.eia.gov"}
-    assert "www.epa.gov" in source_hosts
+    parsed_sources = [urlsplit(url) for url in source_urls]
+    assert any(
+        source.scheme == "https"
+        and (source.hostname == "www.eia.gov" or source.hostname == "api.eia.gov")
+        for source in parsed_sources
+    )
+    assert any(
+        source.scheme == "https" and source.hostname == "www.epa.gov"
+        for source in parsed_sources
+    )
     assert payload["quality"]["status"] == "pass"
     assert payload["quality"]["score"] == 100
     assert payload["drift"]["method"] == "absolute_standardized_mean_difference"
