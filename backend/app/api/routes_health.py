@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from app.rl.dataset import DEFAULT_DATASET_ID, PortDataset
 from app.rl.training import RUNS_DIR
 
 router = APIRouter(tags=["health"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/health")
@@ -40,8 +42,9 @@ def readiness(response: Response) -> dict[str, object]:
             "quality_score": quality["score"],
             "package_sha256": dataset.package_sha256,
         }
-    except Exception as exc:
-        checks["default_dataset"] = {"ok": False, "error": str(exc)}
+    except Exception:
+        logger.exception("Default dataset readiness check failed")
+        checks["default_dataset"] = {"ok": False, "error": "dataset_readiness_failed"}
     run_directory = Path(RUNS_DIR)
     run_directory.mkdir(parents=True, exist_ok=True)
     checks["run_storage"] = {
@@ -53,8 +56,9 @@ def readiness(response: Response) -> dict[str, object]:
         import stable_baselines3  # noqa: F401
 
         checks["rl_runtime"] = {"ok": True}
-    except ImportError as exc:
-        checks["rl_runtime"] = {"ok": False, "error": str(exc)}
+    except ImportError:
+        logger.exception("RL runtime import failed")
+        checks["rl_runtime"] = {"ok": False, "error": "rl_runtime_unavailable"}
     ready = all(bool(check["ok"]) for check in checks.values())
     if not ready:
         response.status_code = 503

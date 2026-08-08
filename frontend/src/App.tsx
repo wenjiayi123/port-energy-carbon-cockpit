@@ -184,6 +184,7 @@ export function App() {
   const [modelRegistry, setModelRegistry] = useState<Record<string, any> | null>(null);
   const [integrationStatus, setIntegrationStatus] = useState<Record<string, any> | null>(null);
   const [auditStatus, setAuditStatus] = useState<Record<string, any> | null>(null);
+  const [landingEvidence, setLandingEvidence] = useState<Record<string, any> | null>(null);
   const [policyTest, setPolicyTest] = useState<Record<string, any> | null>(null);
   const [sailingStatus, setSailingStatus] = useState<Record<string, any> | null>(null);
   const [replayStep, setReplayStep] = useState(0);
@@ -354,6 +355,12 @@ export function App() {
   const activePreference = preferenceLabel(greenPreference);
   const currentRlAlgorithm = String(rlStatus?.config?.algorithm ?? 'SAC').toUpperCase();
   const latestRegisteredPolicy = Array.isArray(modelRegistry?.policies) ? modelRegistry.policies[0] : null;
+  const landingBusiness = landingEvidence?.business_metrics_vs_fixed_full_resources as Record<string, any> | undefined;
+  const algorithmIncrement = landingEvidence?.algorithm_increment_vs_causal_legacy_mpc as Record<string, any> | undefined;
+  const landingProtocol = landingEvidence?.protocol as Record<string, any> | undefined;
+  const landingDataset = landingEvidence?.dataset?.landing_readiness as Record<string, any> | undefined;
+  const landingStress = landingEvidence?.stress_tests as Record<string, any> | undefined;
+  const stressEntries = Object.entries(landingStress ?? {}) as Array<[string, Record<string, any>]>;
 
   async function runDecisionImpact(report: DecisionImpactReport, task?: () => Promise<void> | void, showResultReport = true) {
     const runToken = impactRunToken.current + 1;
@@ -610,7 +617,7 @@ export function App() {
     let active = true;
 
     async function refreshEngineeringSignals() {
-      const [health, linkage, rl, sailing, registry, integration, audit] = await Promise.all([
+      const [health, linkage, rl, sailing, registry, integration, audit, evidence] = await Promise.all([
         fetchJson('/api/health').catch(() => null),
         fetchJson('/api/linkage/health').catch(() => null),
         fetchJson('/api/rl/train/status').catch(() => null),
@@ -618,6 +625,7 @@ export function App() {
         fetchJson('/api/rl/registry').catch(() => null),
         fetchJson('/api/integration/status').catch(() => null),
         fetchJson('/api/audit/integrity').catch(() => null),
+        fetchJson('/api/evidence/landing-benchmark').catch(() => null),
       ]);
       if (!active) return;
       setApiHealth({ health, linkage, rl, sailing, registry });
@@ -626,6 +634,7 @@ export function App() {
       if (registry) setModelRegistry(registry);
       if (integration) setIntegrationStatus(integration);
       if (audit) setAuditStatus(audit);
+      if (evidence) setLandingEvidence(evidence);
     }
 
     void refreshEngineeringSignals();
@@ -919,10 +928,19 @@ export function App() {
       await runApiCheck();
     }
     if (panel === 'marl') {
-      await refreshRlStatus();
+      await Promise.all([refreshRlStatus(), refreshLandingEvidence()]);
     }
     if (panel === 'simulation') {
       await refreshSailingStatus();
+    }
+  }
+
+  async function refreshLandingEvidence() {
+    try {
+      const evidence = await fetchJson('/api/evidence/landing-benchmark');
+      setLandingEvidence(evidence);
+    } catch {
+      setLandingEvidence(null);
     }
   }
 
@@ -1341,6 +1359,73 @@ export function App() {
                   <span>注册阶段 <b>{latestRegisteredPolicy?.stage ?? '未注册'}</b></span>
                   <span>生产资格 <b>{latestRegisteredPolicy?.production_eligible ? '允许' : '禁止'}</b></span>
                 </div>
+                <section className="landing-evidence-board" aria-label="v4 因果落地评测证据">
+                  <header>
+                    <div>
+                      <span>V4 因果落地评测 · 新增业务证据</span>
+                      <small>CAUSAL OFFLINE ROBUSTNESS · NOT A FIELD KPI</small>
+                    </div>
+                    <b>{landingEvidence?.status ? 'REPRODUCIBLE' : 'LOADING'}</b>
+                  </header>
+                  <div className="landing-evidence-protocol">
+                    <span>测试协议 <b>{landingProtocol?.windows ?? '--'} 窗口 × {landingProtocol?.episode_hours ?? '--'}h</b></span>
+                    <span>因果步数 <b>{landingProtocol?.steps?.toLocaleString?.() ?? '--'}</b></span>
+                    <span>MPC 深度 <b>H{landingProtocol?.policy?.horizon ?? '--'} · Beam {landingProtocol?.policy?.beam_width ?? '--'} · {landingProtocol?.policy?.candidate_actions ?? '--'} 动作</b></span>
+                    <span>数据密度 <b>{landingDataset?.row_volume?.toLocaleString?.() ?? '--'} 行 / {landingDataset?.independent_operational_anchors?.toLocaleString?.() ?? '--'} 官方锚点</b></span>
+                  </div>
+                  <div className="landing-business-grid">
+                    <article>
+                      <small>能耗下降 · 对固定全资源</small>
+                      <b>{formatNumber(landingBusiness?.energy_reduction_pct, 2)}%</b>
+                      <span>公开数据留出集</span>
+                    </article>
+                    <article>
+                      <small>碳排下降 · 95% CI</small>
+                      <b>{formatNumber(landingBusiness?.carbon_reduction_pct, 2)}%</b>
+                      <span>{formatNumber(landingBusiness?.carbon_reduction_ci95?.ci95_low_pct, 2)}–{formatNumber(landingBusiness?.carbon_reduction_ci95?.ci95_high_pct, 2)}%</span>
+                    </article>
+                    <article>
+                      <small>成本下降 · 95% CI</small>
+                      <b>{formatNumber(landingBusiness?.cost_reduction_pct, 2)}%</b>
+                      <span>{formatNumber(landingBusiness?.cost_reduction_ci95?.ci95_low_pct, 2)}–{formatNumber(landingBusiness?.cost_reduction_ci95?.ci95_high_pct, 2)}%</span>
+                    </article>
+                    <article>
+                      <small>峰值下降 / 吞吐保留</small>
+                      <b>{formatNumber(landingBusiness?.peak_reduction_pct, 2)}%</b>
+                      <span>{formatNumber(100 + Number(landingBusiness?.throughput_change_pct ?? 0), 4)}% throughput</span>
+                    </article>
+                  </div>
+                  <div className="landing-increment-grid">
+                    <div className="landing-increment-positive">
+                      <strong>相对因果旧 MPC 的算法增量</strong>
+                      <span>延误下降 <b>{formatNumber(algorithmIncrement?.delay_reduction_pct, 2)}%</b></span>
+                      <span>P95 队列下降 <b>{formatNumber(algorithmIncrement?.p95_queue_reduction_pct, 2)}%</b></span>
+                      <span>动作抖动下降 <b>{formatNumber(algorithmIncrement?.action_variation_reduction_pct, 2)}%</b></span>
+                      <span>硬约束成功 <b>{formatNumber(algorithmIncrement?.constraint_success_rate_pct, 1)}%</b></span>
+                    </div>
+                    <div className="landing-increment-tradeoff">
+                      <strong>公开代价 · 不隐藏负结果</strong>
+                      <span>碳排增加 <b>{formatNumber(Math.abs(Number(algorithmIncrement?.carbon_reduction_pct ?? 0)), 4)}%</b></span>
+                      <span>成本增加 <b>{formatNumber(Math.abs(Number(algorithmIncrement?.cost_reduction_pct ?? 0)), 4)}%</b></span>
+                      <span>峰值增加 <b>{formatNumber(Math.abs(Number(algorithmIncrement?.peak_reduction_pct ?? 0)), 4)}%</b></span>
+                      <span>实港等级 <b>{landingDataset?.landing_grade ?? '--'} · 生产禁用</b></span>
+                    </div>
+                  </div>
+                  <div className="landing-stress-strip">
+                    {stressEntries.map(([stressId, stress]) => (
+                      <span key={stressId}>
+                        <small>{stressId.replace(/_/g, ' ')}</small>
+                        <b>{formatNumber(stress.risk_aware_zero_violation_rate_pct, 0)}% 零硬越界</b>
+                        <em>{stressId === 'grid_derating_10pct' ? '软储备缺口 +7.692%' : '代价已公开'}</em>
+                      </span>
+                    ))}
+                  </div>
+                  <footer>
+                    <span>证据哈希 <b>{landingEvidence?.evidence_sha256?.slice(0, 16) ?? '--'}…</b></span>
+                    <span>数据展开比 <b>{formatNumber(landingDataset?.modeled_rows_per_operational_anchor, 3)} 行/锚点</b></span>
+                    <span>边界 <b>公开数据离线回放，不是港口现场 KPI</b></span>
+                  </footer>
+                </section>
                 <section className="algorithm-matrix-board" aria-label="五算法训练矩阵">
                   <header>
                     <div>

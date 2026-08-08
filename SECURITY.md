@@ -6,10 +6,12 @@ Security fixes are applied to the latest release and the default branch.
 
 ## Reporting a vulnerability
 
-Use GitHub private vulnerability reporting after the repository is published. Until that channel
-is enabled, contact the maintainer through a private channel listed on the maintainer's GitHub
-profile. Do not open a public issue containing exploit details, credentials, private port data, or
-the location of an exposed deployment.
+Prefer the repository's
+[private vulnerability advisory form](https://github.com/wenjiayi123/port-energy-carbon-cockpit/security/advisories/new)
+when GitHub presents it to you. If that private channel is unavailable, contact the maintainer
+through a private channel listed on the maintainer's GitHub profile. Do not open a public issue
+containing exploit details, credentials, private port data, or the location of an exposed
+deployment.
 
 Include the affected version, reproduction steps, expected impact, and any proposed mitigation.
 You should receive an acknowledgment within seven days. No bounty is currently offered.

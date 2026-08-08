@@ -132,8 +132,6 @@ export function PortCommandCenter({
   onStartTraining,
   onControlTraining,
   onOpenXiaoyi,
-  onCheckSimulator,
-  onLaunchSimulator,
   onOpenAction,
   onChangeRecommendationTab,
   onSetScenarioMode,
@@ -364,38 +362,60 @@ export function PortCommandCenter({
           <div className="command-panel-title twin-title">
             <b><Bi zh="测试轨迹回放" en="HELD-OUT TRAJECTORY REPLAY" /></b>
             <div className="twin-toolbar">
+              <button className="twin-evidence-button" type="button" title="打开算法落地证据 / Open algorithm evidence" onClick={() => void onOpenPanel('marl')}><Gauge size={11} /><Bi zh="证据" en="Evidence" /></button>
               <button className={viewMode === '2d' ? 'active' : ''} type="button" title="切换二维泊位视图 / Switch to 2D berth view" aria-label="切换二维泊位视图 / Switch to 2D berth view" aria-pressed={viewMode === '2d'} onClick={() => setViewMode('2d')}>2D</button>
               <button className={viewMode === '3d' ? 'active' : ''} type="button" title="切换三维港区视图 / Switch to 3D port view" aria-label="切换三维港区视图 / Switch to 3D port view" aria-pressed={viewMode === '3d'} onClick={() => setViewMode('3d')}>◆ 3D</button>
               <button type="button" title={replayPlaying ? '暂停数字孪生回放 / Pause twin replay' : '继续数字孪生回放 / Resume twin replay'} aria-label={replayPlaying ? '暂停数字孪生回放 / Pause twin replay' : '继续数字孪生回放 / Resume twin replay'} onClick={onToggleReplay}>⌁</button>
               <button type="button" title="刷新仿真回放 / Refresh simulation replay" aria-label="刷新仿真回放 / Refresh simulation replay" onClick={onRefreshSimulation}>▦</button>
-              <button type="button" title="检查航行模拟器状态 / Check simulator" aria-label="检查航行模拟器状态 / Check simulator" onClick={onCheckSimulator}>◎</button>
-              <button type="button" title="打开小懿联动中枢 / Open Xiaoyi hub" aria-label="打开小懿联动中枢 / Open Xiaoyi hub" onClick={onOpenXiaoyi}>⌘</button>
             </div>
           </div>
           <div className={`command-twin-stage view-${viewMode} ${replayPlaying ? 'playing' : 'paused'}`}>
-            <button className="reference-map-layer" type="button" title="查看离线测试轨迹 / View held-out trajectory" aria-label="查看离线测试轨迹 / View held-out trajectory" style={{ transform: `scale(${mapZoom})` }} onClick={() => onOpenAction('twin-map')} />
-            <span className="twin-tide-shimmer" />
-            {layerVisibility.vessel && <span className="twin-route-trace trace-vessel" />}
-            {layerVisibility.agv && <span className="twin-route-trace trace-agv" />}
-            {layerVisibility.truck && <span className="twin-route-trace trace-truck" />}
-            {layerVisibility.planned && <span className="twin-route-trace trace-planned" />}
-            <span className="twin-scan-line" />
-            <div className="twin-live-status"><i /><Bi zh="测试回放" en="TEST REPLAY" /><small>{activeLiveEvent}</small></div>
-            <div className="twin-wind"><Bi zh="风速" en="Wind" /><b>—</b><small>数据集未提供</small></div>
-            <button className="twin-callout callout-b1" type="button" title="查看当前测试轨迹 / View current test trajectory" onClick={() => onOpenAction('berth-b01')}><b>{point?.berth_id ?? 'B--'}</b><span>{point?.vessel_id ?? '等待数据'}</span><small><Bi zh={`STEP ${point?.step ?? 0}`} en={point?.time ?? '--:--'} /></small></button>
-            <button className="twin-callout callout-b3" type="button" title="查看当前资源动作 / View current resource action" onClick={() => onOpenAction('berth-b03')}><b>{point?.berth_id ?? 'B--'}</b><span>{point?.vessel_id ?? '等待数据'}</span><small><Bi zh={`岸桥 ${point?.crane_count ?? 0}`} en={`trucks ${point?.yard_truck_count ?? 0}`} /></small></button>
-            <button className="twin-callout callout-b4" type="button" title="查看数据边界 / View data boundary" onClick={() => onOpenAction('berth-b04')}><b>DATA</b><span><Bi zh="公开测试集" en="PUBLIC TEST SPLIT" /></span></button>
-            <button className="twin-moving-vessel" type="button" title={replayPlaying ? '暂停测试轨迹 / Pause test replay' : '继续测试轨迹 / Resume test replay'} aria-label={replayPlaying ? '暂停测试轨迹 / Pause test replay' : '继续测试轨迹 / Resume test replay'} onClick={onToggleReplay}><Ship size={15} /></button>
-            <div className="twin-legend" aria-label="港区图层控制 / Port layer controls">
-              {([['vessel', '船舶航线', 'Vessel route'], ['agv', 'AGV 路线', 'AGV route'], ['truck', '集卡路线', 'Truck route'], ['planned', '计划路线', 'Planned route']] as Array<[MapLayer, string, string]>).map(([layer, zh, en]) => <button className={layerVisibility[layer] ? 'active' : ''} type="button" key={layer} aria-pressed={layerVisibility[layer]} title={`${zh} / ${en}`} onClick={() => toggleLayer(layer)}><i className={`route ${layer}`} /><Bi zh={zh} en={en} /></button>)}
-              <span><Zap size={12} /><Bi zh="岸电" en="Shore power" /></span><span><BatteryCharging size={12} /><Bi zh="充电站" en="Charging station" /></span><span><ServerCog size={12} /><Bi zh="变电站" en="Substation" /></span>
+            <div className="twin-map-world" style={{ transform: `scale(${mapZoom})` }}>
+              <button className="reference-map-layer" type="button" title="查看离线测试轨迹 / View held-out trajectory" aria-label="查看离线测试轨迹 / View held-out trajectory" onClick={() => onOpenAction('twin-map')} />
+              <span className="twin-tide-shimmer" />
+              <svg className="twin-network-layer" viewBox="0 0 800 520" preserveAspectRatio="none" aria-hidden="true">
+                <defs>
+                  <linearGradient id="twin-channel-glow" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0" stopColor="#13c6ff" stopOpacity="0.12" />
+                    <stop offset="0.55" stopColor="#13c6ff" stopOpacity="0.92" />
+                    <stop offset="1" stopColor="#77eaff" stopOpacity="0.5" />
+                  </linearGradient>
+                </defs>
+                {layerVisibility.vessel && <path className="twin-network-route vessel" d="M66 398 C176 376 275 326 370 286 C471 244 566 268 672 207" />}
+              </svg>
+              <div className="twin-terminal-zone" aria-hidden="true">
+                <span><Bi zh="测试泊位区" en="TEST BERTH ZONE" /></span>
+              </div>
+              {[{ label: 'B01', id: 'B1' }, { label: 'B02', id: 'B2' }, { label: 'B03', id: 'B3' }, { label: 'B04', id: 'B4' }].map((berth, index) => {
+                const berthPoint = trajectory.find((item) => item.berth_id === berth.id);
+                const isActive = point?.berth_id === berth.id;
+                return <button className={`twin-berth-node berth-node-${index + 1} ${isActive ? 'active' : ''}`} type="button" key={berth.id} title={`查看 ${berth.label} 测试步 / Open ${berth.label} test step`} onClick={() => onOpenAction(`berth-${berth.label.toLowerCase()}`)}>
+                  <i />
+                  <span>{isActive ? 'CURRENT' : 'TEST'}</span>
+                  <b>{berth.label}</b>
+                  <small>{berthPoint?.time ?? '--:--'} · {berthPoint?.vessel_id ?? '无测试记录'}</small>
+                </button>;
+              })}
+              <button className="twin-moving-vessel" type="button" title={replayPlaying ? '暂停测试轨迹 / Pause test replay' : '继续测试轨迹 / Resume test replay'} aria-label={replayPlaying ? '暂停测试轨迹 / Pause test replay' : '继续测试轨迹 / Resume test replay'} onClick={onToggleReplay}><Ship size={15} /><small>{point?.berth_id ?? 'B--'}</small></button>
             </div>
+            <span className="twin-scan-line" />
+            <button className="twin-current-card" type="button" title="查看当前测试轨迹 / View current test trajectory" onClick={() => onOpenAction(`berth-${(point?.berth_id ?? 'B1').toLowerCase().replace('b', 'b0')}`)}>
+              <span><i /><Bi zh="当前测试步" en="CURRENT TEST STEP" /></span>
+              <b>{point?.vessel_id ?? '等待测试集'} <em>→</em> {point?.berth_id ?? 'B--'}</b>
+              <small>{point?.time ?? '--:--'} · STEP {point?.step ?? 0}　岸桥 {point?.crane_count ?? 0}　集卡 {point?.yard_truck_count ?? 0}</small>
+            </button>
+            <button className="twin-data-boundary" type="button" title="查看数据边界 / View data boundary" onClick={() => onOpenAction('berth-b04')}><b>DATA</b><Bi zh="公开测试集 · 非实时港口" en="PUBLIC TEST SPLIT · NOT LIVE" /></button>
+            <div className="twin-legend" aria-label="港区图层控制 / Port layer controls">
+              <button className={layerVisibility.vessel ? 'active' : ''} type="button" aria-pressed={layerVisibility.vessel} title="显示或隐藏归一化测试航迹 / Toggle normalized test route" onClick={() => toggleLayer('vessel')}><i className="route vessel" /><Bi zh="测试航迹" en="TEST ROUTE" /></button>
+              <span><Anchor size={12} /><Bi zh={`${point?.berth_id ?? 'B--'} 泊位`} en="CURRENT BERTH" /></span>
+              <span><Gauge size={12} /><Bi zh={`岸桥 ${point?.crane_count ?? 0}`} en="CRANES" /></span>
+              <span><ServerCog size={12} /><Bi zh={`集卡 ${point?.yard_truck_count ?? 0}`} en="TRUCKS" /></span>
+              <span className={point?.shore_power_connected ? 'connected' : 'disconnected'}><Zap size={12} /><Bi zh={point?.shore_power_connected ? '岸电已接' : '岸电未接'} en="SHORE POWER" /></span>
+            </div>
+            <div className="twin-live-status"><i /><Bi zh="测试回放" en="TEST REPLAY" /><small>{activeLiveEvent}</small></div>
             <div className="twin-map-controls">
               <button type="button" title="重置地图视角 / Reset map" aria-label="重置地图视角 / Reset map" onClick={() => { setMapZoom(1); setViewMode('3d'); }}>⌖</button>
-              <button type="button" title="查看仿真与泊位计划 / View simulation" aria-label="查看仿真与泊位计划 / View simulation" onClick={() => void onOpenPanel('simulation')}>◇</button>
               <button type="button" title="查看岸电窗口联动 / View shore power" aria-label="查看岸电窗口联动 / View shore power" onClick={() => void onOpenPanel('shore')}>▱</button>
-              <button type="button" title="检查航行模拟器状态 / Check simulator" aria-label="检查航行模拟器状态 / Check simulator" onClick={onCheckSimulator}>◎</button>
-              <button type="button" title="启动本地航行模拟器 / Start local simulator" aria-label="启动本地航行模拟器 / Start local simulator" onClick={onLaunchSimulator}>⌕</button>
               <button type="button" title="缩小港区视图 / Zoom out" aria-label="缩小港区视图 / Zoom out" onClick={() => setMapZoom((zoom) => Math.max(1, Number((zoom - 0.05).toFixed(2))))}>−</button>
               <button type="button" title="放大港区视图 / Zoom in" aria-label="放大港区视图 / Zoom in" onClick={() => setMapZoom((zoom) => Math.min(1.2, Number((zoom + 0.05).toFixed(2))))}>＋</button>
             </div>
@@ -475,7 +495,7 @@ export function PortCommandCenter({
               return <button className={scenarioMode === mode ? 'active' : ''} type="button" key={mode} aria-pressed={scenarioMode === mode} onClick={() => { setScenarioMode(mode); void onSetScenarioMode(mode); }}><Bi {...copy} /></button>;
             })}</div><button type="button" onClick={onRefreshSimulation}><Bi zh="运行推演" en="Run simulation" /> →</button></div>
             <div className="scenario-deltas"><span><Bi zh="能耗" en="Energy" /> <b>{scenarioOutput[0]}</b></span><span><Bi zh="碳排" en="Carbon" /> <b>{scenarioOutput[1]}</b></span><span><Bi zh="成本" en="Cost" /> <b>{scenarioOutput[2]}</b></span><span><Bi zh="数据分区" en="Split" /> <b>TEST</b></span><span><Bi zh="对照基线" en="Baseline" /> <b>{traditional?.strategy ?? '--'}</b></span><span><Bi zh="当前策略" en="Policy" /> <b>{marl?.strategy ?? '--'}</b></span></div>
-            <div className="training-inline-controls"><span>RL {trainingState.toUpperCase()}</span><button type="button" title="启动 RL 训练 / Start RL training" aria-label="启动 RL 训练 / Start RL training" onClick={onStartTraining}><Play size={11} /><Bi zh="训练" en="Train" /></button><button type="button" title={canResume ? '继续 RL 训练 / Resume RL training' : '暂停 RL 训练 / Pause RL training'} aria-label={canResume ? '继续 RL 训练 / Resume RL training' : '暂停 RL 训练 / Pause RL training'} disabled={!canPause && !canResume} onClick={() => onControlTraining(canResume ? 'resume' : 'pause')}>{canResume ? <Play size={11} /> : <Pause size={11} />}</button><button type="button" title="停止 RL 训练 / Stop RL training" aria-label="停止 RL 训练 / Stop RL training" disabled={!canStop} onClick={() => onControlTraining('stop')}><Square size={10} /></button><button type="button" title={replayPlaying ? '暂停数字孪生回放 / Pause twin replay' : '继续数字孪生回放 / Resume twin replay'} aria-label={replayPlaying ? '暂停数字孪生回放 / Pause twin replay' : '继续数字孪生回放 / Resume twin replay'} onClick={onToggleReplay}>{replayPlaying ? <Pause size={11} /> : <Play size={11} />}<Bi zh="孪生" en="Twin" /></button></div>
+            <div className="training-inline-controls"><span>RL {trainingState.toUpperCase()}</span><button type="button" title="查看 RL 因果评测证据 / View RL causal evidence" aria-label="查看 RL 因果评测证据 / View RL causal evidence" onClick={() => void onOpenPanel('marl')}><Gauge size={11} /><Bi zh="证据" en="Evidence" /></button><button type="button" title="启动 RL 训练 / Start RL training" aria-label="启动 RL 训练 / Start RL training" onClick={onStartTraining}><Play size={11} /><Bi zh="训练" en="Train" /></button><button type="button" title={canResume ? '继续 RL 训练 / Resume RL training' : '暂停 RL 训练 / Pause RL training'} aria-label={canResume ? '继续 RL 训练 / Resume RL training' : '暂停 RL 训练 / Pause RL training'} disabled={!canPause && !canResume} onClick={() => onControlTraining(canResume ? 'resume' : 'pause')}>{canResume ? <Play size={11} /> : <Pause size={11} />}</button><button type="button" title="停止 RL 训练 / Stop RL training" aria-label="停止 RL 训练 / Stop RL training" disabled={!canStop} onClick={() => onControlTraining('stop')}><Square size={10} /></button><button type="button" title={replayPlaying ? '暂停数字孪生回放 / Pause twin replay' : '继续数字孪生回放 / Resume twin replay'} aria-label={replayPlaying ? '暂停数字孪生回放 / Pause twin replay' : '继续数字孪生回放 / Resume twin replay'} onClick={onToggleReplay}>{replayPlaying ? <Pause size={11} /> : <Play size={11} />}<Bi zh="孪生" en="Twin" /></button></div>
           </section>
         </aside>
       </section>

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 import json
+import logging
 import math
 from pathlib import Path
 from threading import RLock
@@ -126,6 +127,7 @@ REQUIRED_METADATA_FIELDS = {
 }
 _DATASET_CACHE: dict[tuple[Any, ...], Any] = {}
 _DATASET_CACHE_LOCK = RLock()
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -471,6 +473,32 @@ def resolve_dataset_path(dataset: str | Path) -> Path:
     return DATASET_DIR / f"{value.name}.csv"
 
 
+def registered_dataset_path(dataset: str) -> Path:
+    """Select a bundled dataset from trusted directory entries.
+
+    HTTP values are used only as lookup keys.  The returned path always comes
+    from the server-owned registry, so a caller cannot smuggle a filesystem
+    path into pandas or the metadata reader.
+    """
+    raw = str(dataset).strip()
+    if not raw or raw != Path(raw).name or "\\" in raw or Path(raw).suffix:
+        raise ValueError("HTTP dataset references must use a registered dataset ID")
+    registered = {
+        candidate.stem: candidate.resolve()
+        for candidate in DATASET_DIR.glob("*.csv")
+        if candidate.is_file()
+    }
+    candidate = registered.get(raw)
+    if candidate is None:
+        raise ValueError(f"Unknown registered dataset: {raw}")
+    return candidate
+
+
+def load_registered_dataset(dataset: str) -> PortDataset:
+    """Load an HTTP-safe dataset selected from the bundled registry."""
+    return PortDataset.load(registered_dataset_path(dataset))
+
+
 def registered_dataset_id(dataset: str | Path) -> str:
     """Resolve a bundled dataset ID without accepting filesystem paths.
 
@@ -478,13 +506,7 @@ def registered_dataset_id(dataset: str | Path) -> str:
     preparation. HTTP callers are restricted to datasets already registered in
     ``app/data/datasets`` so an API request cannot probe arbitrary server files.
     """
-    raw = str(dataset).strip()
-    if not raw or raw != Path(raw).name or "\\" in raw or Path(raw).suffix:
-        raise ValueError("HTTP dataset references must use a registered dataset ID")
-    candidate = (DATASET_DIR / f"{raw}.csv").resolve()
-    if candidate.parent != DATASET_DIR.resolve() or not candidate.is_file():
-        raise ValueError(f"Unknown registered dataset: {raw}")
-    return raw
+    return registered_dataset_path(str(dataset)).stem
 
 
 def portable_dataset_reference(path: str | Path) -> str:
@@ -501,8 +523,14 @@ def list_datasets() -> list[dict[str, Any]]:
     for csv_path in sorted(DATASET_DIR.glob("*.csv")):
         try:
             items.append(PortDataset.load(csv_path).describe())
-        except Exception as exc:
+        except Exception:
+            logger.exception("Bundled dataset validation failed: %s", csv_path.name)
             items.append(
-                {"id": csv_path.stem, "path": str(csv_path), "valid": False, "error": str(exc)}
+                {
+                    "id": csv_path.stem,
+                    "path": str(csv_path),
+                    "valid": False,
+                    "error": "dataset_validation_failed",
+                }
             )
     return items

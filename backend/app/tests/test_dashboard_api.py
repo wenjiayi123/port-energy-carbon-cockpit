@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -107,11 +109,30 @@ def test_dataset_validation_endpoint_records_public_provenance() -> None:
     assert len(payload["sha256"]) == 64
     source_urls = payload["metadata"]["source_urls"]
     assert len(source_urls) >= 10
-    assert any("eia.gov" in url for url in source_urls)
-    assert any("epa.gov" in url for url in source_urls)
+    source_hosts = {urlsplit(url).hostname for url in source_urls}
+    assert source_hosts & {"www.eia.gov", "api.eia.gov"}
+    assert "www.epa.gov" in source_hosts
     assert payload["quality"]["status"] == "pass"
     assert payload["quality"]["score"] == 100
     assert payload["drift"]["method"] == "absolute_standardized_mean_difference"
+
+
+def test_landing_benchmark_endpoint_exposes_increment_and_adverse_tradeoffs() -> None:
+    response = client.get("/api/evidence/landing-benchmark")
+    payload = response.json()
+    business = payload["business_metrics_vs_fixed_full_resources"]
+    increment = payload["algorithm_increment_vs_causal_legacy_mpc"]
+
+    assert response.status_code == 200
+    assert response.headers["etag"].startswith('"')
+    assert payload["evidence_label"] == "CAUSAL_OFFLINE_ROBUSTNESS_BENCHMARK_NOT_FIELD_KPI"
+    assert payload["protocol"]["steps"] == 1_152
+    assert business["carbon_reduction_pct"] == 8.7924
+    assert business["constraint_success_rate_pct"] == 100.0
+    assert increment["delay_reduction_pct"] == 43.8805
+    assert increment["carbon_reduction_pct"] < 0
+    assert payload["per_window_evidence_included"] is False
+    assert "per_window" not in payload
 
 
 def test_port_scenarios_expose_fail_closed_v3_contract() -> None:
@@ -172,9 +193,9 @@ def test_training_scenario_and_dataset_must_resolve_to_same_contract() -> None:
     assert valid.json()["preview"]["scenario"] == "port_la_vessel_activity_benchmark"
     assert valid.json()["preview"]["environment_id"] == "PortEnergyDispatchEnv-v2"
     assert mismatch.status_code == 422
-    assert "expects dataset" in mismatch.json()["detail"]
+    assert mismatch.json()["detail"] == "training_configuration_invalid"
     assert live_template.status_code == 422
-    assert "connector template" in live_template.json()["detail"]
+    assert live_template.json()["detail"] == "training_configuration_invalid"
 
 
 def test_xiaoyi_training_preview_preserves_nested_ui_configuration() -> None:
@@ -221,8 +242,8 @@ def test_http_dataset_inputs_cannot_read_arbitrary_server_paths() -> None:
 
     assert validation.status_code == 422
     assert training.status_code == 422
-    assert "registered dataset ID" in validation.json()["detail"]
-    assert "registered dataset ID" in training.json()["detail"]
+    assert validation.json()["detail"] == "dataset_validation_failed"
+    assert training.json()["detail"] == "training_configuration_invalid"
 
 
 def test_dispatch_endpoint_emits_idempotent_shadow_packet_and_rollback_target() -> None:
@@ -247,7 +268,7 @@ def test_strategy_ids_reject_path_traversal() -> None:
     response = client.post("/api/rl/simulate", json={"strategy_id": "../../outside"})
 
     assert response.status_code == 404
-    assert "Invalid strategy ID" in response.json()["detail"]
+    assert response.json()["detail"] == "policy_artifact_not_found"
 
 
 def test_mpc_controller_artifact_and_held_out_evaluation() -> None:

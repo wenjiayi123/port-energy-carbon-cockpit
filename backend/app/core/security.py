@@ -111,8 +111,8 @@ rate_limiter = SlidingWindowRateLimiter()
 
 def _constant_time_match(provided: str, configured: str) -> bool:
     return bool(provided and configured) and hmac.compare_digest(
-        hashlib.sha256(provided.encode("utf-8")).digest(),
-        hashlib.sha256(configured.encode("utf-8")).digest(),
+        provided.encode("utf-8"),
+        configured.encode("utf-8"),
     )
 
 
@@ -134,9 +134,9 @@ def resolve_principal(request: Request, role: str) -> str:
         return "local-development"
     if role == "anonymous":
         return "anonymous"
-    provided = request.headers.get("x-api-key", "")
-    fingerprint = hashlib.sha256(provided.encode("utf-8")).hexdigest()[:12]
-    return f"api-key:{role}:{fingerprint}"
+    # There is exactly one configured key per role.  Record the role as the
+    # principal without deriving a reusable fingerprint from secret material.
+    return f"api-key-role:{role}"
 
 
 def required_role(request: Request) -> str:

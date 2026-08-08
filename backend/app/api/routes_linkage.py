@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import logging
 import os
 from pathlib import Path
 import shutil
@@ -17,7 +18,7 @@ from fastapi import APIRouter, Body, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.services.kpi_engine import KpiEngine
-from app.rl.dataset import DEFAULT_DATASET_ID, registered_dataset_id
+from app.rl.dataset import DEFAULT_DATASET_ID, registered_dataset_id, registered_dataset_path
 from app.rl.policy_selection import resolve_requested_strategy
 from app.rl.scenarios import resolve_training_scenario
 from app.rl.training import training_service
@@ -25,6 +26,7 @@ from app.integration.gateway import integration_gateway
 
 
 router = APIRouter(tags=["assistant-linkage"])
+logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 XIAOYI_PROJECT = Path(os.getenv("XIAOYI_AI_PROJECT", str(PROJECT_ROOT / "integrations" / "xiaoyi"))).expanduser()
@@ -431,10 +433,12 @@ def _probe_http(url: str, timeout_sec: float = 0.6) -> dict[str, Any]:
         with urlopen(request, timeout=timeout_sec) as response:
             status_code = int(getattr(response, "status", 200))
             return {"ok": 200 <= status_code < 300, "status_code": status_code, "error": None}
-    except URLError as exc:
-        return {"ok": False, "status_code": None, "error": str(getattr(exc, "reason", exc))}
-    except Exception as exc:
-        return {"ok": False, "status_code": None, "error": str(exc)}
+    except URLError:
+        logger.info("Linked HTTP service is unreachable: %s", url)
+        return {"ok": False, "status_code": None, "error": "connection_failed"}
+    except Exception:
+        logger.exception("Linked HTTP service probe failed: %s", url)
+        return {"ok": False, "status_code": None, "error": "probe_failed"}
 
 
 def _post_json(url: str, payload: dict[str, Any], timeout_sec: float = 12.0) -> dict[str, Any]:
@@ -615,8 +619,9 @@ def run_sailing_smoke(payload: dict[str, Any] | None = None, dry_run: bool = Fal
         output = (completed.stdout or "") + ("\n" + completed.stderr if completed.stderr else "")
         ok = completed.returncode == 0 and "SHIP_RL_OK" in output
         packet.update({"status": "passed" if ok else "failed", "returncode": completed.returncode, "ok_marker": "SHIP_RL_OK" in output, "output_tail": output[-1600:]})
-    except subprocess.TimeoutExpired as exc:
-        packet.update({"status": "timeout", "error": str(exc)})
+    except subprocess.TimeoutExpired:
+        logger.warning("Sailing smoke test timed out")
+        packet.update({"status": "timeout", "error": "smoke_test_timeout"})
     _append_log("run_sailing_rl_smoke_test", str(packet["status"]), packet)
     return packet
 
@@ -654,19 +659,22 @@ def _build_training_config(instruction: str, payload: dict[str, Any] | None = No
             str(requested.get("dataset_id") or requested.get("data_file") or DEFAULT_DATASET_ID)
         )
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        logger.info("Assistant dataset selection rejected", exc_info=exc)
+        raise HTTPException(status_code=422, detail="dataset_reference_invalid") from None
     try:
         scenario = resolve_training_scenario(
             str(requested.get("scenario") or "") or None,
             dataset_id,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        logger.info("Assistant scenario selection rejected", exc_info=exc)
+        raise HTTPException(status_code=422, detail="scenario_configuration_invalid") from None
     return {
         "objective_id": objective_id,
         "objective_label": requested.get("objective_label") or profile["label"],
         "algorithm": requested.get("algorithm") or profile["algorithm"],
         "dataset_id": dataset_id,
+        "data_file": registered_dataset_path(dataset_id),
         **scenario,
         "asset_group": requested.get("asset_group") or "berth_shore_power_yard_truck",
         "horizon_min": selected("horizon_min", profile["horizon_min"]),
@@ -924,8 +932,9 @@ def _start_training(payload: dict[str, Any]) -> dict[str, Any]:
             str(raw_config.get("dataset_id") or raw_config.get("data_file") or DEFAULT_DATASET_ID)
         )
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    raw_config.pop("data_file", None)
+        logger.info("Assistant training dataset rejected", exc_info=exc)
+        raise HTTPException(status_code=422, detail="dataset_reference_invalid") from None
+    raw_config["data_file"] = registered_dataset_path(raw_config["dataset_id"])
     try:
         raw_config.update(
             resolve_training_scenario(
@@ -934,7 +943,8 @@ def _start_training(payload: dict[str, Any]) -> dict[str, Any]:
             )
         )
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        logger.info("Assistant training scenario rejected", exc_info=exc)
+        raise HTTPException(status_code=422, detail="scenario_configuration_invalid") from None
     return training_service.start(raw_config)
 
 
@@ -1103,8 +1113,19 @@ def post_xiaoyi_chat(payload: dict[str, Any] = Body(default={})) -> JSONResponse
     try:
         result = _post_json(f"{XIAOYI_BASE_URL}/api/chat", {"question": question, "mode": payload.get("mode") or "brief", "top_k": int(payload.get("top_k") or 5)})
         return JSONResponse({"ok": True, "engine": "xiaoyi_ai", "result": result})
-    except Exception as exc:
-        return JSONResponse({"ok": False, "engine": "local_fallback", "answer": f"小懿暂不可达，能碳驾驶舱本地判断：{question} 可先进入联动中枢确认动作，再执行 dry-run。", "error": str(exc)})
+    except Exception:
+        logger.exception("Xiaoyi chat request failed")
+        return JSONResponse(
+            {
+                "ok": False,
+                "engine": "local_fallback",
+                "answer": (
+                    f"小懿暂不可达，能碳驾驶舱本地判断：{question} "
+                    "可先进入联动中枢确认动作，再执行 dry-run。"
+                ),
+                "error": "xiaoyi_unreachable",
+            }
+        )
 
 
 @router.get("/xiaoyi/logs")

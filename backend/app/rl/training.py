@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import hashlib
 import json
+import logging
 from pathlib import Path
 import platform
 import re
@@ -35,6 +36,7 @@ from app.rl.robust import CausalForecastPortEnv, cvar, paired_bootstrap_interval
 RUNS_DIR = Path(__file__).resolve().parents[1] / "data" / "runs"
 RUNS_DIR.mkdir(parents=True, exist_ok=True)
 RUN_ID_PATTERN = re.compile(r"^rl-\d{8}-\d{6}-[0-9a-f]{6}$")
+logger = logging.getLogger(__name__)
 
 
 def utc_now() -> str:
@@ -56,8 +58,9 @@ class TrainingService:
     def capabilities(self) -> dict[str, Any]:
         try:
             runtime = {"available": True, **self._runtime_versions(), "device": "cpu"}
-        except Exception as exc:
-            runtime = {"available": False, "error": str(exc), "device": None}
+        except Exception:
+            logger.exception("RL runtime capability detection failed")
+            runtime = {"available": False, "error": "rl_runtime_unavailable", "device": None}
         return {
             "algorithms": algorithm_items(),
             "datasets": list_datasets(),
@@ -74,7 +77,7 @@ class TrainingService:
             raise ValueError(
                 f"Unknown algorithm: {algorithm}; choose from {', '.join(ALGORITHM_CATALOG)}"
             )
-        dataset_value = str(raw.get("dataset_id") or raw.get("data_file") or DEFAULT_DATASET_ID)
+        dataset_value = raw.get("data_file") or raw.get("dataset_id") or DEFAULT_DATASET_ID
         dataset = PortDataset.load(dataset_value)
         defaults = ALGORITHM_CATALOG[algorithm]["defaults"]
         total_steps = int(raw.get("total_steps") or defaults["total_steps"])
@@ -327,8 +330,9 @@ class TrainingService:
                     else "changed"
                 )
                 drift = dataset.drift_report()
-            except Exception as exc:
-                drift = {"status": "unavailable", "error": str(exc)}
+            except Exception:
+                logger.exception("Model-registry dataset drift calculation failed")
+                drift = {"status": "unavailable", "error": "dataset_drift_unavailable"}
             evaluation_path = run_dir / "evaluation.json"
             verification_path = run_dir / "verification.json"
             evaluation = (
@@ -706,11 +710,12 @@ class TrainingService:
                 self._job["logs"].append(f"Saved real model artifact: {self._job['artifact_path']}")
                 self._write_manifest()
                 self._persist_state()
-        except Exception as exc:
+        except Exception:
+            logger.exception("RL training job failed: %s", job_id)
             with self._lock:
                 if self._job and self._job["job_id"] == job_id:
                     self._job["status"] = "failed"
-                    self._job["error"] = f"{type(exc).__name__}: {exc}"
+                    self._job["error"] = "training_failed"
                     self._job["completed_at"] = utc_now()
                     self._job["logs"].append(self._job["error"])
                     self._write_manifest()

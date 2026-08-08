@@ -10,13 +10,15 @@ on:
 
 permissions:
   contents: read
-  security-events: write
-  packages: read
-  actions: read
 
 jobs:
   analyze:
     if: github.event.repository.visibility == 'public'
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

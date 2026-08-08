@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes_dashboard import router as dashboard_router
+from app.api.routes_evidence import router as evidence_router
 from app.api.routes_health import router as health_router
 from app.api.routes_integration import router as integration_router
 from app.api.routes_linkage import router as linkage_router
@@ -32,6 +33,7 @@ def create_app() -> FastAPI:
         expose_headers=["X-Request-ID"],
     )
     app.include_router(health_router, prefix="/api")
+    app.include_router(evidence_router, prefix="/api")
     app.include_router(integration_router, prefix="/api")
     app.include_router(dashboard_router, prefix="/api/dashboard")
     app.include_router(optimization_router, prefix="/api/optimization")

@@ -21,7 +21,7 @@
 [![Release](https://img.shields.io/badge/release-v0.3.0-f0b84b.svg)](CHANGELOG.md)
 [![Boundary](https://img.shields.io/badge/production_dispatch-disabled-ef8354.svg)](docs/PRODUCTION_READINESS.md)
 
-[快速开始 / Quick start](#快速开始--quick-start) · [技术评审 / Review](docs/TECHNICAL_REVIEW_2026-08.md) · [系统架构 / Architecture](#系统架构--architecture) · [五类基线 / Baselines](#五类可执行基线--five-executable-baselines) · [数据契约 / Data](#替换港口数据--bring-your-own-port-data) · [可信边界 / Trust](#可信边界--trust-boundaries) · [参与贡献 / Contribute](CONTRIBUTING.md)
+[快速开始 / Quick start](#快速开始--quick-start) · [可视验收 / Visual acceptance](docs/VISUAL_ACCEPTANCE_GUIDE.md) · [技术评审 / Review](docs/TECHNICAL_REVIEW_2026-08.md) · [系统架构 / Architecture](#系统架构--architecture) · [五类基线 / Baselines](#五类可执行基线--five-executable-baselines) · [数据契约 / Data](#替换港口数据--bring-your-own-port-data) · [可信边界 / Trust](#可信边界--trust-boundaries) · [参与贡献 / Contribute](CONTRIBUTING.md)
 
 </div>
 
@@ -374,6 +374,7 @@ cd backend
 | Endpoint | 方法 / Method | 语义 / Semantics |
 | --- | --- | --- |
 | `/api/dashboard/snapshot` | GET | 当前公开 benchmark 与测试轨迹快照 / current benchmark and held-out snapshot |
+| `/api/evidence/landing-benchmark` | GET | v4 因果业务增量、压力权衡、边界与哈希摘要 / v4 causal increment, stress trade-offs, boundary and hashes |
 | `/api/rl/capabilities` | GET | 算法、数据、运行时与渲染边界 / algorithms, datasets, runtime, rendering boundary |
 | `/api/rl/datasets/validate` | POST | 注册数据集质量、分区与血缘校验 / registered-dataset quality, split, provenance validation |
 | `/api/rl/datasets/{id}/landing-readiness` | GET | 独立锚点、展开率、v3 字段、事件血缘与校准缺口 / source anchors, expansion, v3 fields, event lineage, calibration gaps |
@@ -472,6 +473,8 @@ scripts/        安装、运行、校验与数据准备 / bootstrap, run, valida
 
 ## 深入文档 / Documentation
 
+- [Visual acceptance / 本地可视化验收](docs/VISUAL_ACCEPTANCE_GUIDE.md)
+- [Real-port technical review / 实港技术评审](docs/TECHNICAL_REVIEW_2026-08.md)
 - [RL pipeline / 强化学习管线](docs/RL_PIPELINE.md)
 - [Datasets and field contract / 数据与字段契约](docs/DATASETS.md)
 - [Data card / 数据卡](docs/DATA_CARD.md)

@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import APIRouter, Body, HTTPException
 
-from app.rl.dataset import DEFAULT_DATASET_ID, PortDataset, registered_dataset_id
+from app.rl.dataset import (
+    DEFAULT_DATASET_ID,
+    load_registered_dataset,
+    registered_dataset_id,
+    registered_dataset_path,
+)
 from app.rl.landing_readiness import assess_dataset_landing_readiness
 from app.rl.policy_selection import resolve_requested_strategy
 from app.rl.scenarios import resolve_training_scenario
@@ -12,6 +18,7 @@ from app.rl.training import training_service, utc_now
 
 
 router = APIRouter(tags=["reinforcement-learning"])
+logger = logging.getLogger(__name__)
 
 
 def _registered_api_dataset(payload: dict[str, Any]) -> str:
@@ -22,7 +29,7 @@ def _registered_api_dataset(payload: dict[str, Any]) -> str:
 def _api_training_config(payload: dict[str, Any]) -> dict[str, Any]:
     config = dict(payload.get("config") or payload)
     config["dataset_id"] = _registered_api_dataset(config)
-    config.pop("data_file", None)
+    config["data_file"] = registered_dataset_path(config["dataset_id"])
     config.update(
         resolve_training_scenario(
             str(config.get("scenario") or "") or None,
@@ -52,19 +59,21 @@ def datasets() -> dict[str, Any]:
 @router.post("/rl/datasets/validate")
 def validate_dataset(payload: dict[str, Any] = Body(default={})) -> dict[str, Any]:
     try:
-        dataset = PortDataset.load(_registered_api_dataset(payload))
+        dataset = load_registered_dataset(_registered_api_dataset(payload))
         return {"ok": True, "dataset": dataset.describe()}
     except Exception as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        logger.info("Dataset validation rejected", exc_info=exc)
+        raise HTTPException(status_code=422, detail="dataset_validation_failed") from None
 
 
 @router.get("/rl/datasets/{dataset_id}/landing-readiness")
 def dataset_landing_readiness(dataset_id: str) -> dict[str, Any]:
     try:
-        dataset = PortDataset.load(registered_dataset_id(dataset_id))
+        dataset = load_registered_dataset(registered_dataset_id(dataset_id))
         return assess_dataset_landing_readiness(dataset)
     except Exception as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        logger.info("Dataset landing-readiness request rejected", exc_info=exc)
+        raise HTTPException(status_code=422, detail="dataset_landing_readiness_failed") from None
 
 
 @router.post("/rl/train/start")
@@ -72,20 +81,24 @@ def train_start(payload: dict[str, Any] = Body(default={})) -> dict[str, Any]:
     try:
         config = _api_training_config(payload)
     except Exception as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        logger.info("Training configuration rejected", exc_info=exc)
+        raise HTTPException(status_code=422, detail="training_configuration_invalid") from None
     if not bool(payload.get("confirm", False)):
         try:
             config = training_service.validate_config(config)
         except Exception as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
+            logger.info("Training preview validation rejected", exc_info=exc)
+            raise HTTPException(status_code=422, detail="training_configuration_invalid") from None
         return {"ok": False, "status": "confirmation_required", "preview": config}
     try:
         result = training_service.start(config)
         return {"ok": True, "result": result}
     except RuntimeError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        logger.info("Training start conflict", exc_info=exc)
+        raise HTTPException(status_code=409, detail="training_start_conflict") from None
+    except Exception:
+        logger.exception("Training start failed")
+        raise HTTPException(status_code=422, detail="training_start_failed") from None
 
 
 @router.get("/rl/train/status")
@@ -143,9 +156,11 @@ def simulate(payload: dict[str, Any] = Body(default={})) -> dict[str, Any]:
             resolve_requested_strategy(payload.get("strategy_id"))
         )
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        logger.info("Policy simulation artifact not found", exc_info=exc)
+        raise HTTPException(status_code=404, detail="policy_artifact_not_found") from None
     except RuntimeError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        logger.info("Policy simulation rejected", exc_info=exc)
+        raise HTTPException(status_code=409, detail="policy_not_ready") from None
 
 
 @router.post("/rlops/policies/verify")
@@ -155,7 +170,8 @@ def verify_policy(payload: dict[str, Any] = Body(default={})) -> dict[str, Any]:
             resolve_requested_strategy(payload.get("strategy_id"), require_verified=False)
         )
     except (FileNotFoundError, RuntimeError) as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        logger.info("Policy verification rejected", exc_info=exc)
+        raise HTTPException(status_code=409, detail="policy_verification_unavailable") from None
     metrics = evaluation["metrics"]
     uncertainty = evaluation.get("uncertainty") or {}
     checks = [

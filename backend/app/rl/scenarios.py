@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,7 @@ from app.rl.dataset import PROJECT_ROOT, PortDataset
 
 
 SCENARIO_CONFIG = PROJECT_ROOT / "configs" / "ports.yaml"
+logger = logging.getLogger(__name__)
 
 
 def load_scenario_registry(path: Path = SCENARIO_CONFIG) -> dict[str, Any]:
@@ -104,11 +106,12 @@ def scenario_items() -> list[dict[str, Any]]:
                     "quality": dataset.quality_report(),
                     "source_urls": dataset.metadata.get("source_urls", []),
                 }
-            except Exception as error:
+            except Exception:
+                logger.exception("Scenario dataset validation failed: %s", dataset_id)
                 dataset_evidence = {
                     "id": str(dataset_id),
                     "valid": False,
-                    "error": str(error),
+                    "error": "dataset_validation_failed",
                 }
         adapters = item.get("adapters") or {}
         if item.get("mode") == "live_port_template":
