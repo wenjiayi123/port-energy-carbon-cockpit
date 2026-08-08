@@ -35,7 +35,6 @@ jobs:
           PYTHONPATH=backend python -m app.rl.benchmark verify reports/offline_benchmark_v3.json
           PYTHONPATH=backend python -m app.rl.benchmark verify reports/offline_benchmark_vessel_activity_v1.json
           PYTHONPATH=backend python -m app.rl.landing_benchmark verify reports/port_landing_benchmark_v4.json
-          PYTHONPATH=backend python -m app.rl.landing_benchmark verify reports/port_landing_benchmark_v4.json
       - name: Audit Python dependencies
         run: python -m pip_audit --skip-editable
 
