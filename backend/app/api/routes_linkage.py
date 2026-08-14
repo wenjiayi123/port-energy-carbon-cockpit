@@ -23,6 +23,9 @@ from app.rl.policy_selection import resolve_requested_strategy
 from app.rl.scenarios import resolve_training_scenario
 from app.rl.training import training_service
 from app.integration.gateway import integration_gateway
+from app.services.runtime_decision import runtime_decision_service
+from app.services.runtime_forecast import runtime_forecast_model
+from app.services.runtime_simulator import runtime_simulator
 
 
 router = APIRouter(tags=["assistant-linkage"])
@@ -94,6 +97,7 @@ PREFERENCE_ACTIONS: dict[str, dict[str, Any]] = {
 }
 
 TOP_PANEL_ACTIONS: dict[str, dict[str, str]] = {
+    "open_runtime_panel": {"panel": "runtime", "label": "实时闭环面板"},
     "open_simulation_panel": {"panel": "simulation", "label": "仿真在线面板"},
     "open_marl_panel": {"panel": "marl", "label": "RL 策略面板"},
     "open_carbon_panel": {"panel": "carbon", "label": "低碳优先面板"},
@@ -103,6 +107,84 @@ TOP_PANEL_ACTIONS: dict[str, dict[str, str]] = {
 
 
 ACTION_REGISTRY: list[dict[str, Any]] = [
+    {
+        "id": "open_runtime_panel",
+        "label": "打开实时闭环面板",
+        "category": "runtime_closed_loop",
+        "description": "打开公开数据校准实时模拟、预测、建议、人工审批、模拟执行和回滚面板。",
+        "intent_aliases": ["open_runtime_panel", "打开实时闭环", "打开实时态势面板"],
+        "keywords": ["实时闭环", "实时态势", "运行闭环", "打开实时", "闭环面板"],
+        "button_selector": "#btnXiaoyiOpenRuntimePanel",
+        "button_label": "打开实时闭环",
+        "backend_request": {"method": "LOCAL", "path": "front-end:open-top-panel", "body": {"panel": "runtime"}},
+        "linked_system": "runtime_closed_loop",
+        "requires_human_confirm": False,
+    },
+    {
+        "id": "summarize_runtime_state",
+        "label": "总结实时态势",
+        "category": "runtime_closed_loop",
+        "description": "读取当前 51 字段快照、质量门禁和 1/3/6 小时模型预测，生成有来源边界的态势摘要。",
+        "intent_aliases": ["summarize_runtime_state", "总结实时态势", "实时态势摘要"],
+        "keywords": ["总结实时", "态势摘要", "现在什么情况", "当前能碳态势", "实时状态"],
+        "button_selector": "#btnXiaoyiRuntimeSummary",
+        "button_label": "实时态势摘要",
+        "backend_request": {"method": "POST", "path": "/api/assistant/actions/execute"},
+        "linked_system": "runtime_closed_loop",
+        "requires_human_confirm": False,
+    },
+    {
+        "id": "prepare_runtime_handover",
+        "label": "生成实时交班摘要",
+        "category": "runtime_closed_loop",
+        "description": "整理场景、数据质量、能碳指标、模型预测、最新建议和生产权限边界，供人工交班复核。",
+        "intent_aliases": ["prepare_runtime_handover", "生成交班摘要", "实时交班"],
+        "keywords": ["交班", "交接班", "值班摘要", "班组交接", "运行简报"],
+        "button_selector": "#btnXiaoyiRuntimeHandover",
+        "button_label": "实时交班摘要",
+        "backend_request": {"method": "POST", "path": "/api/assistant/actions/execute"},
+        "linked_system": "runtime_closed_loop",
+        "requires_human_confirm": False,
+    },
+    {
+        "id": "triage_runtime_alerts",
+        "label": "研判实时异常",
+        "category": "runtime_closed_loop",
+        "description": "读取质量门禁、异常字段和当前工程场景，给出 fail-closed 的人工处置顺序。",
+        "intent_aliases": ["triage_runtime_alerts", "研判实时异常", "异常研判"],
+        "keywords": ["异常研判", "告警", "质量门禁", "哪里异常", "故障处置"],
+        "button_selector": "#btnXiaoyiRuntimeTriage",
+        "button_label": "实时异常研判",
+        "backend_request": {"method": "POST", "path": "/api/assistant/actions/execute"},
+        "linked_system": "runtime_closed_loop",
+        "requires_human_confirm": False,
+    },
+    {
+        "id": "create_runtime_recommendation",
+        "label": "生成当前运行建议",
+        "category": "runtime_closed_loop",
+        "description": "经人工确认后调用运行 MPC 生成建议；小懿不能审批、执行或绕过质量门禁。",
+        "intent_aliases": ["create_runtime_recommendation", "生成当前运行建议", "生成实时建议"],
+        "keywords": ["生成建议", "运行建议", "实时推荐", "生成推荐", "mcp建议"],
+        "button_selector": "#btnRuntimeCreateDecision",
+        "button_label": "生成当前推荐",
+        "backend_request": {"method": "POST", "path": "/api/runtime/decisions"},
+        "linked_system": "runtime_closed_loop",
+        "requires_human_confirm": True,
+    },
+    {
+        "id": "explain_runtime_recommendation",
+        "label": "解释最新运行建议",
+        "category": "runtime_closed_loop",
+        "description": "只读解释最新 MPC 建议、安全投影、约束、审批状态和强基线对比，不代替人工授权。",
+        "intent_aliases": ["explain_runtime_recommendation", "解释最新运行建议", "解释实时推荐"],
+        "keywords": ["解释建议", "解释推荐", "为什么这样调", "安全投影", "审批状态"],
+        "button_selector": "#btnXiaoyiRuntimeExplain",
+        "button_label": "解释最新建议",
+        "backend_request": {"method": "POST", "path": "/api/assistant/actions/execute"},
+        "linked_system": "runtime_closed_loop",
+        "requires_human_confirm": False,
+    },
     {
         "id": "start_xiaoyi_ai",
         "label": "启动小懿AI",
@@ -465,6 +547,30 @@ def _process_state(process: subprocess.Popen[Any] | None) -> dict[str, Any]:
     }
 
 
+def _public_path_ref(path: Path) -> str:
+    """Return a portable integration reference without exposing a host path."""
+    try:
+        return path.resolve().relative_to(PROJECT_ROOT.resolve()).as_posix()
+    except (OSError, ValueError):
+        return f"external-integration/{path.name or 'configured-target'}"
+
+
+def _sanitize_integration_output(value: str) -> str:
+    sanitized = str(value)
+    replacements = {
+        str(PROJECT_ROOT): "<repository-root>",
+        str(XIAOYI_PROJECT): "<xiaoyi-integration>",
+        str(SAILING_PROJECT): "<sailing-integration>",
+        str(GODOT_EXECUTABLE): f"<godot:{GODOT_EXECUTABLE.name}>",
+    }
+    for local_path, portable_label in sorted(
+        replacements.items(), key=lambda item: len(item[0]), reverse=True
+    ):
+        if local_path:
+            sanitized = sanitized.replace(local_path, portable_label)
+    return sanitized
+
+
 def _python_for_xiaoyi() -> str:
     candidates = [
         PROJECT_ROOT / "backend" / ".venv" / "bin" / "python",
@@ -495,9 +601,9 @@ def xiaoyi_status() -> dict[str, Any]:
         "base_url": XIAOYI_BASE_URL,
         "health_url": health_url,
         "chat_url": f"{XIAOYI_BASE_URL}/api/chat",
-        "project": {"path": str(XIAOYI_PROJECT), "exists": XIAOYI_PROJECT.exists()},
-        "run_script": {"path": str(XIAOYI_PROJECT / "run.sh"), "exists": (XIAOYI_PROJECT / "run.sh").exists()},
-        "start_command": _xiaoyi_start_command(),
+        "project": {"path": _public_path_ref(XIAOYI_PROJECT), "exists": XIAOYI_PROJECT.exists()},
+        "run_script": {"path": _public_path_ref(XIAOYI_PROJECT / "run.sh"), "exists": (XIAOYI_PROJECT / "run.sh").exists()},
+        "launcher": "configured-local-integration",
         "probe": probe,
         "process": _process_state(_xiaoyi_process),
         "last_launch": _last_xiaoyi_launch,
@@ -511,7 +617,7 @@ def launch_xiaoyi(payload: dict[str, Any] | None = None, dry_run: bool = False) 
     packet = {
         "type": "xiaoyi_service_launch",
         "dry_run": dry_run,
-        "command": status["start_command"],
+        "launcher": "configured-local-integration",
         "health_url": status["health_url"],
         "chat_url": status["chat_url"],
     }
@@ -526,7 +632,7 @@ def launch_xiaoyi(payload: dict[str, Any] | None = None, dry_run: bool = False) 
         return packet
 
     _xiaoyi_process = subprocess.Popen(
-        ["bash", "-lc", status["start_command"]],
+        ["bash", "-lc", _xiaoyi_start_command()],
         cwd=str(XIAOYI_PROJECT),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -556,11 +662,11 @@ def sailing_status() -> dict[str, Any]:
         "launchable": launchable,
         "label": "航行模拟器可启动" if launchable else "航行模拟器不可启动",
         "control_mode": "launch_and_preset_scene",
-        "project_root": {"path": str(SAILING_PROJECT), "exists": SAILING_PROJECT.exists()},
-        "project_file": {"path": str(project_file), "exists": project_file.exists()},
-        "godot_executable": {"path": str(GODOT_EXECUTABLE), "exists": GODOT_EXECUTABLE.exists()},
+        "project_root": {"path": _public_path_ref(SAILING_PROJECT), "exists": SAILING_PROJECT.exists()},
+        "project_file": {"path": _public_path_ref(project_file), "exists": project_file.exists()},
+        "godot_executable": {"name": GODOT_EXECUTABLE.name, "exists": GODOT_EXECUTABLE.exists()},
         "main_scene": MAIN_SCENE,
-        "smoke_script": {"path": str(smoke_script), "exists": smoke_script.exists()},
+        "smoke_script": {"path": _public_path_ref(smoke_script), "exists": smoke_script.exists()},
         "process": _process_state(_sailing_process),
         "last_launch": _last_sailing_launch,
     }
@@ -577,7 +683,7 @@ def launch_sailing(payload: dict[str, Any] | None = None, dry_run: bool = False)
         "dry_run": dry_run,
         "preset": preset,
         "scene": MAIN_SCENE,
-        "command": command,
+        "launcher": "configured-local-integration",
         "note": "Godot 端暂未开放 HTTP 控制；当前联动执行启动和预设主场景加载。",
     }
     if not status["launchable"]:
@@ -607,7 +713,7 @@ def launch_sailing(payload: dict[str, Any] | None = None, dry_run: bool = False)
 def run_sailing_smoke(payload: dict[str, Any] | None = None, dry_run: bool = False) -> dict[str, Any]:
     payload = payload or {}
     command = [str(GODOT_EXECUTABLE), "--headless", "--path", str(SAILING_PROJECT), "--script", SMOKE_SCRIPT]
-    packet = {"type": "godot_headless_smoke_test", "dry_run": dry_run, "command": command, "script": SMOKE_SCRIPT}
+    packet = {"type": "godot_headless_smoke_test", "dry_run": dry_run, "launcher": "configured-local-integration", "script": SMOKE_SCRIPT}
     if not sailing_status()["launchable"]:
         packet.update({"status": "failed", "error": "航行模拟器项目或 Godot 可执行文件不存在"})
         return packet
@@ -618,7 +724,7 @@ def run_sailing_smoke(payload: dict[str, Any] | None = None, dry_run: bool = Fal
         completed = subprocess.run(command, cwd=str(SAILING_PROJECT), capture_output=True, text=True, timeout=35, check=False)
         output = (completed.stdout or "") + ("\n" + completed.stderr if completed.stderr else "")
         ok = completed.returncode == 0 and "SHIP_RL_OK" in output
-        packet.update({"status": "passed" if ok else "failed", "returncode": completed.returncode, "ok_marker": "SHIP_RL_OK" in output, "output_tail": output[-1600:]})
+        packet.update({"status": "passed" if ok else "failed", "returncode": completed.returncode, "ok_marker": "SHIP_RL_OK" in output, "output_tail": _sanitize_integration_output(output[-1600:])})
     except subprocess.TimeoutExpired:
         logger.warning("Sailing smoke test timed out")
         packet.update({"status": "timeout", "error": "smoke_test_timeout"})
@@ -828,21 +934,256 @@ def _top_panel_result(action_id: str, dry_run: bool) -> dict[str, Any]:
     }
 
 
+def _runtime_signal(snapshot: dict[str, Any], field_id: str) -> dict[str, Any]:
+    item = snapshot.get("signals", {}).get(field_id, {})
+    return {
+        "value": item.get("value"),
+        "unit": item.get("unit"),
+        "source_type": item.get("source_type"),
+        "quality_status": item.get("quality_status"),
+    }
+
+
+def _latest_runtime_decision() -> dict[str, Any] | None:
+    items = runtime_decision_service.list(limit=1).get("items", [])
+    return items[0] if items else None
+
+
+def _runtime_state_summary() -> dict[str, Any]:
+    snapshot = runtime_simulator.snapshot(advance=False)
+    forecast: dict[str, Any] | None = None
+    forecast_error: str | None = None
+    if snapshot.get("decision_allowed"):
+        try:
+            forecast = runtime_forecast_model.predict(snapshot)
+        except RuntimeError as exc:
+            forecast_error = str(exc)
+    else:
+        forecast_error = "runtime_quality_gate_failed"
+    quality = snapshot.get("quality", {})
+    current_kpis = snapshot.get("kpis", {}).get("current", {})
+    forecast_points = []
+    if forecast:
+        for point in forecast.get("points", []):
+            predictions = point.get("predictions", {})
+            forecast_points.append(
+                {
+                    "horizon_hours": point.get("horizon_hours"),
+                    "terminal_load_kw": predictions.get("terminal_load_kw"),
+                    "grid_carbon_kg_per_kwh": predictions.get("grid_carbon_kg_per_kwh"),
+                    "electricity_price_cny_per_kwh": predictions.get("electricity_price_cny_per_kwh"),
+                    "throughput_demand_teu_h": predictions.get("throughput_demand_teu_h"),
+                }
+            )
+    state = {
+        "status": "grounded_runtime_summary",
+        "data_mode": snapshot.get("data_mode"),
+        "simulator_state": snapshot.get("simulator_state"),
+        "scenario_id": snapshot.get("active_scenario", {}).get("scenario_id"),
+        "step": snapshot.get("step"),
+        "virtual_event_time": snapshot.get("virtual_event_time"),
+        "field_count": len(snapshot.get("signals", {})),
+        "quality_gate": {
+            "status": quality.get("status"),
+            "critical_reasons": quality.get("critical_reasons", []),
+            "decision_allowed": bool(snapshot.get("decision_allowed")),
+            "classification_pct": quality.get("classification_pct", {}),
+        },
+        "signals": {
+            "grid_import": _runtime_signal(snapshot, "grid.import_power_kw"),
+            "transformer_loading": _runtime_signal(snapshot, "transformer.loading_pct"),
+            "battery_soc": _runtime_signal(snapshot, "battery.soc_pct"),
+            "battery_temperature": _runtime_signal(snapshot, "battery.temperature_c"),
+            "solar_available": _runtime_signal(snapshot, "solar.available_power_kw"),
+            "shore_power_load": _runtime_signal(snapshot, "shore_power.load_kw"),
+            "operation_queue": _runtime_signal(snapshot, "operations.queue_teu"),
+        },
+        "current_kpis": current_kpis,
+        "forecast": {
+            "available": forecast is not None,
+            "true_model_inference": bool(forecast and forecast.get("true_model_inference")),
+            "model_id": forecast.get("model", {}).get("model_id") if forecast else None,
+            "points": forecast_points,
+            "error": forecast_error,
+        },
+        "trace": {
+            "snapshot_sha256": snapshot.get("snapshot_sha256"),
+            "dataset_id": snapshot.get("dataset", {}).get("dataset_id"),
+            "dataset_sha256": snapshot.get("dataset", {}).get("dataset_sha256"),
+        },
+        "production_boundary": {
+            "simulation_mode": True,
+            "live_data_verified": False,
+            "dispatch_allowed": False,
+            "production_authority": False,
+        },
+    }
+    state["summary"] = (
+        f"实时模拟器 {state['simulator_state']}，场景 {state['scenario_id']}，"
+        f"质量门禁 {str(state['quality_gate']['status']).upper()}，"
+        f"电网进口 {state['signals']['grid_import']['value']} kW，"
+        f"变压器负载率 {state['signals']['transformer_loading']['value']}%，"
+        f"储能 SOC {state['signals']['battery_soc']['value']}%。"
+    )
+    return state
+
+
+def _runtime_handover_summary() -> dict[str, Any]:
+    state = _runtime_state_summary()
+    latest = _latest_runtime_decision()
+    latest_summary = None
+    if latest:
+        latest_summary = {
+            "decision_id": latest.get("decision_id"),
+            "status": latest.get("status"),
+            "risk_level": latest.get("risk_level"),
+            "approval_count": len(latest.get("approvals", [])),
+            "required_approvals": latest.get("required_approvals"),
+            "created_at": latest.get("created_at"),
+            "objective": latest.get("objective"),
+        }
+    return {
+        "status": "grounded_runtime_handover",
+        "summary": state["summary"],
+        "shift_handover": {
+            "runtime": {
+                "simulator_state": state["simulator_state"],
+                "scenario_id": state["scenario_id"],
+                "step": state["step"],
+                "virtual_event_time": state["virtual_event_time"],
+            },
+            "quality_gate": state["quality_gate"],
+            "signals": state["signals"],
+            "current_kpis": state["current_kpis"],
+            "forecast": state["forecast"],
+            "latest_decision": latest_summary,
+            "operator_note": "交班内容来自当前模拟快照与模型推理；任何建议仍须由独立人工角色审批后才能模拟执行。",
+        },
+        "production_boundary": state["production_boundary"],
+    }
+
+
+def _runtime_alert_triage() -> dict[str, Any]:
+    snapshot = runtime_simulator.snapshot(advance=False)
+    quality = snapshot.get("quality", {})
+    abnormal = [
+        {
+            "field_id": field_id,
+            "quality_status": item.get("quality_status"),
+            "value": item.get("value"),
+            "unit": item.get("unit"),
+            "source_type": item.get("source_type"),
+        }
+        for field_id, item in snapshot.get("signals", {}).items()
+        if item.get("quality_status") not in {"正常", "插值"}
+    ]
+    blocked = not bool(snapshot.get("decision_allowed"))
+    actions = (
+        [
+            "保持 fail-closed，不生成或执行新建议。",
+            "按异常字段的 source_id 与 trace_id 核验数据源、时间戳和质量规则。",
+            "质量恢复后重新刷新快照与预测，再由人工复核建议。",
+        ]
+        if blocked or abnormal
+        else [
+            "当前无阻断级异常；继续监控变压器负载率、储能温度和作业队列。",
+            "如需改变运行参数，只生成建议并保留独立人工审批。",
+        ]
+    )
+    return {
+        "status": "grounded_runtime_alert_triage",
+        "scenario_id": snapshot.get("active_scenario", {}).get("scenario_id"),
+        "quality_status": quality.get("status"),
+        "decision_allowed": not blocked,
+        "critical_reasons": quality.get("critical_reasons", []),
+        "abnormal_fields": abnormal,
+        "operator_actions": actions,
+        "summary": (
+            f"质量门禁 {'FAIL-CLOSED' if blocked else 'PASS'}，"
+            f"阻断原因 {len(quality.get('critical_reasons', []))} 项，"
+            f"异常字段 {len(abnormal)} 项。"
+        ),
+        "production_boundary": {
+            "live_data_verified": False,
+            "dispatch_allowed": False,
+            "production_authority": False,
+        },
+    }
+
+
+def _runtime_recommendation_explanation() -> dict[str, Any]:
+    latest = _latest_runtime_decision()
+    if latest is None:
+        return {
+            "status": "no_runtime_recommendation",
+            "summary": "尚无运行建议；可先经人工确认生成当前推荐。",
+            "production_authority": False,
+        }
+    policy = latest.get("policy", {})
+    impact = latest.get("predicted_impact", {})
+    return {
+        "status": "grounded_runtime_recommendation_explanation",
+        "summary": (
+            f"最新建议 {latest.get('decision_id')} 状态 {latest.get('status')}，"
+            f"风险 {latest.get('risk_level')}，审批 "
+            f"{len(latest.get('approvals', []))}/{latest.get('required_approvals')}。"
+        ),
+        "decision": {
+            "decision_id": latest.get("decision_id"),
+            "status": latest.get("status"),
+            "risk_level": latest.get("risk_level"),
+            "objective": latest.get("objective"),
+            "recommended_action": latest.get("recommended_action", {}),
+            "projected_action": latest.get("projected_action", {}),
+            "triggered_constraints": latest.get("safety_projection", {}).get("triggered_constraints", []),
+            "predicted_impact": impact,
+            "strong_baseline": policy.get("strong_baseline"),
+            "approval_count": len(latest.get("approvals", [])),
+            "required_approvals": latest.get("required_approvals"),
+            "production_authority": False,
+            "dispatch_allowed": False,
+        },
+        "operator_note": "小懿只解释建议，不具备审批、生产下发或绕过质量门禁的权限。",
+    }
+
+
+def _runtime_recommendation_trigger(dry_run: bool) -> dict[str, Any]:
+    snapshot = runtime_simulator.snapshot(advance=False)
+    allowed = bool(snapshot.get("decision_allowed"))
+    return {
+        "status": (
+            "ready_for_human_confirmation"
+            if dry_run and allowed
+            else "front_end_recommendation_trigger_ready"
+            if allowed
+            else "blocked_by_runtime_quality_gate"
+        ),
+        "decision_allowed": allowed,
+        "target_button": "#btnRuntimeCreateDecision",
+        "note": "仅生成 MPC 建议；审批、模拟执行和回滚由独立人工按钮完成。",
+        "production_authority": False,
+        "dispatch_allowed": False,
+    }
+
+
 def _linkage_health_summary() -> dict[str, Any]:
     xiaoyi = xiaoyi_status()
     sailing = sailing_status()
     training = _training_status()
+    runtime = _runtime_state_summary()
     return {
         "status": "checked",
         "summary": {
             "xiaoyi": xiaoyi["label"],
             "rl": training["summary"],
             "sailing": sailing["label"],
+            "runtime": f"实时闭环{str(runtime['quality_gate']['status']).upper()} / 生产权限关闭",
         },
         "systems": {
             "xiaoyi_ai": xiaoyi,
             "rl_training": training,
             "sailing_simulator": sailing,
+            "runtime_closed_loop": runtime,
         },
     }
 
@@ -851,6 +1192,16 @@ def _execute_action(action: dict[str, Any], payload: dict[str, Any], dry_run: bo
     action_id = action["id"]
     if action_id in TOP_PANEL_ACTIONS:
         return _top_panel_result(action_id, dry_run=dry_run)
+    if action_id == "summarize_runtime_state":
+        return _runtime_state_summary()
+    if action_id == "prepare_runtime_handover":
+        return _runtime_handover_summary()
+    if action_id == "triage_runtime_alerts":
+        return _runtime_alert_triage()
+    if action_id == "create_runtime_recommendation":
+        return _runtime_recommendation_trigger(dry_run=dry_run)
+    if action_id == "explain_runtime_recommendation":
+        return _runtime_recommendation_explanation()
     if action_id == "refresh_dashboard_snapshot":
         return _dashboard_refresh(payload, dry_run=dry_run)
     if action_id == "run_linkage_health_check":
@@ -1052,6 +1403,7 @@ def linkage_health() -> dict[str, Any]:
     rl_capabilities = training_service.capabilities()
     rl_status = training_service.status()
     rl_online = bool(rl_capabilities["runtime"].get("available"))
+    runtime = _runtime_state_summary()
     return {
         "ok": True,
         "updated_at": _utc_now(),
@@ -1060,9 +1412,10 @@ def linkage_health() -> dict[str, Any]:
             "xiaoyi": xiaoyi["label"],
             "rl": rl_status["summary"] if rl_online else "RL运行时不可用",
             "sailing": sailing["label"],
+            "runtime": f"实时闭环{str(runtime['quality_gate']['status']).upper()} / 生产权限关闭",
         },
         "systems": {
-            "energy_carbon_cockpit": {"online": True, "label": "能碳驾驶舱在线", "project_root": str(PROJECT_ROOT)},
+            "energy_carbon_cockpit": {"online": True, "label": "能碳驾驶舱在线", "project_root": "."},
             "xiaoyi_ai": xiaoyi,
             "rl_interface": {
                 "online": rl_online,
@@ -1086,6 +1439,7 @@ def linkage_health() -> dict[str, Any]:
                 },
             },
             "sailing_simulator": sailing,
+            "runtime_closed_loop": runtime,
         },
     }
 
@@ -1162,6 +1516,11 @@ def assistant_execute(payload: dict[str, Any] = Body(default={})) -> dict[str, A
     confirm_required = bool(action.get("requires_human_confirm"))
     confirm_provided = bool(payload.get("confirm"))
     execution = _execute_action(action, payload, dry_run=dry_run or (confirm_required and not confirm_provided))
+    confirmation_reason = (
+        "该动作会生成新的运行建议，但不会代替值班主管与能源经理审批，也不会执行调度。"
+        if action["id"] == "create_runtime_recommendation"
+        else "该动作会启动训练、测试或桌面程序，需要人工确认。"
+    )
     return {
         "ok": True,
         "updated_at": _utc_now(),
@@ -1182,7 +1541,7 @@ def assistant_execute(payload: dict[str, Any] = Body(default={})) -> dict[str, A
             "required": confirm_required,
             "provided": confirm_provided,
             "needed_before_execution": confirm_required and not confirm_provided,
-            "reason": "该动作会启动训练、测试或桌面程序，需要人工确认。" if confirm_required else "该动作可查询或 dry-run。",
+            "reason": confirmation_reason if confirm_required else "该动作可查询或 dry-run。",
         },
         "execution_result": {"status": execution.get("status", "done"), "mode": "dry_run" if dry_run or (confirm_required and not confirm_provided) else "executed", "executed": not dry_run and (not confirm_required or confirm_provided), "result": execution},
     }

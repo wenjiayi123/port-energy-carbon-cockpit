@@ -195,6 +195,7 @@ export function App() {
   const [replayStep, setReplayStep] = useState(0);
   const [replayPlaying, setReplayPlaying] = useState(true);
   const [xiaoyiOpenToken, setXiaoyiOpenToken] = useState(0);
+  const [xiaoyiTrainingOpenToken, setXiaoyiTrainingOpenToken] = useState(0);
   const [activeOperation, setActiveOperation] = useState<string | null>(null);
   const [operationBusy, setOperationBusy] = useState(false);
   const [operationHistory, setOperationHistory] = useState<Record<string, string>>({});
@@ -1168,33 +1169,8 @@ export function App() {
   async function startMarlTraining() {
     setActivePanel('marl');
     setReplayPlaying(true);
-    setPanelBusy(true);
-    try {
-      const objectiveId = greenPreference >= 0.7 ? 'carbon_min' : 'cost_carbon_balance';
-      const algorithm = objectiveId === 'carbon_min' ? 'sac' : 'td3';
-      const data = await fetchJson('/api/rl/train/start', {
-        method: 'POST',
-        body: JSON.stringify({
-          confirm: true,
-          source: 'topbar_rl_panel',
-          config: {
-            objective_id: objectiveId,
-            objective_label: objectiveId === 'carbon_min' ? '碳排最低目标' : '成本与碳排均衡',
-            algorithm,
-            scenario: 'port_la_vessel_activity_benchmark',
-            dataset_id: 'port_la_2020_2024_vessel_activity_hourly',
-            total_steps: 100000,
-            seed: 20260720,
-          },
-        }),
-      });
-      setRlStatus(data.result ?? data);
-      setPanelNotice(`RL 训练已启动：${data.result?.config?.objective_label ?? data.result?.policy_version ?? 'policy pending'}`);
-    } catch (error) {
-      setPanelNotice(`RL 训练启动失败：${String(error)}`);
-    } finally {
-      setPanelBusy(false);
-    }
+    setXiaoyiTrainingOpenToken((token) => token + 1);
+    setPanelNotice('已打开小懿训练工作台；请检查算法、注册数据集、全部参数和风险提示，并人工确认后再启动。');
   }
 
   async function controlMarlTraining(action: 'pause' | 'resume' | 'stop') {
@@ -2023,6 +1999,7 @@ export function App() {
         currentGreenPreference={greenPreference}
         currentCarbonPrice={carbonPrice}
         externalOpenToken={xiaoyiOpenToken}
+        externalTrainingToken={xiaoyiTrainingOpenToken}
         onSetGreenPreference={(value, label) => {
           applyDashboardPreference(value, label, value >= 0.86 ? 'shore' : 'carbon');
         }}

@@ -167,10 +167,10 @@ export function RuntimeClosedLoopPanel({
           <span>质量门禁 <b className={snapshot?.decision_allowed ? 'good' : 'bad'}>{snapshot?.decision_allowed ? 'PASS' : 'FAIL-CLOSED'}</b></span>
         </div>
         <div className="runtime-actions">
-          <button type="button" disabled={busy} onClick={() => void onRefresh()}><RefreshCw size={13} />刷新</button>
-          <button type="button" disabled={busy} onClick={() => void onControl('start')}><Play size={13} />启动</button>
-          <button type="button" disabled={busy} onClick={() => void onControl('stop')}><Square size={12} />停止</button>
-          <button type="button" disabled={busy} onClick={() => void onControl('reset')}><RotateCcw size={13} />复位</button>
+          <button id="btnRuntimeRefresh" type="button" disabled={busy} onClick={() => void onRefresh()}><RefreshCw size={13} />刷新</button>
+          <button id="btnRuntimeStart" type="button" disabled={busy} onClick={() => void onControl('start')}><Play size={13} />启动</button>
+          <button id="btnRuntimeStop" type="button" disabled={busy} onClick={() => void onControl('stop')}><Square size={12} />停止</button>
+          <button id="btnRuntimeReset" type="button" disabled={busy} onClick={() => void onControl('reset')}><RotateCcw size={13} />复位</button>
         </div>
       </section>
 
@@ -266,11 +266,11 @@ export function RuntimeClosedLoopPanel({
           </article>
         </div>
         <div className="runtime-actions decision-actions">
-          <button type="button" disabled={busy || !snapshot?.decision_allowed} onClick={() => void onCreateDecision()}><Zap size={13} />生成当前推荐</button>
-          <button type="button" disabled={busy || !decision || approvals.some((item: Record<string, any>) => item.approver_id === 'shift-supervisor')} onClick={() => void onApprove('shift-supervisor')}><CheckCircle2 size={13} />班组长审批</button>
-          <button type="button" disabled={busy || !decision || approvals.some((item: Record<string, any>) => item.approver_id === 'energy-duty-manager')} onClick={() => void onApprove('energy-duty-manager')}><CheckCircle2 size={13} />能源经理审批</button>
-          <button type="button" disabled={busy || decisionStatus !== 'approved'} onClick={() => void onExecute()}><Play size={13} />模拟执行</button>
-          <button type="button" disabled={busy || decisionStatus !== 'executed_simulation'} onClick={() => void onRollback()}><RotateCcw size={13} />回滚</button>
+          <button id="btnRuntimeCreateDecision" type="button" disabled={busy || !snapshot?.decision_allowed} onClick={() => void onCreateDecision()}><Zap size={13} />生成当前推荐</button>
+          <button id="btnRuntimeApproveSupervisor" type="button" disabled={busy || !decision || approvals.some((item: Record<string, any>) => item.approver_id === 'shift-supervisor')} onClick={() => void onApprove('shift-supervisor')}><CheckCircle2 size={13} />班组长审批</button>
+          <button id="btnRuntimeApproveEnergyManager" type="button" disabled={busy || !decision || approvals.some((item: Record<string, any>) => item.approver_id === 'energy-duty-manager')} onClick={() => void onApprove('energy-duty-manager')}><CheckCircle2 size={13} />能源经理审批</button>
+          <button id="btnRuntimeExecute" type="button" disabled={busy || decisionStatus !== 'approved'} onClick={() => void onExecute()}><Play size={13} />模拟执行</button>
+          <button id="btnRuntimeRollback" type="button" disabled={busy || decisionStatus !== 'executed_simulation'} onClick={() => void onRollback()}><RotateCcw size={13} />回滚</button>
         </div>
       </section>
 
@@ -298,7 +298,7 @@ export function RuntimeClosedLoopPanel({
             ))}
           </div>
           <div className="runtime-scenario-actions">
-            {scenarioButtons.map(([id, label]) => <button type="button" disabled={busy} key={id} onClick={() => void onInject(id)}>{label}</button>)}
+            {scenarioButtons.map(([id, label]) => <button id={`btnRuntimeScenario-${id}`} type="button" disabled={busy} key={id} onClick={() => void onInject(id)}>{label}</button>)}
           </div>
           <p><CircleAlert size={13} />需求响应与故障均是明确标注的工程事件，不是现场事故或真实结算记录。</p>
         </section>

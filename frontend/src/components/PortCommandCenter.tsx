@@ -9,6 +9,7 @@ import {
   Gauge,
   Leaf,
   Maximize2,
+  Minimize2,
   Pause,
   Play,
   RefreshCw,
@@ -139,6 +140,7 @@ export function PortCommandCenter({
   onChangeRecommendationTab,
   onSetScenarioMode,
 }: PortCommandCenterProps) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [clock, setClock] = useState(() => new Date());
   const [scenarioMode, setScenarioMode] = useState<ScenarioMode>('optimized');
   const [viewMode, setViewMode] = useState<'2d' | '3d'>('3d');
@@ -269,6 +271,13 @@ export function PortCommandCenter({
     }
   }
 
+  useEffect(() => {
+    const syncFullscreenState = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    syncFullscreenState();
+    document.addEventListener('fullscreenchange', syncFullscreenState);
+    return () => document.removeEventListener('fullscreenchange', syncFullscreenState);
+  }, []);
+
   return (
     <div className="command-center-screen">
       <header className="command-header">
@@ -289,7 +298,16 @@ export function PortCommandCenter({
           <span><Bi zh="运行场景" en="Scenario" /><b><Waves size={13} /> {runtimeScenario}</b></span>
           <span><Bi zh="碳价情景" en="Carbon price scenario" /><b className="price">¥ {carbonPrice.toFixed(1)}/t</b></span>
           <button className="command-icon-button" type="button" title="打开 API 与模型治理面板 / Open API and model governance" aria-label="打开 API 与模型治理面板 / Open API and model governance" onClick={() => void onOpenPanel('api')}><ServerCog size={16} /></button>
-          <button className="command-icon-button" type="button" title="进入全屏驾驶舱 / Fullscreen cockpit" aria-label="进入全屏驾驶舱 / Fullscreen cockpit" onClick={() => void toggleFullscreen()}><Maximize2 size={16} /></button>
+          <button
+            className="command-icon-button"
+            type="button"
+            title={isFullscreen ? '退出全屏驾驶舱 / Exit fullscreen cockpit' : '进入全屏驾驶舱 / Fullscreen cockpit'}
+            aria-label={isFullscreen ? '退出全屏驾驶舱 / Exit fullscreen cockpit' : '进入全屏驾驶舱 / Fullscreen cockpit'}
+            aria-pressed={isFullscreen}
+            onClick={() => void toggleFullscreen()}
+          >
+            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
         </div>
       </header>
 
@@ -491,7 +509,7 @@ export function PortCommandCenter({
             <div className="command-panel-title"><b><Bi zh="24 小时测试轨迹摘要" en="24-HOUR TEST ROLLOUT" /></b></div>
             <div>{[
               ['处理量', 'Throughput', fmt(handledTeu, 0), '测试集'], ['本步能耗', 'Energy load', fmt(energyLoad, 1), point?.time ?? '--'], ['累计碳排', 'Carbon emissions', fmt(carbonBase, 1), '测试轨迹'], ['数据来源', 'Data source', 'POLA+eGRID', snapshot?.carbon_model.dataset_sha256.slice(0, 8) ?? '--'], ['碳价情景', 'Carbon price', `¥${carbonPrice.toFixed(1)}`, '用户输入'],
-            ].map((row) => <button type="button" key={String(row[1])} title={`查看${row[0]} / View ${row[1]}`} onClick={() => onOpenAction(row[1] === 'Grid price' || row[1] === 'Carbon emissions' ? 'carbon-market' : row[1] === 'Energy load' ? 'energy-load' : row[1] === 'Renewable share' ? 'renewable-mix' : 'throughput')}><Bi zh={String(row[0])} en={String(row[1])} /><b>{row[2]}</b><em>{row[3]}</em></button>)}</div>
+            ].map((row) => <button type="button" key={String(row[1])} title={`查看${row[0]} / View ${row[1]}`} onClick={() => onOpenAction(row[1] === 'Carbon price' || row[1] === 'Carbon emissions' ? 'carbon-market' : row[1] === 'Energy load' ? 'energy-load' : row[1] === 'Renewable share' ? 'renewable-mix' : 'throughput')}><Bi zh={String(row[0])} en={String(row[1])} /><b>{row[2]}</b><em>{row[3]}</em></button>)}</div>
           </section>
 
           <section className="command-panel scenario-panel">

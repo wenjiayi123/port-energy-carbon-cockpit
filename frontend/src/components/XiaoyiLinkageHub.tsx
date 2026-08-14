@@ -83,12 +83,13 @@ interface StageModalState {
   progressLabel: string;
 }
 
-type TopPanelId = 'simulation' | 'marl' | 'carbon' | 'shore' | 'api';
+type TopPanelId = 'runtime' | 'simulation' | 'marl' | 'carbon' | 'shore' | 'api';
 
 interface XiaoyiLinkageHubProps {
   currentGreenPreference?: number;
   currentCarbonPrice?: number;
   externalOpenToken?: number;
+  externalTrainingToken?: number;
   onSetGreenPreference?: (value: number, label: string) => void;
   onSyncDashboard?: (reason?: string) => Promise<void> | void;
   onOpenTopPanel?: (panel: TopPanelId) => Promise<void> | void;
@@ -417,6 +418,12 @@ function buildTrainingRiskWarnings(params: TrainingParams) {
 }
 
 const commandCatalog: CommandCatalogItem[] = [
+  { id: 'open_runtime_panel', label: '打开实时闭环', command: '小懿，打开实时闭环面板', group: '实时闭环', buttonId: 'btnXiaoyiOpenRuntimePanel' },
+  { id: 'summarize_runtime_state', label: '总结实时态势', command: '小懿，总结当前实时态势', group: '实时闭环', buttonId: 'btnXiaoyiRuntimeSummary' },
+  { id: 'prepare_runtime_handover', label: '生成交班摘要', command: '小懿，生成实时交班摘要', group: '实时闭环', buttonId: 'btnXiaoyiRuntimeHandover' },
+  { id: 'triage_runtime_alerts', label: '研判实时异常', command: '小懿，研判当前实时异常', group: '实时闭环', buttonId: 'btnXiaoyiRuntimeTriage' },
+  { id: 'create_runtime_recommendation', label: '生成运行建议', command: '小懿，生成当前运行建议', group: '实时闭环', buttonId: 'btnXiaoyiRuntimeRecommend' },
+  { id: 'explain_runtime_recommendation', label: '解释最新建议', command: '小懿，解释最新运行建议', group: '实时闭环', buttonId: 'btnXiaoyiRuntimeExplain' },
   { id: 'open_simulation_panel', label: '打开仿真面板', command: '小懿，打开仿真在线面板', group: 'AI决策面板', buttonId: 'btnXiaoyiOpenSimulationPanel' },
   { id: 'open_marl_panel', label: '打开 RL 面板', command: '小懿，打开 RL 策略面板', group: 'AI决策面板', buttonId: 'btnXiaoyiOpenMarlPanel' },
   { id: 'open_carbon_panel', label: '打开低碳面板', command: '小懿，打开低碳优先面板', group: 'AI决策面板', buttonId: 'btnXiaoyiOpenCarbonPanel' },
@@ -453,6 +460,7 @@ const preferenceActions: Record<string, { value: number; label: string; panel: T
 };
 
 const topPanelActions: Record<string, TopPanelId> = {
+  open_runtime_panel: 'runtime',
   open_simulation_panel: 'simulation',
   open_marl_panel: 'marl',
   open_carbon_panel: 'carbon',
@@ -461,6 +469,12 @@ const topPanelActions: Record<string, TopPanelId> = {
 };
 
 const actionContracts: Record<string, { method: string; path: string; confirmationRequired: boolean }> = {
+  open_runtime_panel: { method: 'LOCAL', path: 'front-end:open-top-panel', confirmationRequired: false },
+  summarize_runtime_state: { method: 'POST', path: '/api/assistant/actions/execute', confirmationRequired: false },
+  prepare_runtime_handover: { method: 'POST', path: '/api/assistant/actions/execute', confirmationRequired: false },
+  triage_runtime_alerts: { method: 'POST', path: '/api/assistant/actions/execute', confirmationRequired: false },
+  create_runtime_recommendation: { method: 'POST', path: '/api/runtime/decisions', confirmationRequired: true },
+  explain_runtime_recommendation: { method: 'POST', path: '/api/assistant/actions/execute', confirmationRequired: false },
   open_simulation_panel: { method: 'LOCAL', path: 'front-end:open-top-panel', confirmationRequired: false },
   open_marl_panel: { method: 'LOCAL', path: 'front-end:open-top-panel', confirmationRequired: false },
   open_carbon_panel: { method: 'LOCAL', path: 'front-end:open-top-panel', confirmationRequired: false },
@@ -488,6 +502,7 @@ const actionContracts: Record<string, { method: string; path: string; confirmati
 };
 
 const actionPreludeSteps: Record<string, Array<{ selector: string; label: string }>> = {
+  create_runtime_recommendation: [{ selector: '#btnXiaoyiOpenRuntimePanel', label: '打开实时闭环面板 / Open runtime panel' }],
   refresh_dashboard_snapshot: [{ selector: '#btnXiaoyiOpenApiPanel', label: '打开 API 同步面板 / Open API panel' }],
   run_linkage_health_check: [{ selector: '#btnXiaoyiOpenApiPanel', label: '打开 API 同步面板 / Open API panel' }],
   check_sailing_status: [{ selector: '#btnXiaoyiOpenSimulationPanel', label: '打开仿真在线面板 / Open simulation panel' }],
@@ -557,6 +572,7 @@ export function XiaoyiLinkageHub({
   currentGreenPreference = 0.5,
   currentCarbonPrice = 85,
   externalOpenToken = 0,
+  externalTrainingToken = 0,
   onSetGreenPreference,
   onSyncDashboard,
   onOpenTopPanel,
@@ -604,8 +620,8 @@ export function XiaoyiLinkageHub({
     updatedAt: now(),
   });
   const [position, setPosition] = useState(() => ({
-    x: Math.max(16, window.innerWidth - 126),
-    y: Math.max(80, window.innerHeight - 166),
+    x: Math.max(16, window.innerWidth - 88),
+    y: Math.max(80, window.innerHeight - 108),
   }));
   const [showOrbGreeting, setShowOrbGreeting] = useState(true);
   const dragRef = useRef<{ dx: number; dy: number; moved: boolean } | null>(null);
@@ -617,6 +633,16 @@ export function XiaoyiLinkageHub({
       setOpen(true);
     }
   }, [externalOpenToken]);
+
+  useEffect(() => {
+    if (externalTrainingToken > 0) {
+      setOpen(true);
+      setTrainingStudioOpen(true);
+      setTrainingReviewOpen(false);
+      setSelectedAction('start_rl_training');
+      setCommand((current) => current || trainingObjectives[0].command);
+    }
+  }, [externalTrainingToken]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setShowOrbGreeting(false), 5200);
@@ -949,13 +975,9 @@ export function XiaoyiLinkageHub({
 
   async function typeAnswer(text: string) {
     setBusy(true);
-    setAnswer('思考中...');
-    await wait(2000);
-    setAnswer('');
-    for (const char of text) {
-      setAnswer((current) => current + char);
-      await wait(18);
-    }
+    setAnswer('正在读取工具结果并核验来源边界…');
+    await wait(600);
+    setAnswer(text);
     setBusy(false);
   }
 
@@ -1103,14 +1125,16 @@ export function XiaoyiLinkageHub({
     const actionId = String(packetData.action?.id ?? packetData.will_execute?.action_id ?? '');
     const selector = String(packetData.will_execute?.button?.selector ?? packetData.action?.button_selector ?? '');
     if (!clickableActions.has(actionId) || !selector) return false;
+    const preludeSteps = actionPreludeSteps[actionId] ?? [];
     const target = document.querySelector<HTMLButtonElement>(selector);
-    if (!target) return false;
-    const label = String(packetData.will_execute?.button?.label ?? packetData.action?.button_label ?? target.textContent ?? actionId);
+    if (!target && !preludeSteps.length) return false;
+    const label = String(packetData.will_execute?.button?.label ?? packetData.action?.button_label ?? target?.textContent ?? actionId);
     if (actionId === 'start_rl_training') {
+      if (!target) return false;
       return runXiaoyiTrainingSequence(packetData, target, label);
     }
     const steps = [
-      ...(actionPreludeSteps[actionId] ?? []),
+      ...preludeSteps,
       { selector, label: `${label} / Execute action` },
     ].filter((step, index, items) => items.findIndex((item) => item.selector === step.selector) === index);
     setClickSequence(steps.map((step) => ({ ...step, status: 'pending' })));
@@ -1463,8 +1487,46 @@ export function XiaoyiLinkageHub({
       await onRunApiCheck?.();
     }
     const summary = result.summary ?? {};
-    await typeAnswer(`健康检查完成：${summary.xiaoyi ?? '小懿待检查'} / ${summary.rl ?? 'RL待检查'} / ${summary.sailing ?? '模拟器待检查'}`);
+    await typeAnswer(`健康检查完成：${summary.runtime ?? '实时闭环待检查'} / ${summary.xiaoyi ?? '小懿待检查'} / ${summary.rl ?? 'RL待检查'} / ${summary.sailing ?? '模拟器待检查'}`);
     addLog('TOP-PANEL', 'run_linkage_health_check · checked');
+  }
+
+  async function runRuntimeInsightFromXiaoyi(actionId: string, instruction: string) {
+    setCommand(instruction);
+    setSelectedAction(actionId);
+    const data = await executeGateway(actionId, instruction);
+    const result = data.execution_result?.result ?? {};
+    await onOpenTopPanel?.('runtime');
+    if (actionId === 'summarize_runtime_state') {
+      const signals = result.signals ?? {};
+      const forecastPoint = result.forecast?.points?.[0];
+      await typeAnswer([
+        result.summary ?? '实时态势已刷新。',
+        `本步能耗 ${Number(result.current_kpis?.energy_kwh ?? 0).toFixed(1)} kWh，碳排 ${Number(result.current_kpis?.carbon_kg ?? 0).toFixed(1)} kg，服务完成率 ${Number(result.current_kpis?.service_fulfilment_pct ?? 0).toFixed(1)}%。`,
+        forecastPoint ? `1 小时模型预测负荷 ${Number(forecastPoint.terminal_load_kw ?? 0).toFixed(0)} kW，碳因子 ${Number(forecastPoint.grid_carbon_kg_per_kwh ?? 0).toFixed(3)}。` : '预测被质量门禁关闭。',
+        `来源：${signals.grid_import?.source_type ?? '待核验'}；当前仅为公开数据校准实时模拟，生产权限关闭。`,
+      ].join('\n'));
+    } else if (actionId === 'prepare_runtime_handover') {
+      const handover = result.shift_handover ?? {};
+      const latest = handover.latest_decision;
+      await typeAnswer([
+        result.summary ?? '交班摘要已生成。',
+        `质量门禁 ${String(handover.quality_gate?.status ?? 'unknown').toUpperCase()}；当前场景 ${handover.runtime?.scenario_id ?? 'unknown'}。`,
+        latest ? `最新建议 ${latest.decision_id}：${latest.status}，审批 ${latest.approval_count}/${latest.required_approvals}。` : '当前没有待交接的运行建议。',
+        handover.operator_note ?? '请由下一班人工复核。',
+      ].join('\n'));
+    } else if (actionId === 'triage_runtime_alerts') {
+      const actions = Array.isArray(result.operator_actions) ? result.operator_actions : [];
+      await typeAnswer([result.summary ?? '异常研判完成。', ...actions.map((item: string, index: number) => `${index + 1}. ${item}`)].join('\n'));
+    } else {
+      const decision = result.decision;
+      await typeAnswer([
+        result.summary ?? '最新运行建议已读取。',
+        decision ? `安全投影触发 ${decision.triggered_constraints?.length ?? 0} 条约束；相对强基线评分改善 ${Number(decision.predicted_impact?.score_improvement_vs_sop_pct ?? 0).toFixed(1)}%。` : '',
+        result.operator_note ?? '小懿只做只读解释，不具备审批或执行权限。',
+      ].filter(Boolean).join('\n'));
+    }
+    addLog('RUNTIME', `${actionId} · grounded`);
   }
 
   async function checkSailingStatusFromXiaoyi(instruction: string) {
@@ -1479,6 +1541,8 @@ export function XiaoyiLinkageHub({
   }
 
   async function runCatalogAction(actionId: string, instruction: string) {
+    if (busy) return;
+    setBusy(true);
     if (topPanelActions[actionId]) {
       await openTopPanel(actionId, instruction);
       return;
@@ -1497,6 +1561,10 @@ export function XiaoyiLinkageHub({
     }
     if (actionId === 'check_sailing_status') {
       await checkSailingStatusFromXiaoyi(instruction);
+      return;
+    }
+    if (['summarize_runtime_state', 'prepare_runtime_handover', 'triage_runtime_alerts', 'explain_runtime_recommendation'].includes(actionId)) {
+      await runRuntimeInsightFromXiaoyi(actionId, instruction);
       return;
     }
     setCommand(instruction);
@@ -1667,7 +1735,7 @@ export function XiaoyiLinkageHub({
           <div className="linkage-head">
             <div>
               <p>小懿AI · 能碳联动中枢 / Energy-Carbon Linkage Hub</p>
-              <h2>把问答、训练、策略验证和航行模拟器接成一条链<small>One flow for Q&amp;A, training, policy validation, and sailing simulation.</small></h2>
+              <h2>把实时态势、预测建议、训练验证和审计接成一条链<small>One grounded flow for runtime insight, recommendations, training, validation, and audit.</small></h2>
             </div>
             <button className="icon-btn" type="button" onClick={() => setOpen(false)} aria-label="关闭小懿联动面板">
               <X size={18} />
@@ -1675,6 +1743,7 @@ export function XiaoyiLinkageHub({
           </div>
 
           <div className="linkage-status-row">
+            <span><Activity size={14} />{statusLabel(health, ['summary', 'runtime'], '实时闭环待检查')}</span>
             <span><Bot size={14} />{statusLabel(health, ['summary', 'xiaoyi'], '小懿待检查')}</span>
             <span><Gauge size={14} />{statusLabel(health, ['summary', 'rl'], 'RL待检查')}</span>
             <span><ShipWheel size={14} />{statusLabel(health, ['summary', 'sailing'], '航行模拟器待检查')}</span>
@@ -1699,7 +1768,7 @@ export function XiaoyiLinkageHub({
                   setCommand(event.target.value);
                   setSelectedAction('');
                 }}
-                placeholder="例如：小懿，启动模拟器 / 小懿，开始训练碳排最低目标"
+                placeholder="例如：小懿，总结实时态势 / 小懿，生成交班摘要"
               />
               <select value={selectedAction} onChange={(event) => setSelectedAction(event.target.value)}>
                 <option value="">自动识别动作 / Auto-detect action</option>
@@ -1708,25 +1777,31 @@ export function XiaoyiLinkageHub({
                 ))}
               </select>
               <div className="linkage-actions">
-                <button id="btnXiaoyiStart" type="button" onClick={launchXiaoyi}><Bot size={14} />启动小懿 / Start</button>
-                <button type="button" onClick={() => askXiaoyi()}><Send size={14} />识别并执行 / Run</button>
-                <button type="button" disabled={!pendingPacket} onClick={confirmAction}><Play size={14} />确认执行 / Confirm</button>
-                <button type="button" onClick={clearAssistant}>清空 / Clear</button>
+                <button id="btnXiaoyiStart" type="button" disabled={busy} onClick={launchXiaoyi}><Bot size={14} />启动小懿 / Start</button>
+                <button type="button" disabled={busy} onClick={() => askXiaoyi()}><Send size={14} />识别并执行 / Run</button>
+                <button type="button" disabled={busy || !pendingPacket} onClick={confirmAction}><Play size={14} />确认执行 / Confirm</button>
+                <button type="button" disabled={busy} onClick={clearAssistant}>清空 / Clear</button>
               </div>
               <div className="xiaoyi-command-targets" aria-label="小懿可视化按钮联动区 / Xiaoyi visual action targets">
                 <span><small>可视化按钮联动</small><b>VISUAL AUTO-CLICK TARGETS</b></span>
-                <button id="btnXiaoyiOpenSimulationPanel" type="button" onClick={() => void runCatalogAction('open_simulation_panel', '小懿，打开仿真在线面板')}>仿真 / Simulation</button>
-                <button id="btnXiaoyiOpenMarlPanel" type="button" onClick={() => void runCatalogAction('open_marl_panel', '小懿，打开 RL 策略面板')}>RL / Policy</button>
-                <button id="btnXiaoyiOpenCarbonPanel" type="button" onClick={() => void runCatalogAction('open_carbon_panel', '小懿，打开低碳优先面板')}>低碳 / Carbon</button>
-                <button id="btnXiaoyiOpenShorePanel" type="button" onClick={() => void runCatalogAction('open_shore_panel', '小懿，打开岸电联动面板')}>岸电 / Shore</button>
-                <button id="btnXiaoyiOpenApiPanel" type="button" onClick={() => void runCatalogAction('open_api_panel', '小懿，打开 API 同步面板')}>API / Health</button>
-                <button id="btnXiaoyiRefreshDashboard" type="button" onClick={() => void runCatalogAction('refresh_dashboard_snapshot', '小懿，刷新仿真并重新同步仪表盘')}>刷新 / Refresh</button>
-                <button id="btnXiaoyiHealthCheck" type="button" onClick={() => void runCatalogAction('run_linkage_health_check', '小懿，做一次联动健康检查')}>检查 / Check</button>
-                <button id="btnXiaoyiCheckSailingStatus" type="button" onClick={() => void runCatalogAction('check_sailing_status', '小懿，检查航行模拟器状态')}>模拟器 / Simulator</button>
-                <button id="btnXiaoyiPreferenceEfficiency" type="button" onClick={() => void runCatalogAction('set_efficiency_priority', '小懿，切到效率优先')}>效率 / Efficiency</button>
-                <button id="btnXiaoyiPreferenceBalanced" type="button" onClick={() => void runCatalogAction('set_balanced_dispatch', '小懿，切到均衡调度')}>均衡 / Balanced</button>
-                <button id="btnXiaoyiPreferenceLowCarbon" type="button" onClick={() => void runCatalogAction('set_low_carbon_priority', '小懿，切到低碳优先')}>低碳优先 / Low-carbon</button>
-                <button id="btnXiaoyiPreferenceShorePower" type="button" onClick={() => void runCatalogAction('set_shore_power_preference', '小懿，切到岸电优先')}>岸电优先 / Shore first</button>
+                <button id="btnXiaoyiOpenRuntimePanel" type="button" disabled={busy} onClick={() => void runCatalogAction('open_runtime_panel', '小懿，打开实时闭环面板')}>实时 / Runtime</button>
+                <button id="btnXiaoyiRuntimeSummary" type="button" disabled={busy} onClick={() => void runCatalogAction('summarize_runtime_state', '小懿，总结当前实时态势')}>态势 / Summary</button>
+                <button id="btnXiaoyiRuntimeHandover" type="button" disabled={busy} onClick={() => void runCatalogAction('prepare_runtime_handover', '小懿，生成实时交班摘要')}>交班 / Handover</button>
+                <button id="btnXiaoyiRuntimeTriage" type="button" disabled={busy} onClick={() => void runCatalogAction('triage_runtime_alerts', '小懿，研判当前实时异常')}>研判 / Triage</button>
+                <button id="btnXiaoyiRuntimeRecommend" type="button" disabled={busy} onClick={() => void runCatalogAction('create_runtime_recommendation', '小懿，生成当前运行建议')}>建议 / Recommend</button>
+                <button id="btnXiaoyiRuntimeExplain" type="button" disabled={busy} onClick={() => void runCatalogAction('explain_runtime_recommendation', '小懿，解释最新运行建议')}>解释 / Explain</button>
+                <button id="btnXiaoyiOpenSimulationPanel" type="button" disabled={busy} onClick={() => void runCatalogAction('open_simulation_panel', '小懿，打开仿真在线面板')}>仿真 / Simulation</button>
+                <button id="btnXiaoyiOpenMarlPanel" type="button" disabled={busy} onClick={() => void runCatalogAction('open_marl_panel', '小懿，打开 RL 策略面板')}>RL / Policy</button>
+                <button id="btnXiaoyiOpenCarbonPanel" type="button" disabled={busy} onClick={() => void runCatalogAction('open_carbon_panel', '小懿，打开低碳优先面板')}>低碳 / Carbon</button>
+                <button id="btnXiaoyiOpenShorePanel" type="button" disabled={busy} onClick={() => void runCatalogAction('open_shore_panel', '小懿，打开岸电联动面板')}>岸电 / Shore</button>
+                <button id="btnXiaoyiOpenApiPanel" type="button" disabled={busy} onClick={() => void runCatalogAction('open_api_panel', '小懿，打开 API 同步面板')}>API / Health</button>
+                <button id="btnXiaoyiRefreshDashboard" type="button" disabled={busy} onClick={() => void runCatalogAction('refresh_dashboard_snapshot', '小懿，刷新仿真并重新同步仪表盘')}>刷新 / Refresh</button>
+                <button id="btnXiaoyiHealthCheck" type="button" disabled={busy} onClick={() => void runCatalogAction('run_linkage_health_check', '小懿，做一次联动健康检查')}>检查 / Check</button>
+                <button id="btnXiaoyiCheckSailingStatus" type="button" disabled={busy} onClick={() => void runCatalogAction('check_sailing_status', '小懿，检查航行模拟器状态')}>模拟器 / Simulator</button>
+                <button id="btnXiaoyiPreferenceEfficiency" type="button" disabled={busy} onClick={() => void runCatalogAction('set_efficiency_priority', '小懿，切到效率优先')}>效率 / Efficiency</button>
+                <button id="btnXiaoyiPreferenceBalanced" type="button" disabled={busy} onClick={() => void runCatalogAction('set_balanced_dispatch', '小懿，切到均衡调度')}>均衡 / Balanced</button>
+                <button id="btnXiaoyiPreferenceLowCarbon" type="button" disabled={busy} onClick={() => void runCatalogAction('set_low_carbon_priority', '小懿，切到低碳优先')}>低碳优先 / Low-carbon</button>
+                <button id="btnXiaoyiPreferenceShorePower" type="button" disabled={busy} onClick={() => void runCatalogAction('set_shore_power_preference', '小懿，切到岸电优先')}>岸电优先 / Shore first</button>
               </div>
               <div className="xiaoyi-answer">{answer}</div>
               <pre className="linkage-packet">{packet}</pre>
@@ -1853,12 +1928,12 @@ export function XiaoyiLinkageHub({
                 </div>
               </div>
               <div className="linkage-actions">
-                <button id="btnOpenTrainingStudio" type="button" onClick={() => openTrainingStudio(false)}><SlidersHorizontal size={14} />配置参数 / Configure</button>
-                <button id="btnStartTraining" type="button" onClick={() => startTraining()}><Play size={14} />启动训练 / Start</button>
+                <button id="btnOpenTrainingStudio" type="button" disabled={busy} onClick={() => openTrainingStudio(false)}><SlidersHorizontal size={14} />配置参数 / Configure</button>
+                <button id="btnStartTraining" type="button" disabled={busy} onClick={() => startTraining()}><Play size={14} />启动训练 / Start</button>
                 <button
                   id="btnPauseTraining"
                   type="button"
-                  disabled={!trainingCanPause && !trainingCanResume}
+                  disabled={busy || (!trainingCanPause && !trainingCanResume)}
                   onClick={() => controlTraining(trainingCanResume ? 'resume' : 'pause')}
                 >
                   {trainingCanResume ? <Play size={14} /> : <Pause size={14} />}
@@ -1868,13 +1943,13 @@ export function XiaoyiLinkageHub({
                   id="btnStopTraining"
                   className="training-stop-action"
                   type="button"
-                  disabled={!trainingCanStop}
+                  disabled={busy || !trainingCanStop}
                   onClick={() => controlTraining('stop')}
                 ><Square size={14} />停止 / Stop</button>
-                <button id="btnTrainingStatus" type="button" onClick={showTrainingStatus}><Radio size={14} />状态 / Status</button>
-                <button id="btnTrainingHistory" type="button" onClick={() => void openTrainingHistory()}><Gauge size={14} />历史收敛曲线 / Results</button>
-                <button id="btnPolicyTest" type="button" onClick={runPolicyTest}><Gauge size={14} />策略测试 / Test</button>
-                <button id="btnVerifyPolicy" type="button" onClick={verifyPolicy}><ShieldCheck size={14} />上线验证 / Dry-run</button>
+                <button id="btnTrainingStatus" type="button" disabled={busy} onClick={showTrainingStatus}><Radio size={14} />状态 / Status</button>
+                <button id="btnTrainingHistory" type="button" disabled={busy} onClick={() => void openTrainingHistory()}><Gauge size={14} />历史收敛曲线 / Results</button>
+                <button id="btnPolicyTest" type="button" disabled={busy} onClick={runPolicyTest}><Gauge size={14} />策略测试 / Test</button>
+                <button id="btnVerifyPolicy" type="button" disabled={busy} onClick={verifyPolicy}><ShieldCheck size={14} />上线验证 / Dry-run</button>
               </div>
               <pre className="mini-log">{(trainingStatus?.logs ?? ['等待训练指令。']).join('\n')}</pre>
             </div>
@@ -1890,10 +1965,10 @@ export function XiaoyiLinkageHub({
                 <span>模式 <b>{sailingStatus?.control_mode ?? 'launch'}</b></span>
               </div>
               <div className="linkage-actions stack">
-                <button id="btnSailingLaunch" type="button" onClick={launchSailing}><ShipWheel size={14} />启动模拟器 / Launch</button>
-                <button id="btnSailingDemo" type="button" onClick={() => runSailingAction('start_navigation_demo')}>航线演示 / Route demo</button>
-                <button id="btnShipView" type="button" onClick={() => runSailingAction('switch_ship_view')}>船舶视角 / Ship view</button>
-                <button id="btnSailingSmoke" type="button" onClick={() => runSailingAction('run_sailing_rl_smoke_test')}>Smoke test / 测试</button>
+                <button id="btnSailingLaunch" type="button" disabled={busy} onClick={launchSailing}><ShipWheel size={14} />启动模拟器 / Launch</button>
+                <button id="btnSailingDemo" type="button" disabled={busy} onClick={() => runSailingAction('start_navigation_demo')}>航线演示 / Route demo</button>
+                <button id="btnShipView" type="button" disabled={busy} onClick={() => runSailingAction('switch_ship_view')}>船舶视角 / Ship view</button>
+                <button id="btnSailingSmoke" type="button" disabled={busy} onClick={() => runSailingAction('run_sailing_rl_smoke_test')}>Smoke test / 测试</button>
               </div>
               <div className="command-examples">
                 <b>可说：</b>
@@ -2165,7 +2240,7 @@ export function XiaoyiLinkageHub({
                           <option value={item.path} key={item.id}>{item.label} · {item.path}</option>
                         ))}
                       </datalist>
-                    <em>{selectedDataFileProfile.description} 也可输入符合规范的 CSV 路径。</em>
+                    <em>{selectedDataFileProfile.description} 也可输入后端已注册数据集 ID；绝对路径与任意 CSV 会被拒绝。</em>
                   </label>
                 </div>
 
@@ -2318,7 +2393,7 @@ export function XiaoyiLinkageHub({
               <input
                 value={commandSearch}
                 onChange={(event) => setCommandSearch(event.target.value)}
-                placeholder="搜索：岸电 / 碳排 / 训练 / 模拟器 / API"
+                placeholder="搜索：实时 / 交班 / 岸电 / 训练 / 模拟器 / API"
               />
               <div className="command-center-tabs">
                 {commandGroups.map((group) => (

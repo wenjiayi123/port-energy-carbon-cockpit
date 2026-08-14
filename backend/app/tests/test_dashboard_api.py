@@ -39,6 +39,100 @@ def test_public_rl_surfaces_do_not_expose_local_absolute_paths() -> None:
         assert "/home/" not in response.text
 
 
+def test_public_linkage_surfaces_are_portable_and_do_not_expose_launch_commands() -> None:
+    responses = [
+        client.get("/api/linkage/health"),
+        client.get("/api/xiaoyi/status"),
+        client.get("/api/sailing/status"),
+        client.get("/api/rl/actions/registry"),
+        client.post(
+            "/api/xiaoyi/launch",
+            json={"dry_run": True, "source": "test"},
+        ),
+        client.post(
+            "/api/sailing/launch",
+            json={"dry_run": True, "source": "test"},
+        ),
+    ]
+
+    for response in responses:
+        assert response.status_code == 200
+        assert "/Users/" not in response.text
+        assert "/home/" not in response.text
+        assert '"start_command"' not in response.text
+        assert '"command"' not in response.text
+
+    health = responses[0].json()
+    assert health["systems"]["energy_carbon_cockpit"]["project_root"] == "."
+    assert health["systems"]["runtime_closed_loop"]["production_boundary"] == {
+        "simulation_mode": True,
+        "live_data_verified": False,
+        "dispatch_allowed": False,
+        "production_authority": False,
+    }
+
+
+def test_xiaoyi_runtime_actions_are_grounded_and_preserve_separation_of_duties() -> None:
+    registry = client.get("/api/rl/actions/registry").json()
+    actions = {item["id"]: item for item in registry["actions"]}
+    expected = {
+        "open_runtime_panel",
+        "summarize_runtime_state",
+        "prepare_runtime_handover",
+        "triage_runtime_alerts",
+        "create_runtime_recommendation",
+        "explain_runtime_recommendation",
+    }
+    assert expected <= set(actions)
+    assert actions["create_runtime_recommendation"]["requires_human_confirm"] is True
+    assert actions["summarize_runtime_state"]["requires_human_confirm"] is False
+    assert not any("approve" in action_id or "execute_runtime" in action_id for action_id in expected)
+
+    results = {}
+    for action_id in (
+        "summarize_runtime_state",
+        "prepare_runtime_handover",
+        "triage_runtime_alerts",
+        "explain_runtime_recommendation",
+    ):
+        response = client.post(
+            "/api/assistant/actions/execute",
+            json={
+                "action_id": action_id,
+                "instruction": action_id,
+                "dry_run": False,
+                "confirm": True,
+            },
+        )
+        assert response.status_code == 200
+        assert response.json()["matched"] is True
+        assert "/Users/" not in response.text
+        assert "/home/" not in response.text
+        results[action_id] = response.json()["execution_result"]["result"]
+
+    summary = results["summarize_runtime_state"]
+    assert summary["field_count"] == 51
+    assert summary["forecast"]["true_model_inference"] is True
+    assert summary["production_boundary"]["production_authority"] is False
+    assert results["prepare_runtime_handover"]["shift_handover"]["operator_note"]
+    assert results["triage_runtime_alerts"]["operator_actions"]
+    explanation = results["explain_runtime_recommendation"]
+    assert explanation.get("production_authority", explanation.get("decision", {}).get("production_authority")) is False
+
+    preview = client.post(
+        "/api/assistant/actions/execute",
+        json={
+            "action_id": "create_runtime_recommendation",
+            "instruction": "生成当前运行建议",
+            "dry_run": False,
+            "confirm": False,
+        },
+    ).json()
+    assert preview["human_confirmation"]["needed_before_execution"] is True
+    assert preview["execution_result"]["executed"] is False
+    assert preview["execution_result"]["result"]["production_authority"] is False
+
+
 def test_dashboard_uses_public_test_split_and_measured_trajectory() -> None:
     response = client.get("/api/dashboard/snapshot")
     payload = response.json()

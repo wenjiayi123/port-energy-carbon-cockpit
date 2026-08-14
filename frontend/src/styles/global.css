@@ -7,6 +7,8 @@
 /* Chinese-first bilingual command-center layer and live interaction affordances. */
 .port-command-shell .xiaoyi-orb {
   display: block;
+  width: 68px;
+  height: 92px;
 }
 
 .bi-label {
