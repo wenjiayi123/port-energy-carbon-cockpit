@@ -10,12 +10,12 @@ dependencies = [
   "pydantic-settings>=2.4.0",
   # The offline benchmark is an evidence artifact. Pin its numerical stack so
   # six-decimal aggregate checks do not drift across developer and CI hosts.
-  "pandas==3.0.3",
+  "pandas==3.0.5",
   "numpy==1.26.4",
   "certifi>=2024.8.30",
   "openpyxl>=3.1.5,<4",
   "pyyaml>=6.0.0",
-  "gymnasium==1.0.0",
+  "gymnasium==1.3.0",
 ]
 
 [project.optional-dependencies]
@@ -26,14 +26,14 @@ dev = [
   "pip-audit>=2.9,<3",
 ]
 data = [
-  "pdfplumber==0.11.9",
+  "pdfplumber==0.11.10",
   "cryptography==50.0.0",
 ]
 rl = [
   # PyTorch stopped publishing patched Intel-macOS wheels after 2.2.2. Keep
   # neural training off that unsupported host; causal MPC and replay remain
   # available, while Linux/Apple Silicon use the audited learner runtime.
-  "stable-baselines3==2.4.1; platform_system != 'Darwin' or platform_machine != 'x86_64'",
+  "stable-baselines3==2.9.0; platform_system != 'Darwin' or platform_machine != 'x86_64'",
   "torch>=2.13,<3; platform_system != 'Darwin' or platform_machine != 'x86_64'",
 ]
 
