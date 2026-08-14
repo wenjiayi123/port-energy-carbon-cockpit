@@ -21,8 +21,9 @@ import {
   Zap,
 } from 'lucide-react';
 import type { DashboardSnapshot, DispatchTrajectoryPoint } from '../types/dashboard';
+import type { RuntimeSnapshot } from './RuntimeClosedLoopPanel';
 
-type CommandPanelId = 'simulation' | 'marl' | 'carbon' | 'shore' | 'api';
+type CommandPanelId = 'runtime' | 'simulation' | 'marl' | 'carbon' | 'shore' | 'api';
 type TrainingAction = 'pause' | 'resume' | 'stop';
 type ScenarioMode = 'baseline' | 'optimized' | 'low-carbon';
 type MapLayer = 'vessel' | 'agv' | 'truck' | 'planned';
@@ -33,6 +34,7 @@ export interface OperationalRuntimeState {
 
 interface PortCommandCenterProps {
   snapshot: DashboardSnapshot | null;
+  runtimeSnapshot: RuntimeSnapshot | null;
   rlStatus: Record<string, any> | null;
   integrationStatus: Record<string, any> | null;
   auditIntegrityOk: boolean | null;
@@ -116,6 +118,7 @@ function Bi({ zh, en, className = '' }: BilingualCopy & { className?: string }) 
 
 export function PortCommandCenter({
   snapshot,
+  runtimeSnapshot,
   rlStatus,
   integrationStatus,
   auditIntegrityOk,
@@ -197,6 +200,9 @@ export function PortCommandCenter({
       savingPct(traditional?.total_cost_cny, marl?.total_cost_cny),
     ];
   const activeLiveEvent = operationState?.latestEvent ?? point?.decision_reason ?? '等待测试集轨迹';
+  const runtimeTemperature = runtimeSnapshot?.signals?.['weather.ambient_temperature_c'];
+  const runtimeWind = runtimeSnapshot?.signals?.['weather.wind_speed_m_s'];
+  const runtimeScenario = runtimeSnapshot?.active_scenario?.scenario_id ?? 'normal';
   const craneWorking = point?.crane_count ?? 0;
   const craneIdle = 0;
   const craneUtilization = craneWorking > 0 ? 100 : 0;
@@ -267,7 +273,7 @@ export function PortCommandCenter({
     <div className="command-center-screen">
       <header className="command-header">
         <div className="command-live-block">
-          <span className="command-live"><i /><Bi zh="公开离线基准 · 等待接入港口" en="PUBLIC BENCHMARK · PORT INTEGRATION PENDING" /></span>
+          <button className="command-live" type="button" title="打开实时数据、预测、审批与执行闭环 / Open realtime closed loop" onClick={() => void onOpenPanel('runtime')}><i /><Bi zh={runtimeSnapshot?.simulator_state === 'running' ? '公开数据校准实时模拟' : '实时模拟器失败关闭'} en={runtimeSnapshot?.simulator_state === 'running' ? 'CALIBRATED REALTIME SIMULATION' : 'RUNTIME FAIL-CLOSED'} /></button>
           <b>{clockText}</b>
           <small>{dateText}</small>
         </div>
@@ -278,9 +284,9 @@ export function PortCommandCenter({
           </span>
         </div>
         <div className="command-weather">
-          <span><Bi zh="气象" en="Weather" /><b>未接入</b></span>
-          <span><Bi zh="风速" en="Wind" /><b><Wind size={12} /> 无公开输入</b></span>
-          <span><Bi zh="海况" en="Sea state" /><b><Waves size={13} /> 无公开输入</b></span>
+          <span><Bi zh="气象" en="Weather" /><b>{runtimeTemperature ? `${fmt(Number(runtimeTemperature.value), 1)} °C · 工程模拟` : '等待模拟器'}</b></span>
+          <span><Bi zh="风速" en="Wind" /><b><Wind size={12} /> {runtimeWind ? `${fmt(Number(runtimeWind.value), 1)} m/s` : '--'}</b></span>
+          <span><Bi zh="运行场景" en="Scenario" /><b><Waves size={13} /> {runtimeScenario}</b></span>
           <span><Bi zh="碳价情景" en="Carbon price scenario" /><b className="price">¥ {carbonPrice.toFixed(1)}/t</b></span>
           <button className="command-icon-button" type="button" title="打开 API 与模型治理面板 / Open API and model governance" aria-label="打开 API 与模型治理面板 / Open API and model governance" onClick={() => void onOpenPanel('api')}><ServerCog size={16} /></button>
           <button className="command-icon-button" type="button" title="进入全屏驾驶舱 / Fullscreen cockpit" aria-label="进入全屏驾驶舱 / Fullscreen cockpit" onClick={() => void toggleFullscreen()}><Maximize2 size={16} /></button>
@@ -500,7 +506,7 @@ export function PortCommandCenter({
         </aside>
       </section>
 
-      <footer className="command-status-footer"><span><i />{onlineSystemCount}/{totalSystemCount} <Bi zh="系统在线" en="SYSTEMS ONLINE" /></span><span><Bi zh="实港快照" en="PORT FEEDS" />: {integrationStatus?.ready_adapter_count ?? 0}/{integrationStatus?.required_adapter_count ?? 6}</span><span><Bi zh="审计链" en="AUDIT CHAIN" />: {auditIntegrityOk === true ? 'INTACT' : 'FAIL-CLOSED'}</span><span><Bi zh="模式" en="MODE" />: {snapshot?.governance.deployment_mode ?? '等待数据'}</span><span><Bi zh="策略" en="POLICY" />: {rlStatus?.policy_version ?? marl?.strategy ?? '等待策略'}</span><span><Bi zh="生产调度" en="PRODUCTION DISPATCH" />: {snapshot?.governance.production_dispatch_enabled ? 'ENABLED' : 'DISABLED'}</span><span><Bi zh="更新时间" en="UPDATED" /> {clockText}</span></footer>
+      <footer className="command-status-footer"><span><i />{onlineSystemCount}/{totalSystemCount} <Bi zh="系统在线" en="SYSTEMS ONLINE" /></span><span><Bi zh="实时模拟" en="RUNTIME" />: {runtimeSnapshot?.simulator_state ?? 'checking'}</span><span><Bi zh="实港快照" en="PORT FEEDS" />: {integrationStatus?.ready_adapter_count ?? 0}/{integrationStatus?.required_adapter_count ?? 6}</span><span><Bi zh="审计链" en="AUDIT CHAIN" />: {auditIntegrityOk === true ? 'INTACT' : 'FAIL-CLOSED'}</span><span><Bi zh="模式" en="MODE" />: {runtimeSnapshot?.data_mode ?? snapshot?.governance.deployment_mode ?? '等待数据'}</span><span><Bi zh="策略" en="POLICY" />: {rlStatus?.policy_version ?? marl?.strategy ?? '等待策略'}</span><span><Bi zh="生产调度" en="PRODUCTION DISPATCH" />: DISABLED</span><span><Bi zh="更新时间" en="UPDATED" /> {clockText}</span></footer>
     </div>
   );
 }

@@ -8,6 +8,7 @@ from app.api.routes_integration import router as integration_router
 from app.api.routes_linkage import router as linkage_router
 from app.api.routes_optimization import router as optimization_router
 from app.api.routes_rl import router as rl_router
+from app.api.routes_runtime import router as runtime_router
 from app.api.routes_scenarios import router as scenarios_router
 from app.core.config import settings
 from app.core.security import RequestBodyLimitMiddleware, SecurityObservabilityMiddleware
@@ -16,8 +17,11 @@ from app.core.security import RequestBodyLimitMiddleware, SecurityObservabilityM
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Energy Carbon Dispatch Cockpit API",
-        version="0.3.0",
-        description="API for offline energy-carbon benchmarking, RL training, and held-out policy evaluation.",
+        version="0.4.0",
+        description=(
+            "API for public-data-calibrated realtime simulation, causal forecasting, "
+            "approval-gated simulation execution, offline RL training, and held-out evaluation."
+        ),
     )
     app.add_middleware(
         RequestBodyLimitMiddleware,
@@ -41,6 +45,7 @@ def create_app() -> FastAPI:
     # Register the real learner routes before the legacy assistant gateway so
     # duplicate historical paths cannot shadow measured training endpoints.
     app.include_router(rl_router, prefix="/api")
+    app.include_router(runtime_router, prefix="/api")
     app.include_router(linkage_router, prefix="/api")
     return app
 

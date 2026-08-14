@@ -1,8 +1,8 @@
 # Production readiness
 
-This repository is production-shaped but intentionally not production-authorized. It is an
-offline benchmark and decision-support cockpit. Passing every built-in gate does not enable
-autonomous equipment control.
+This repository is production-shaped but intentionally not production-authorized. It combines
+public-data-calibrated realtime simulation, offline benchmarks, and a decision-support cockpit.
+Passing every built-in gate does not enable autonomous equipment control.
 
 ## Implemented gates
 
@@ -13,10 +13,14 @@ autonomous equipment control.
 | Dataset governance | Schema, finite values, split isolation, provenance, units, package hash, quality score | Enforced |
 | Landing data grade | Independent source anchors, modeled-expansion ratio, v3 fields, event lineage and parameter calibration | Separately enforced from offline quality |
 | Read-only live ingestion | Per-adapter HMAC, payload hash, schema/units, freshness, monotonic sequence and replay protection | Fail-closed |
+| Realtime field contract | Per-field value, unit, event/ingest time, source, quality, confidence, classification, asset/site, schema and trace | Active in calibrated simulation; live adapter pending |
+| Physical/operational simulation | Energy balance, transformer reserve, battery SOC/SOH/temperature/cycles, workload/service coupling and scenario injection | Deterministic simulation only |
+| Current-input forecast | Train-only Ridge fit, validation-only alpha selection, held-out metrics and model/data hashes | Active; terminal load target is engineering-derived |
 | Port scenario contract | v3 weather, vessel, berth, equipment, grid, shore compatibility and renewable observations | Fail-closed |
 | Distribution checks | Train/test standardized mean-difference report | Advisory or blocking at high shift |
 | Model lifecycle | Candidate, validated offline, verified offline, and blocked stages | Production eligibility always false |
 | Shadow decision package | Policy/artifact hash, input digests, idempotency ID, expiry and frozen rollback target | Execution authorization always false |
+| Runtime decision execution | MPC/SOP comparison, action whitelist, safety projection, requester self-approval prohibition, distinct dual approval, idempotent receipt and rollback | Simulation executor only |
 | Artifact integrity | SHA-256 for newly trained model/controller artifacts | Enforced for new runs |
 | Runtime security | Production API-key validation, role gates, security headers, request IDs | Required in production |
 | Auditability | JSON access logs and SHA-256-chained mutation audit log | Active; external WORM retention required |
@@ -44,6 +48,14 @@ The production gate remains closed until these items are supplied and independen
 - `GET /api/health/ready`: dataset, run storage, and RL-runtime readiness.
 - `GET /api/metrics`: Prometheus text metrics.
 - `GET /api/rl/registry`: model lifecycle, data hash, artifact hash, drift, and test status.
+- `GET /api/runtime/contract`: field contract, adapters, scenarios, actions and fixed production boundary.
+- `GET /api/runtime/snapshot`: current calibrated-simulation digital-twin snapshot and quality gate.
+- `GET /api/runtime/forecast`: 1/3/6-hour current-input model inference.
+- `POST /api/runtime/decisions`: runtime MPC recommendation and safety projection.
+- `POST /api/runtime/decisions/{id}/approve`: persisted distinct human approval.
+- `POST /api/runtime/decisions/{id}/execute`: idempotent simulation receipt and state/KPI feedback.
+- `POST /api/runtime/decisions/{id}/rollback`: simulation rollback with chained audit evidence.
+- `GET /api/evidence/history`: versioned historical, current, and blocked-candidate evidence.
 - `GET /api/scenarios`: per-port dataset, observation and adapter readiness.
 - `GET /api/scenarios/contract`: common objectives, observations, actions and hard constraints.
 - `GET /api/integration/contract`: signed `port-snapshot.v1` envelope and feed SLAs.

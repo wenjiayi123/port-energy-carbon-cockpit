@@ -31,6 +31,14 @@ def test_health_and_rl_capabilities_are_real() -> None:
     assert payload["evaluation_render_mode"] == "trajectory"
 
 
+def test_public_rl_surfaces_do_not_expose_local_absolute_paths() -> None:
+    for path in ("/api/rl/train/status", "/api/rl/registry", "/api/rl/strategies"):
+        response = client.get(path)
+        assert response.status_code == 200
+        assert "/Users/" not in response.text
+        assert "/home/" not in response.text
+
+
 def test_dashboard_uses_public_test_split_and_measured_trajectory() -> None:
     response = client.get("/api/dashboard/snapshot")
     payload = response.json()
@@ -140,6 +148,27 @@ def test_landing_benchmark_endpoint_exposes_increment_and_adverse_tradeoffs() ->
     assert increment["carbon_reduction_pct"] < 0
     assert payload["per_window_evidence_included"] is False
     assert "per_window" not in payload
+
+
+def test_evidence_history_preserves_blocked_candidate_without_local_paths() -> None:
+    response = client.get("/api/evidence/history")
+    payload = response.json()
+    entries = {entry["evidence_id"]: entry for entry in payload["entries"]}
+
+    assert response.status_code == 200
+    assert payload["schema_version"] == "history-evidence.v1"
+    assert payload["history_preserved"] is True
+    assert payload["production_authority"] is False
+    assert payload["entry_count"] == 5
+    blocked = entries["td3-rl-20260725-233109-6ac68e"]
+    assert blocked["status"] == "blocked"
+    assert blocked["decision"] == "rejected_by_admission_gate"
+    assert "carbon_non_regression" in blocked["failed_checks"]
+    assert len(blocked["artifact_sha256"]) == 64
+    assert entries["public-calibrated-causal-ridge-v1"][
+        "future_test_rows_accessed_during_inference"
+    ] is False
+    assert "/Users/" not in response.text
 
 
 def test_port_scenarios_expose_fail_closed_v3_contract() -> None:

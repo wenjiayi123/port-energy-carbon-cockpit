@@ -49,8 +49,8 @@
       "dqn_discrete_combinations": 81
     }
   },
-  "run_dir": "/Users/apple/Desktop/能碳驾驶舱/backend/app/data/runs/rl-20260725-233109-6ac68e",
-  "artifact_path": "/Users/apple/Desktop/能碳驾驶舱/backend/app/data/runs/rl-20260725-233109-6ac68e/model.zip",
+  "run_dir": "backend/app/data/runs/rl-20260725-233109-6ac68e",
+  "artifact_path": "backend/app/data/runs/rl-20260725-233109-6ac68e/model.zip",
   "policy_version": "td3-rl-20260725-233109-6ac68e",
   "error": null,
   "last_metric_step": 100000,

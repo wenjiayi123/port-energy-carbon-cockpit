@@ -11,7 +11,7 @@ RUN python -m pip install --no-cache-dir --upgrade "pip==26.2.1" \
     && python -m pip install --no-cache-dir '.[rl]' \
     && groupadd --gid 10001 app \
     && useradd --uid 10001 --gid app --no-create-home --shell /usr/sbin/nologin app \
-    && mkdir -p /app/app/data/runs /app/app/data/audit \
+    && mkdir -p /app/app/data/runs /app/app/data/audit /app/app/data/runtime \
     && chown -R app:app /app/app/data
 
 USER 10001:10001

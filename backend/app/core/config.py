@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     live_port_id: str = ""
     port_snapshot_keys_json: str = "{}"
     integration_state_path: str = str(DEFAULT_DATA_DIR / "integration" / "state.json")
+    runtime_state_path: str = str(DEFAULT_DATA_DIR / "runtime" / "decisions.json")
     live_max_clock_skew_seconds: int = 60
 
     @property

@@ -21,8 +21,8 @@ def health_check() -> dict[str, str]:
     return {
         "status": "ok",
         "service": "energy-carbon-dispatch-cockpit",
-        "version": "0.3.0",
-        "mode": "offline_benchmark",
+        "version": "0.4.0",
+        "mode": "public_data_calibrated_realtime_simulation",
     }
 
 

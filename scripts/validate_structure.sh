@@ -16,6 +16,10 @@ required_paths=(
   "$ROOT/backend/app/rl/robust.py"
   "$ROOT/backend/app/api/routes_integration.py"
   "$ROOT/backend/app/integration/gateway.py"
+  "$ROOT/backend/app/services/runtime_simulator.py"
+  "$ROOT/backend/app/services/runtime_forecast.py"
+  "$ROOT/backend/app/services/runtime_decision.py"
+  "$ROOT/backend/app/api/routes_runtime.py"
   "$ROOT/backend/app/data/datasets/port_la_2020_2025_hourly.csv"
   "$ROOT/backend/app/data/datasets/port_la_2020_2025_monthly.csv"
   "$ROOT/backend/app/env/gymnasium_adapter.py"
@@ -28,6 +32,9 @@ required_paths=(
   "$ROOT/scripts/fetch_port_la_public_dataset.py"
   "$ROOT/scripts/run_frontend_command.sh"
   "$ROOT/scripts/sign_port_snapshot.py"
+  "$ROOT/scripts/export_runtime_evidence.py"
+  "$ROOT/scripts/audit_python_dependencies.py"
+  "$ROOT/scripts/release_check.sh"
   "$ROOT/configs/carbon_factors.yaml"
   "$ROOT/configs/rl_search_space.json"
   "$ROOT/docs/RL_PIPELINE.md"
@@ -35,10 +42,13 @@ required_paths=(
   "$ROOT/docs/MODULE_AUDIT.md"
   "$ROOT/docs/RESUME_CLAIMS.md"
   "$ROOT/docs/TECHNICAL_REVIEW_2026-08.md"
+  "$ROOT/docs/RUNTIME_DATA_CONTRACT.md"
+  "$ROOT/docs/CLOSED_LOOP_ACCEPTANCE.md"
   "$ROOT/reports/offline_benchmark_v3.json"
   "$ROOT/reports/port_landing_benchmark_v4.json"
   "$ROOT/reports/port_landing_benchmark_v4.md"
   "$ROOT/reports/rl_tuning_smoke.json"
+  "$ROOT/reports/runtime_forecast_model_v1.json"
   "$ROOT/LICENSE"
   "$ROOT/docker-compose.yml"
 )
@@ -60,10 +70,12 @@ fi
 
 PYTHONPATH="$ROOT/backend" "$PYTHON_BIN" -m app.rl.cli validate-data port_la_2020_2025_hourly >/dev/null
 
-if ! grep -q "公开离线基准 · 等待接入港口" \
+if ! grep -q "公开数据校准实时模拟" \
   "$ROOT/frontend/src/components/PortCommandCenter.tsx"; then
-  echo "missing first-clone port-integration boundary in command center" >&2
+  echo "missing public-data-calibrated runtime boundary in command center" >&2
   exit 1
 fi
+
+"$PYTHON_BIN" "$ROOT/scripts/export_runtime_evidence.py" verify >/dev/null
 
 echo "structure and default dataset ok: $ROOT"

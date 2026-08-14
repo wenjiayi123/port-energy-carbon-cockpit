@@ -5,9 +5,9 @@ type: software
 authors:
   - family-names: "Wen"
     given-names: "Jiayi"
-version: 0.3.0
-date-released: 2026-08-08
+version: 0.4.0
+date-released: 2026-08-14
 license: MIT
-abstract: "An auditable port energy-carbon decision-support project with causal offline benchmarks, four RL algorithms, constrained MPC, and fail-closed read-only integration contracts."
+abstract: "A public-data-calibrated realtime port energy-carbon decision-support project with current-input forecasting, constrained dispatch, human approval, execution receipts, causal offline benchmarks, and fail-closed production boundaries."
 repository-code: "https://github.com/wenjiayi123/port-energy-carbon-cockpit"
 url: "https://github.com/wenjiayi123/port-energy-carbon-cockpit"

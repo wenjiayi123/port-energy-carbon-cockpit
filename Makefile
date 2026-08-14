@@ -1,4 +1,4 @@
-.PHONY: bootstrap validate backend frontend demo test build data-deps data-enhanced benchmark benchmark-enhanced landing-benchmark tune-enhanced-short verify-benchmark verify-benchmark-enhanced verify-landing-benchmark docker-up docker-down
+.PHONY: bootstrap validate backend frontend demo test build runtime-evidence verify-runtime-evidence security-audit release-check data-deps data-enhanced benchmark benchmark-enhanced landing-benchmark tune-enhanced-short verify-benchmark verify-benchmark-enhanced verify-landing-benchmark docker-up docker-down
 
 bootstrap:
 	bash scripts/bootstrap.sh
@@ -20,6 +20,19 @@ test:
 
 build:
 	cd frontend && bash ../scripts/run_frontend_command.sh build
+
+runtime-evidence:
+	backend/.venv/bin/python scripts/export_runtime_evidence.py export
+
+verify-runtime-evidence:
+	backend/.venv/bin/python scripts/export_runtime_evidence.py verify
+
+security-audit:
+	backend/.venv/bin/python scripts/audit_python_dependencies.py
+	cd frontend && bash ../scripts/run_frontend_command.sh audit --audit-level high
+
+release-check:
+	bash scripts/release_check.sh
 
 benchmark:
 	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.benchmark run

@@ -46,7 +46,7 @@ is_energy_backend() {
 
 is_energy_frontend() {
   curl -fsS --max-time 2 "$FRONTEND_URL" \
-    | grep -q '<title>港口能碳与调度优化公开基准</title>'
+    | grep -q '<title>港口能碳实时模拟与调度优化驾驶舱</title>'
 }
 
 managed_processes_alive() {

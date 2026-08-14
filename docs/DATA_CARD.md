@@ -1,5 +1,21 @@
 # Data card: Port of Los Angeles public dispatch benchmarks
 
+## v0.4 realtime simulation use
+
+The runtime simulator replays the held-out `port_la_2020_2024_vessel_activity_hourly`
+partition as its public calibration clock. Official vessel-activity and regional EIA/eGRID
+signals retain public/historical source labels. Terminal asset fields that do not exist in the
+public package are generated from declared energy balance, equipment state, battery,
+transformer, service, calendar and engineering constraints and are labelled exclusively as
+physical simulation or engineering-derived values; they are never labelled as field measured.
+
+The stable `runtime-telemetry.v1` field contract, units, classifications, scenarios, quality
+states and real-port adapter mapping are documented in
+[`RUNTIME_DATA_CONTRACT.md`](RUNTIME_DATA_CONTRACT.md). Its principal limitation is explicit:
+this project has no terminal EMS/BMS/BA/SCADA/TOS meter or device feed, so
+`live_data_verified`, `dispatch_allowed`, and `production_authority` remain false. Demand-response
+settlement is unavailable; displayed avoided cost is an engineering estimate only.
+
 > v0.3.0 protocol erratum: the frozen v0.2.0 environment populated its
 > three-hour forecast features and MPC look-ahead from later rows inside the
 > evaluation window. Those reports are preserved as legacy perfect-forecast

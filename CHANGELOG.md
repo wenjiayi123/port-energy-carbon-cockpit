@@ -4,6 +4,34 @@ All notable project changes are documented here.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-14
+
+### Added
+
+- A deterministic public-data-calibrated realtime simulator with a field-level
+  `runtime-telemetry.v1` contract, physical/operational constraints, quality gates,
+  source classification, scenario injection and fail-closed stop/loss behaviour.
+- A real current-input multi-output Ridge forecast trained on `train`, selected on
+  `validation`, evaluated on held-out `test`, and bound to model/dataset SHA-256.
+- A runtime MPC/SOP comparison, action whitelist, safety projection, distinct dual
+  approvals, idempotent simulation execution, ACK receipts, KPI feedback, rollback,
+  and per-decision audit hash chains.
+- Runtime and historical evidence APIs, including the preserved blocked 100k TD3
+  candidate and its failed admission checks.
+- A cockpit realtime closed-loop panel with lineage, measured/simulated/derived
+  proportions, forecast evidence, decision flow, execution receipts and fault injection.
+- Runtime data-contract, audit and end-to-end acceptance documents plus deterministic
+  evidence export/verification and a consolidated release check.
+
+### Changed
+
+- Project positioning now leads with the public-data-calibrated simulation boundary
+  and states the adapter/calibration work required for real-port deployment.
+- Containers persist runtime decision/audit state while production authority remains
+  hard-disabled.
+- Release version advanced to 0.4.0 without overwriting v0.2.0/v0.3.0 reports,
+  screenshots, learner artifacts or metrics.
+
 ## [0.3.0] - 2026-08-08
 
 ### Added

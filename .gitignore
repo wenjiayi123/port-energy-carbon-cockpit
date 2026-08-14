@@ -16,6 +16,7 @@ coverage/
 backend/app/data/generated/
 backend/app/data/artifacts/
 backend/app/data/audit/
+backend/app/data/runtime/
 backend/app/data/runs/*
 !backend/app/data/runs/.gitkeep
 frontend/.env.local

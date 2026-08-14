@@ -8,6 +8,12 @@
 - [ ] README screenshots come from the bundled offline benchmark and show the production boundary.
 - [ ] Dataset metadata, attribution, hashes, units, assumptions, and split remain accurate.
 - [ ] `python -m app.rl.benchmark verify reports/offline_benchmark_v3.json` passes.
+- [ ] `make verify-runtime-evidence` passes and the runtime model/data/report SHA-256 values match.
+- [ ] Runtime field classification, energy balance, SOC/temperature/capacity limits, fault injection,
+  dual approval, idempotency, receipt, rollback and audit-chain tests pass.
+- [ ] Browser acceptance completes one current-input forecast → recommendation → safety projection →
+  dual approval → simulation execution → KPI feedback → rollback path and one fail-closed loss path.
+- [ ] `GET /api/evidence/history` exposes archived/champion/current/blocked evidence without local paths.
 - [ ] Resume/release claims retain the offline-scenario comparator qualifier.
 
 ## GitHub sync and review / GitHub 同步与复核
@@ -18,6 +24,7 @@
 - [ ] Repository description, topics, license, Discussions, Issues, and vulnerability alerts are configured.
 - [ ] No secret, email, local absolute path, or proprietary artifact appears in the Git history.
 - [ ] Draft release notes describe the offline benchmark boundary.
+- [ ] Do not push, create a PR or publish a release until the owner explicitly approves the local result.
 
 ## Public repository controls / 公开仓库控制
 

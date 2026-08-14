@@ -25,10 +25,14 @@ import {
   type DecisionImpactState,
 } from './components/DecisionImpactOverlay';
 import { XiaoyiLinkageHub } from './components/XiaoyiLinkageHub';
+import {
+  RuntimeClosedLoopPanel,
+  type RuntimeSnapshot,
+} from './components/RuntimeClosedLoopPanel';
 import { recomputeDashboard } from './lib/api';
 import type { DashboardSnapshot, RlRewardTracePoint } from './types/dashboard';
 
-type TopPanelId = 'simulation' | 'marl' | 'carbon' | 'shore' | 'api';
+type TopPanelId = 'runtime' | 'simulation' | 'marl' | 'carbon' | 'shore' | 'api';
 
 interface TopPanelMeta {
   id: TopPanelId;
@@ -185,6 +189,7 @@ export function App() {
   const [integrationStatus, setIntegrationStatus] = useState<Record<string, any> | null>(null);
   const [auditStatus, setAuditStatus] = useState<Record<string, any> | null>(null);
   const [landingEvidence, setLandingEvidence] = useState<Record<string, any> | null>(null);
+  const [evidenceHistory, setEvidenceHistory] = useState<Record<string, any> | null>(null);
   const [policyTest, setPolicyTest] = useState<Record<string, any> | null>(null);
   const [sailingStatus, setSailingStatus] = useState<Record<string, any> | null>(null);
   const [replayStep, setReplayStep] = useState(0);
@@ -196,9 +201,15 @@ export function App() {
   const [operationResults, setOperationResults] = useState<Record<string, string>>({});
   const [operationalState, setOperationalState] = useState<OperationalRuntimeState>({});
   const [decisionImpact, setDecisionImpact] = useState<DecisionImpactState | null>(null);
+  const [runtimeSnapshot, setRuntimeSnapshot] = useState<RuntimeSnapshot | null>(null);
+  const [runtimeForecast, setRuntimeForecast] = useState<Record<string, any> | null>(null);
+  const [runtimeDecision, setRuntimeDecision] = useState<Record<string, any> | null>(null);
+  const [runtimeHistory, setRuntimeHistory] = useState<Record<string, any> | null>(null);
+  const [runtimeBusy, setRuntimeBusy] = useState(false);
   const impactRunToken = useRef(0);
 
   const panelMeta: Record<TopPanelId, TopPanelMeta> = {
+    runtime: { id: 'runtime', label: '实时闭环', en: 'Realtime closed loop', icon: <Radio size={16} /> },
     simulation: { id: 'simulation', label: '离线仿真', en: 'Offline simulation', icon: <Activity size={16} /> },
     marl: { id: 'marl', label: 'RL 策略', en: 'RL policy', icon: <ShipWheel size={16} /> },
     carbon: { id: 'carbon', label: '低碳优先', en: 'Low-carbon priority', icon: <Leaf size={16} /> },
@@ -206,6 +217,7 @@ export function App() {
     api: { id: 'api', label: isRefreshing ? '重算中' : 'API 已同步', en: isRefreshing ? 'Recomputing' : 'API synchronized', icon: <ServerCog size={16} /> },
   };
   const panelHeading: Record<TopPanelId, { zh: string; en: string }> = {
+    runtime: { zh: '公开数据校准模拟、预测、审批、执行与审计', en: 'Calibrated simulation, forecast, approval, execution and audit' },
     simulation: { zh: '仿真状态与模拟器启动', en: 'Simulation status and simulator launch' },
     marl: { zh: 'RL 策略测试与真实训练状态', en: 'RL policy testing and measured training status' },
     carbon: { zh: '低碳偏好调度参数', en: 'Low-carbon preference dispatch parameters' },
@@ -361,6 +373,7 @@ export function App() {
   const landingDataset = landingEvidence?.dataset?.landing_readiness as Record<string, any> | undefined;
   const landingStress = landingEvidence?.stress_tests as Record<string, any> | undefined;
   const stressEntries = Object.entries(landingStress ?? {}) as Array<[string, Record<string, any>]>;
+  const historicalEvidenceEntries = Array.isArray(evidenceHistory?.entries) ? evidenceHistory.entries : [];
 
   async function runDecisionImpact(report: DecisionImpactReport, task?: () => Promise<void> | void, showResultReport = true) {
     const runToken = impactRunToken.current + 1;
@@ -617,7 +630,7 @@ export function App() {
     let active = true;
 
     async function refreshEngineeringSignals() {
-      const [health, linkage, rl, sailing, registry, integration, audit, evidence] = await Promise.all([
+      const [health, linkage, rl, sailing, registry, integration, audit, evidence, historyEvidence] = await Promise.all([
         fetchJson('/api/health').catch(() => null),
         fetchJson('/api/linkage/health').catch(() => null),
         fetchJson('/api/rl/train/status').catch(() => null),
@@ -626,6 +639,7 @@ export function App() {
         fetchJson('/api/integration/status').catch(() => null),
         fetchJson('/api/audit/integrity').catch(() => null),
         fetchJson('/api/evidence/landing-benchmark').catch(() => null),
+        fetchJson('/api/evidence/history').catch(() => null),
       ]);
       if (!active) return;
       setApiHealth({ health, linkage, rl, sailing, registry });
@@ -635,10 +649,32 @@ export function App() {
       if (integration) setIntegrationStatus(integration);
       if (audit) setAuditStatus(audit);
       if (evidence) setLandingEvidence(evidence);
+      if (historyEvidence) setEvidenceHistory(historyEvidence);
     }
 
     void refreshEngineeringSignals();
     const timer = window.setInterval(refreshEngineeringSignals, 7000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    async function pollRuntime() {
+      const [nextSnapshot, nextForecast, nextHistory] = await Promise.all([
+        fetchJson('/api/runtime/snapshot').catch(() => null),
+        fetchJson('/api/runtime/forecast').catch(() => null),
+        fetchJson('/api/runtime/history?limit=48').catch(() => null),
+      ]);
+      if (!active) return;
+      if (nextSnapshot) setRuntimeSnapshot(nextSnapshot as RuntimeSnapshot);
+      setRuntimeForecast(nextForecast);
+      if (nextHistory) setRuntimeHistory(nextHistory);
+    }
+    void pollRuntime();
+    const timer = window.setInterval(pollRuntime, 4000);
     return () => {
       active = false;
       window.clearInterval(timer);
@@ -933,14 +969,174 @@ export function App() {
     if (panel === 'simulation') {
       await refreshSailingStatus();
     }
+    if (panel === 'runtime') {
+      await refreshRuntime();
+    }
+  }
+
+  async function refreshRuntime() {
+    setRuntimeBusy(true);
+    try {
+      const nextSnapshot = await fetchJson('/api/runtime/snapshot');
+      const [nextForecast, nextHistory] = await Promise.all([
+        fetchJson('/api/runtime/forecast').catch(() => null),
+        fetchJson('/api/runtime/history?limit=48').catch(() => null),
+      ]);
+      setRuntimeSnapshot(nextSnapshot as RuntimeSnapshot);
+      setRuntimeForecast(nextForecast);
+      if (nextHistory) setRuntimeHistory(nextHistory);
+      setPanelNotice(nextSnapshot.decision_allowed
+        ? `实时快照 STEP ${nextSnapshot.step} 已同步，质量门禁通过。`
+        : `实时链路失败关闭：${nextSnapshot.quality?.critical_reasons?.join(', ') ?? 'quality gate failed'}`);
+    } catch (error) {
+      setPanelNotice(`实时闭环读取失败：${String(error)}`);
+    } finally {
+      setRuntimeBusy(false);
+    }
+  }
+
+  async function createRuntimeDecision() {
+    setRuntimeBusy(true);
+    try {
+      const objective = greenPreference >= 0.72 ? 'carbon' : 'balanced';
+      const data = await fetchJson('/api/runtime/decisions', {
+        method: 'POST',
+        body: JSON.stringify({
+          objective,
+          idempotency_key: `cockpit-create-${Date.now()}`,
+          requested_by: 'cockpit-operator',
+        }),
+      });
+      setRuntimeDecision(data);
+      setPanelNotice(`运行 MPC 已生成推荐：${data.decision_id}，需要 ${data.required_approvals} 人审批。`);
+      await refreshRuntime();
+    } catch (error) {
+      setPanelNotice(`推荐生成失败：${String(error)}`);
+    } finally {
+      setRuntimeBusy(false);
+    }
+  }
+
+  async function approveRuntimeDecision(approverId: string) {
+    if (!runtimeDecision?.decision_id) return;
+    setRuntimeBusy(true);
+    try {
+      const data = await fetchJson(`/api/runtime/decisions/${runtimeDecision.decision_id}/approve`, {
+        method: 'POST',
+        body: JSON.stringify({
+          approver_id: approverId,
+          decision: 'approve',
+          comment: '驾驶舱本地模拟验收审批；不授予生产控制权。',
+          idempotency_key: `${runtimeDecision.decision_id}-${approverId}`,
+        }),
+      });
+      setRuntimeDecision(data);
+      setPanelNotice(`审批已记录：${data.approvals.length}/${data.required_approvals}，状态 ${data.status}。`);
+    } catch (error) {
+      setPanelNotice(`审批失败：${String(error)}`);
+    } finally {
+      setRuntimeBusy(false);
+    }
+  }
+
+  async function executeRuntimeDecision() {
+    if (!runtimeDecision?.decision_id) return;
+    setRuntimeBusy(true);
+    try {
+      const data = await fetchJson(`/api/runtime/decisions/${runtimeDecision.decision_id}/execute`, {
+        method: 'POST',
+        body: JSON.stringify({
+          executor_id: 'cockpit-simulation-executor',
+          idempotency_key: `${runtimeDecision.decision_id}-execute`,
+        }),
+      });
+      setRuntimeDecision(data);
+      setPanelNotice(`模拟执行器回执：${data.execution_receipt?.status ?? data.status}；KPI 已回写。`);
+      await refreshRuntime();
+    } catch (error) {
+      setPanelNotice(`模拟执行失败：${String(error)}`);
+    } finally {
+      setRuntimeBusy(false);
+    }
+  }
+
+  async function rollbackRuntimeDecision() {
+    if (!runtimeDecision?.decision_id) return;
+    setRuntimeBusy(true);
+    try {
+      const data = await fetchJson(`/api/runtime/decisions/${runtimeDecision.decision_id}/rollback`, {
+        method: 'POST',
+        body: JSON.stringify({
+          requested_by: 'cockpit-operator',
+          reason: '本地验收回滚',
+          idempotency_key: `${runtimeDecision.decision_id}-rollback`,
+        }),
+      });
+      setRuntimeDecision(data);
+      setPanelNotice(`回滚回执：${data.rollback?.status ?? data.status}。`);
+      await refreshRuntime();
+    } catch (error) {
+      setPanelNotice(`回滚失败：${String(error)}`);
+    } finally {
+      setRuntimeBusy(false);
+    }
+  }
+
+  async function injectRuntimeScenario(scenarioId: string) {
+    setRuntimeBusy(true);
+    try {
+      const data = await fetchJson('/api/runtime/scenarios/inject', {
+        method: 'POST',
+        body: JSON.stringify({
+          scenario_id: scenarioId,
+          duration_steps: 8,
+          idempotency_key: `cockpit-scenario-${scenarioId}-${Date.now()}`,
+        }),
+      });
+      setRuntimeSnapshot(data.snapshot as RuntimeSnapshot);
+      setRuntimeForecast(null);
+      setPanelNotice(`已注入工程场景 ${scenarioId}；质量门禁=${data.snapshot.quality.status}。`);
+      await refreshRuntime();
+    } catch (error) {
+      setPanelNotice(`场景注入失败：${String(error)}`);
+    } finally {
+      setRuntimeBusy(false);
+    }
+  }
+
+  async function controlRuntime(action: 'start' | 'stop' | 'reset') {
+    setRuntimeBusy(true);
+    try {
+      const data = await fetchJson('/api/runtime/control', {
+        method: 'POST',
+        body: JSON.stringify({
+          action,
+          idempotency_key: `cockpit-control-${action}-${Date.now()}`,
+        }),
+      });
+      setRuntimeSnapshot(data as RuntimeSnapshot);
+      if (action === 'stop') setRuntimeForecast(null);
+      if (action === 'reset') setRuntimeDecision(null);
+      setPanelNotice(`实时模拟器操作 ${action} 完成：${data.simulator_state}。`);
+      if (action !== 'stop') await refreshRuntime();
+    } catch (error) {
+      setPanelNotice(`实时模拟器操作失败：${String(error)}`);
+    } finally {
+      setRuntimeBusy(false);
+    }
   }
 
   async function refreshLandingEvidence() {
     try {
-      const evidence = await fetchJson('/api/evidence/landing-benchmark');
+      const [evidence, historyEvidence] = await Promise.all([
+        fetchJson('/api/evidence/landing-benchmark'),
+        fetchJson('/api/evidence/history'),
+      ]);
       setLandingEvidence(evidence);
+      setEvidenceHistory(historyEvidence);
     } catch {
       setLandingEvidence(null);
+      setEvidenceHistory(null);
     }
   }
 
@@ -1186,6 +1382,7 @@ export function App() {
     <main className="port-command-shell">
       <PortCommandCenter
         snapshot={snapshot}
+        runtimeSnapshot={runtimeSnapshot}
         rlStatus={rlStatus}
         integrationStatus={integrationStatus}
         auditIntegrityOk={auditStatus?.ok ?? null}
@@ -1255,6 +1452,22 @@ export function App() {
           </div>
 
           <div className="top-action-content">
+            {activePanel === 'runtime' && (
+              <RuntimeClosedLoopPanel
+                snapshot={runtimeSnapshot}
+                forecast={runtimeForecast}
+                decision={runtimeDecision}
+                history={runtimeHistory}
+                busy={runtimeBusy}
+                onRefresh={refreshRuntime}
+                onCreateDecision={createRuntimeDecision}
+                onApprove={approveRuntimeDecision}
+                onExecute={executeRuntimeDecision}
+                onRollback={rollbackRuntimeDecision}
+                onInject={injectRuntimeScenario}
+                onControl={controlRuntime}
+              />
+            )}
             {activePanel === 'simulation' && (
               <>
                 <div className="action-stat-grid">
@@ -1424,6 +1637,41 @@ export function App() {
                     <span>证据哈希 <b>{landingEvidence?.evidence_sha256?.slice(0, 16) ?? '--'}…</b></span>
                     <span>数据展开比 <b>{formatNumber(landingDataset?.modeled_rows_per_operational_anchor, 3)} 行/锚点</b></span>
                     <span>边界 <b>公开数据离线回放，不是港口现场 KPI</b></span>
+                  </footer>
+                </section>
+                <section className="historical-evidence-board" aria-label="不覆盖历史证据与失败候选">
+                  <header>
+                    <div>
+                      <span>不覆盖历史证据</span>
+                      <small>VERSIONED RESULTS + REJECTED CANDIDATES</small>
+                    </div>
+                    <b>{evidenceHistory?.history_preserved ? `${historicalEvidenceEntries.length} RECORDS` : 'LOADING'}</b>
+                  </header>
+                  <div>
+                    {historicalEvidenceEntries.map((entry: Record<string, any>) => {
+                      const failedChecks = Array.isArray(entry.failed_checks) ? entry.failed_checks : [];
+                      const runtimeMae = entry.held_out_test_mae_by_horizon?.['1']?.terminal_load_kw;
+                      const mainMetric = runtimeMae != null
+                        ? `1h 负荷 MAE ${formatNumber(runtimeMae, 1)} kW`
+                        : entry.metrics?.carbon_reduction_pct != null
+                          ? `碳排 ${formatNumber(entry.metrics.carbon_reduction_pct, 3)}%`
+                          : '完整指标见 JSON 证据';
+                      return (
+                        <article className={entry.status === 'blocked' ? 'blocked' : ''} key={entry.evidence_id}>
+                          <span>{entry.version}<i>{entry.status}</i></span>
+                          <b>{entry.algorithm ? `${String(entry.algorithm).toUpperCase()} 候选` : entry.decision}</b>
+                          <em>{mainMetric}</em>
+                          {failedChecks.length > 0 && <small>未通过：{failedChecks.join(' / ')}</small>}
+                          <small>{entry.evidence_label}</small>
+                          <code>{String(entry.report_file_sha256 ?? entry.model_sha256 ?? '').slice(0, 18)}…</code>
+                        </article>
+                      );
+                    })}
+                  </div>
+                  <footer>
+                    <span>注册表 <b>{String(evidenceHistory?.registry_sha256 ?? '').slice(0, 16) || '--'}…</b></span>
+                    <span>失败候选 <b>保留且显示</b></span>
+                    <span>生产授权 <b>FALSE</b></span>
                   </footer>
                 </section>
                 <section className="algorithm-matrix-board" aria-label="五算法训练矩阵">

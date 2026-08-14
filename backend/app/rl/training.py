@@ -33,12 +33,30 @@ from app.rl.robust import CausalForecastPortEnv, cvar, paired_bootstrap_interval
 
 RUNS_DIR = Path(__file__).resolve().parents[1] / "data" / "runs"
 RUNS_DIR.mkdir(parents=True, exist_ok=True)
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 RUN_ID_PATTERN = re.compile(r"^rl-\d{8}-\d{6}-[0-9a-f]{6}$")
 logger = logging.getLogger(__name__)
 
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def public_artifact_path(value: object) -> str | None:
+    """Expose portable repository paths while retaining absolute paths internally."""
+    if not value:
+        return None
+    path = Path(str(value))
+    if not path.is_absolute():
+        return path.as_posix()
+    try:
+        return path.resolve().relative_to(PROJECT_ROOT.resolve()).as_posix()
+    except ValueError:
+        return f"external-artifact/{path.name}"
+
+
+def public_log_line(value: object) -> str:
+    return str(value).replace(str(PROJECT_ROOT), ".")
 
 
 class TrainingService:
@@ -202,7 +220,7 @@ class TrainingService:
                 "step_rate_per_min": round(rate * 60, 2),
                 "recent_metrics": metrics[-120:],
                 "policy_version": job["policy_version"],
-                "artifact_path": job.get("artifact_path"),
+                "artifact_path": public_artifact_path(job.get("artifact_path")),
                 "started_at": job.get("started_at"),
                 "completed_at": job.get("completed_at"),
                 "duration_sec": round(elapsed, 2),
@@ -216,7 +234,7 @@ class TrainingService:
                 "can_resume": job["status"] == "paused",
                 "can_stop": job["status"] in {"running", "paused"},
                 "config": job["config"],
-                "logs": list(job.get("logs") or [])[-20:],
+                "logs": [public_log_line(line) for line in list(job.get("logs") or [])[-20:]],
                 "error": job.get("error"),
                 "summary": self._summary(job, step),
                 "rendering": False,
@@ -277,7 +295,7 @@ class TrainingService:
                     "strategy_id": manifest["job_id"],
                     "policy_version": manifest["policy_version"],
                     "algorithm": manifest["config"]["algorithm"],
-                    "artifact_path": manifest.get("artifact_path"),
+                    "artifact_path": public_artifact_path(manifest.get("artifact_path")),
                     "artifact_sha256": manifest.get("artifact_sha256"),
                     "objective": manifest["config"].get("objective_label")
                     or manifest["config"].get("objective_id"),
@@ -366,7 +384,7 @@ class TrainingService:
                     "trained_dataset_sha256": config.get("dataset_sha256"),
                     "current_dataset_sha256": current_dataset_sha256,
                     "dataset_status": dataset_status,
-                    "artifact_path": artifact_value,
+                    "artifact_path": public_artifact_path(artifact_value),
                     "artifact_sha256": artifact_sha256,
                     "recorded_artifact_sha256": recorded_artifact_sha256,
                     "artifact_integrity": artifact_integrity,
@@ -520,7 +538,7 @@ class TrainingService:
             "policy": {
                 "policy_version": manifest["policy_version"],
                 "algorithm": algorithm,
-                "artifact_path": manifest.get("artifact_path"),
+                "artifact_path": public_artifact_path(manifest.get("artifact_path")),
                 "artifact_sha256": self._sha256_file(Path(manifest["artifact_path"])),
                 "dataset_id": config["dataset_id"],
                 "data_file": config["data_file"],
@@ -627,7 +645,7 @@ class TrainingService:
             checkpoints.append(
                 {
                     "step": checkpoint_step,
-                    "path": str(checkpoint_path),
+                    "path": public_artifact_path(checkpoint_path),
                     "validation_return": validation.get("validation_return"),
                     "validation_safety_violations": validation.get("validation_safety_violations"),
                 }
@@ -647,7 +665,7 @@ class TrainingService:
             "duration_sec": manifest.get("duration_sec", 0),
             "started_at": manifest["started_at"],
             "completed_at": manifest.get("completed_at"),
-            "checkpoint": manifest.get("artifact_path"),
+            "checkpoint": public_artifact_path(manifest.get("artifact_path")),
             "metrics": evaluation_metrics,
             "checkpoints": checkpoints,
             "series": series,

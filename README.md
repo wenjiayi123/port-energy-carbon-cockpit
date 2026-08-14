@@ -4,26 +4,43 @@
 
 <div align="center">
 
-# 港口能碳强化学习驾驶舱
+# 港口能碳实时模拟与智能调度驾驶舱
 
-## Port Energy-Carbon RL Cockpit
+## Port Energy-Carbon Realtime Simulation & Intelligent Dispatch Cockpit
 
-<strong>面向港口能源、碳排与资源协同调度的可审计离线实验系统</strong><br>
-<strong>An auditable offline experimentation system for coordinated port energy, carbon, and resource dispatch</strong>
+<strong>公开数据校准的实时数字孪生、预测、优化、审批、执行回执与审计系统</strong><br>
+<strong>Public-data-calibrated realtime digital twin, forecast, optimization, approval, execution receipt and audit</strong>
 
-<strong>研发作者：</strong>温家懿 · <strong>Research Author:</strong> Wen Jiayi
+<strong>独立研发者：</strong>温家懿 · <strong>Independent Developer:</strong> Wen Jiayi
 
 [![CI](https://github.com/wenjiayi123/port-energy-carbon-cockpit/actions/workflows/ci.yml/badge.svg)](https://github.com/wenjiayi123/port-energy-carbon-cockpit/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/wenjiayi123/port-energy-carbon-cockpit/actions/workflows/codeql.yml/badge.svg)](https://github.com/wenjiayi123/port-energy-carbon-cockpit/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-16b8a6.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776ab.svg)](backend/pyproject.toml)
 [![React](https://img.shields.io/badge/React-18-61dafb.svg)](frontend/package.json)
-[![Release](https://img.shields.io/badge/release-v0.3.0-f0b84b.svg)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-v0.4.0-f0b84b.svg)](CHANGELOG.md)
 [![Boundary](https://img.shields.io/badge/production_dispatch-disabled-ef8354.svg)](docs/PRODUCTION_READINESS.md)
 
 [快速开始 / Quick start](#快速开始--quick-start) · [可视验收 / Visual acceptance](docs/VISUAL_ACCEPTANCE_GUIDE.md) · [技术评审 / Review](docs/TECHNICAL_REVIEW_2026-08.md) · [系统架构 / Architecture](#系统架构--architecture) · [五类基线 / Baselines](#五类可执行基线--five-executable-baselines) · [数据契约 / Data](#替换港口数据--bring-your-own-port-data) · [可信边界 / Trust](#可信边界--trust-boundaries) · [参与贡献 / Contribute](CONTRIBUTING.md)
 
 </div>
+
+## 项目概览 / Project overview
+
+| HR 首屏信息 / First-screen fact | 已实现 / Implemented |
+| --- | --- |
+| 业务问题 | 在岸电、储能、光伏、暖通、充电、冷藏箱、作业服务与电网约束之间协同优化能耗、峰值、成本、碳排、延误和设备寿命。 |
+| 系统架构 | `公开数据/历史数据 → 实时模拟器 → 质量门禁 → 数字孪生 → Ridge 预测 → MPC/SOP 对照 → 安全投影 → 双人审批 → 模拟执行 → 回执/KPI/审计链`。 |
+| 实时模拟器 | 以洛杉矶港逐日船舶活动、EIA 电网/电价、eGRID 碳因子为校准底座，用守恒关系、设备状态机和工程约束生成稳定 `runtime-telemetry.v1`。 |
+| 实港替换面 | 保留 TOS、AIS/VTS、PLC/SCADA、EMS、BMS、BA、电表和气象适配位；现场只替换适配器、字段映射和标定参数，不重写状态/动作/业务合同。 |
+| 算法覆盖 | PPO、SAC、TD3、DQN、约束 MPC、风险感知 MPC 与当前状态 SOP 强基线；训练/验证/盲测按时间隔离，训练不渲染，测试才回放。 |
+| 当前可核验价值 | v4 公开数据因果留出评测相对固定满资源基线：碳排 `-8.792%` 、情景成本 `-8.094%`、峰值 `-2.983%`、约束满足 `100%`；不是现场 KPI。实时 Ridge 模型的 1h 终端负荷 held-out MAE 为 `416.493 kW`。 |
+| 信任边界 | `simulation_mode=true`、`live_data_verified=false`、`dispatch_allowed=false`、`production_authority=false`；需求响应收益仅是未结算的工程估算。 |
+| 本地验收 | 首次执行 `make bootstrap`，之后 `make demo`；驾驶舱 `http://127.0.0.1:5173/`，OpenAPI `http://127.0.0.1:8808/docs`，点击顶栏“实时闭环”完成端到端验收。 |
+
+> 系统已在公开数据校准的实时模拟环境中完成端到端闭环；数据合同、模型推理、安全投影、执行回执和审计链均可运行。接入真实港口时，主要工作是替换数据与设备适配器、完成现场标定、影子运行及生产验收。
+
+闭环合同和可复现验收见 [Runtime data contract](docs/RUNTIME_DATA_CONTRACT.md) 与 [Closed-loop acceptance](docs/CLOSED_LOOP_ACCEPTANCE.md)；2026-08-14 逐项审计见 [Audit report](docs/AUDIT_2026-08-14.md)。以下版本化指标与历史证据保持原样、不覆盖。
 
 <table>
   <tr>
@@ -43,8 +60,8 @@
 </table>
 
 <p align="center">
-  <sub>v0.3.0 主指标使用不读取未来测试行的因果持久性预测；旧 v0.2.0 指标和报告继续冻结保留。</sub><br />
-  <sub>v0.3.0 headline metrics use a causal persistence forecast that cannot read later test rows; the original v0.2.0 evidence remains frozen.</sub>
+  <sub>v0.4.0 新增当前输入模型推理与模拟执行闭环；v0.3.0/v0.2.0 因果和历史指标继续冻结保留。</sub><br />
+  <sub>v0.4.0 adds current-input inference and a simulation execution loop; the v0.3.0 and v0.2.0 evidence remains frozen.</sub>
 </p>
 
 ![Port Energy-Carbon RL Cockpit verified overview](docs/assets/cockpit-overview-verified.png)
@@ -64,7 +81,7 @@
 
 ## 项目定位 / Project position
 
-本项目把港口能耗、岸电、设备资源、延误、成本与碳排放放进同一个约束环境，连接数据校验、强化学习训练、控制理论对照、独立测试、轨迹回放、模型治理与双语驾驶舱。重点不是制造一张“看起来在线”的大屏，而是让每个关键数字都能回到数据分区、物理假设、算法动作和证据文件。
+本项目把港口能耗、岸电、设备资源、延误、成本与碳排放放进同一个约束环境，连接公开数据校准实时模拟、当前输入预测、策略安全投影、人工审批、模拟执行回执、强化学习训练、独立测试、模型治理与双语驾驶舱。每个关键数字都能回到数据分区、字段血缘、物理假设、算法动作和证据文件。
 
 This project places port energy use, shore power, equipment allocation, delay, cost, and emissions inside one constrained environment. It connects dataset validation, reinforcement-learning training, a control-theory baseline, held-out evaluation, trajectory replay, model governance, and a bilingual cockpit. Its central goal is evidence: every important number should trace back to a split, a declared physical assumption, an algorithm action, and a persisted artifact.
 
@@ -243,6 +260,14 @@ The report also publishes a harder comparator: select an 80%/80% crane/yard-vehi
 
 The original v0.2.0 vessel-activity report evaluates 48×24 held-out hours from 2024. MPC reduces carbon by <strong>8.90%</strong> and scenario cost by <strong>8.22%</strong> versus the fixed full-resource comparator, with <strong>100.00%</strong> throughput retention and <strong>100%</strong> constraint satisfaction. Against the harder validation-selected 80%/80% comparator, carbon still falls <strong>2.77%</strong> and cost <strong>2.11%</strong>, while peak load rises <strong>3.61%</strong>. That historical protocol lets MPC consume later rows within the window as a deterministic forecast; it remains preserved as legacy perfect-forecast scenario evidence, not the causal deployment metric.
 
+### v0.4.0 实时闭环证据 / Realtime closed-loop evidence
+
+v0.4.0 新增确定性的公开数据校准模拟器：以 `port_la_2020_2024_vessel_activity_hourly` 测试分区为底座，每步按港口作业、能量守恒、储能 SOC/SOH/温度/循环衰减、变压器容量、岸电服务、AGV 备用和设备状态机更新。非公开现场字段明确标为 `物理模拟` 或 `工程派生`，不冒充实测。
+
+多输出 Ridge 模型仅使用 `train` 拟合、`validation` 选 alpha，并保留 `test` 评测；1/3/6h 终端负荷 held-out MAE 分别是 <strong>416.493 / 507.028 / 479.823 kW</strong>。运行 MPC 的 135 个当前状态候选与 SOP 强基线对照后，经动作白名单、SOC/温度/变压器/服务约束投影、请求人禁止自审和双人审批，才能进入模拟执行器。回执持久化 ACK、快照/模型/数据哈希、KPI 前后变化、失败/回滚原因和 SHA-256 审计链。
+
+可复现模型证据见 [`runtime_forecast_model_v1.json`](reports/runtime_forecast_model_v1.json)；完整 API 步骤见 [`CLOSED_LOOP_ACCEPTANCE.md`](docs/CLOSED_LOOP_ACCEPTANCE.md)；`GET /api/evidence/history` 同时返回 v0.2/v0.3/v0.4 证据和被拒绝的 TD3 候选。这些是实时模拟和公开数据离线证据，不授权生产控制。
+
 ### v0.3.0 因果鲁棒性增量 / Causal robustness increment
 
 新的 [v4 港口落地评测](reports/port_landing_benchmark_v4.md) 保持相同 48×24 留出窗口，但在每个决策时刻禁止读取后续测试行。风险感知 MPC 相对固定满配强基线降低能耗 <strong>8.726%</strong>、碳排 <strong>8.792%</strong>、情景成本 <strong>8.094%</strong>、峰值 <strong>2.983%</strong>，吞吐变化 <strong>−0.017%</strong>、约束满足率 <strong>100%</strong>；碳排改善的配对 bootstrap 95% 区间为 <strong>8.387%–9.249%</strong>。
@@ -271,6 +296,11 @@ make demo
 - OpenAPI: `http://127.0.0.1:8808/docs`
 - Readiness: `http://127.0.0.1:8808/api/health/ready`
 - Metrics: `http://127.0.0.1:8808/api/metrics`
+- Runtime snapshot: `http://127.0.0.1:8808/api/runtime/snapshot`
+- Forecast evidence: `http://127.0.0.1:8808/api/runtime/forecast/model`
+- Versioned evidence history: `http://127.0.0.1:8808/api/evidence/history`
+
+驾驶舱顶部点击“实时闭环”，依次查看连续字段、1/3/6h 预测、生成当前推荐、两名不同审批人确认、模拟执行回执、KPI 变化和回滚；再注入“通信失联”验证预测/决策失败关闭，最后点击“复位”。
 
 ### 加固容器 / Hardened containers
 
@@ -443,6 +473,7 @@ Before a real-port integration, provide read-only TOS/EMS adapters, parameter ca
 make test       # backend API, accounting, Gymnasium and five-baseline smoke tests
 make build      # TypeScript + Vite production build
 make validate   # repository structure and default dataset contract
+make security-audit # Python and frontend known-vulnerability gates
 
 cd backend
 .venv/bin/python -m ruff check app

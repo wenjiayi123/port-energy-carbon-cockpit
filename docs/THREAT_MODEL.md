@@ -25,6 +25,10 @@ to command production equipment.
 | Secret leakage | Keys are environment-only and bodies are excluded from logs | Managed secret store and rotation |
 | Repudiation | Request IDs and mutation audit JSONL | Central append-only logging and retention |
 | Unsafe automated dispatch | Production eligibility hard-coded false | Human approval plus independent interlock |
+| Runtime action bypass | Four-field action whitelist, safety projection, dual distinct approvals, requester self-approval prohibition | Independent execution channel, PLC interlock and site SOP |
+| Duplicate command or retry | Required business idempotency keys with persisted replay results | Gateway-level idempotency retention and device sequence acknowledgements |
+| Forged simulated/live identity | Every runtime field has exclusive measured/simulated/derived classification and source ID | Port-owned adapter certificates and source reconciliation |
+| Simulator or communication loss | Quality gate blocks forecast/decision; dispatch and production authority stay false | Redundant live sources, watchdog and fail-safe device mode |
 | Dependency compromise | Pinned actions, audits, CodeQL, Dependabot, Scorecard | Protected branches and signed releases |
 | Denial of service | Body limit and per-process sliding-window backstop | Distributed quotas, autoscaling, reverse-proxy timeouts, and WAF |
 | Snapshot spoofing or replay | Per-adapter HMAC, payload hash, freshness, snapshot ID and monotonic sequence | Managed key rotation, source mTLS and port SIEM correlation |
@@ -34,8 +38,10 @@ to command production equipment.
 
 Logs include timestamp, request ID, method, path, status, role, client address, and duration.
 Request bodies, API-key values, raw datasets, and model parameters are not written to access or
-audit logs. Production deployments should forward logs to an append-only store and define a
-retention and access policy.
+the generic mutation log. The runtime decision record intentionally retains its whitelisted
+recommended/projected action, approver IDs, receipt, hashes and KPI delta; it does not retain API
+keys or raw external telemetry. Production deployments should forward logs to an append-only
+store and define a retention and access policy.
 
 ## Non-goals
 

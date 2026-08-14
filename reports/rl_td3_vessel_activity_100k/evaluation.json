@@ -4,7 +4,7 @@
   "policy": {
     "policy_version": "td3-rl-20260725-233109-6ac68e",
     "algorithm": "td3",
-    "artifact_path": "/Users/apple/Desktop/能碳驾驶舱/backend/app/data/runs/rl-20260725-233109-6ac68e/model.zip",
+    "artifact_path": "backend/app/data/runs/rl-20260725-233109-6ac68e/model.zip",
     "artifact_sha256": "d2b5e4881ef3753b3be02df45dd84951bf0d1507d92adb1c708d4a90caf3efa6",
     "dataset_id": "port_la_2020_2024_vessel_activity_hourly",
     "data_file": "port_la_2020_2024_vessel_activity_hourly",
