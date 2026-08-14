@@ -1,4 +1,5 @@
 {
+  "coefficient_quantization_decimals": 8,
   "dataset_id": "port_la_2020_2024_vessel_activity_hourly",
   "dataset_sha256": "fbb3d1c34ccad61214119b600f09e8a6c37c13826fad6e4dde0c33cdc821758e",
   "evidence": {
@@ -6,32 +7,32 @@
       "alpha_candidates": [
         {
           "alpha": 0.001,
-          "validation_scaled_mae": 0.024642111028
+          "validation_scaled_mae": 0.024642111
         },
         {
           "alpha": 0.01,
-          "validation_scaled_mae": 0.024642595591
+          "validation_scaled_mae": 0.02464259608
         },
         {
           "alpha": 0.1,
-          "validation_scaled_mae": 0.024647483672
+          "validation_scaled_mae": 0.024647483244
         },
         {
           "alpha": 1.0,
-          "validation_scaled_mae": 0.024698665908
+          "validation_scaled_mae": 0.024698665727
         },
         {
           "alpha": 10.0,
-          "validation_scaled_mae": 0.025372371666
+          "validation_scaled_mae": 0.025372371925
         }
       ],
       "alpha_selection_split": "validation",
-      "coefficient_sha256": "860a46f33a6ec94cce5c460de0b5c6196ca5a05a1e16be6b2f05a40d76c35452",
+      "coefficient_sha256": "b8f8822c602e036fd4874c6d17660c43b9747a47bc1e1b24c9f221caa383b190",
       "held_out_test_mae": {
         "electricity_price_cny_per_kwh": 0.152892,
         "grid_carbon_kg_per_kwh": 0.014328,
-        "regional_grid_demand_mw": 88.472215,
-        "terminal_load_kw": 416.493046,
+        "regional_grid_demand_mw": 88.472209,
+        "terminal_load_kw": 416.493033,
         "throughput_demand_teu_h": 55.916397
       },
       "selected_alpha": 0.001,
@@ -39,9 +40,9 @@
       "validation_mae": {
         "electricity_price_cny_per_kwh": 0.135239,
         "grid_carbon_kg_per_kwh": 0.012789,
-        "regional_grid_demand_mw": 83.204699,
-        "terminal_load_kw": 430.059169,
-        "throughput_demand_teu_h": 47.963831
+        "regional_grid_demand_mw": 83.204695,
+        "terminal_load_kw": 430.059159,
+        "throughput_demand_teu_h": 47.963832
       },
       "validation_rows": 8759
     },
@@ -49,42 +50,42 @@
       "alpha_candidates": [
         {
           "alpha": 0.001,
-          "validation_scaled_mae": 0.042251412656
+          "validation_scaled_mae": 0.042251413457
         },
         {
           "alpha": 0.01,
-          "validation_scaled_mae": 0.042251761126
+          "validation_scaled_mae": 0.042251760275
         },
         {
           "alpha": 0.1,
-          "validation_scaled_mae": 0.042255249662
+          "validation_scaled_mae": 0.042255249521
         },
         {
           "alpha": 1.0,
-          "validation_scaled_mae": 0.042290733036
+          "validation_scaled_mae": 0.042290732936
         },
         {
           "alpha": 10.0,
-          "validation_scaled_mae": 0.042697551234
+          "validation_scaled_mae": 0.042697552033
         }
       ],
       "alpha_selection_split": "validation",
-      "coefficient_sha256": "9b7b6f3a19fdbd59a40136417b22a47577ea98187c2e7e2cf02e9b98ea56f9a7",
+      "coefficient_sha256": "678f2603851376124aba130685f0ff332e59ba6ef4b4759b2233125befc7ce4b",
       "held_out_test_mae": {
         "electricity_price_cny_per_kwh": 0.224544,
         "grid_carbon_kg_per_kwh": 0.029463,
-        "regional_grid_demand_mw": 210.254361,
-        "terminal_load_kw": 507.028048,
-        "throughput_demand_teu_h": 117.693148
+        "regional_grid_demand_mw": 210.254346,
+        "terminal_load_kw": 507.028101,
+        "throughput_demand_teu_h": 117.693153
       },
       "selected_alpha": 0.001,
       "test_rows": 8781,
       "validation_mae": {
         "electricity_price_cny_per_kwh": 0.203742,
         "grid_carbon_kg_per_kwh": 0.02593,
-        "regional_grid_demand_mw": 189.95773,
-        "terminal_load_kw": 444.146798,
-        "throughput_demand_teu_h": 101.72716
+        "regional_grid_demand_mw": 189.957723,
+        "terminal_load_kw": 444.14682,
+        "throughput_demand_teu_h": 101.727161
       },
       "validation_rows": 8757
     },
@@ -92,42 +93,42 @@
       "alpha_candidates": [
         {
           "alpha": 0.001,
-          "validation_scaled_mae": 0.057957901981
+          "validation_scaled_mae": 0.057957902091
         },
         {
           "alpha": 0.01,
-          "validation_scaled_mae": 0.057958099972
+          "validation_scaled_mae": 0.057958100396
         },
         {
           "alpha": 0.1,
-          "validation_scaled_mae": 0.057960082669
+          "validation_scaled_mae": 0.057960083626
         },
         {
           "alpha": 1.0,
-          "validation_scaled_mae": 0.057980062684
+          "validation_scaled_mae": 0.057980062723
         },
         {
           "alpha": 10.0,
-          "validation_scaled_mae": 0.058195565697
+          "validation_scaled_mae": 0.058195565384
         }
       ],
       "alpha_selection_split": "validation",
-      "coefficient_sha256": "d615603cc499e8a73733b59164c2be65c5ebd8b54e7784fd784e409bfd929f6b",
+      "coefficient_sha256": "73cd42d4b964614047f20f84fc2169b93f3742d5aba9c9803a3965c8a42a8fd7",
       "held_out_test_mae": {
         "electricity_price_cny_per_kwh": 0.377735,
         "grid_carbon_kg_per_kwh": 0.039335,
-        "regional_grid_demand_mw": 309.574814,
-        "terminal_load_kw": 479.823355,
-        "throughput_demand_teu_h": 124.251896
+        "regional_grid_demand_mw": 309.574832,
+        "terminal_load_kw": 479.823354,
+        "throughput_demand_teu_h": 124.251894
       },
       "selected_alpha": 0.001,
       "test_rows": 8778,
       "validation_mae": {
         "electricity_price_cny_per_kwh": 0.348476,
         "grid_carbon_kg_per_kwh": 0.034905,
-        "regional_grid_demand_mw": 282.124493,
-        "terminal_load_kw": 440.217937,
-        "throughput_demand_teu_h": 115.692447
+        "regional_grid_demand_mw": 282.124506,
+        "terminal_load_kw": 440.217938,
+        "throughput_demand_teu_h": 115.69245
       },
       "validation_rows": 8754
     }
@@ -146,6 +147,7 @@
     "engineering_temperature",
     "engineering_solar"
   ],
+  "fit_solver": "augmented_least_squares",
   "future_test_rows_accessed_during_inference": false,
   "horizons_hours": [
     1,
@@ -153,7 +155,7 @@
     6
   ],
   "model_id": "public-calibrated-causal-ridge-v1",
-  "model_sha256": "a240bc12d41ad28381f2bc7b03f3b43d6fedf4077185885a62f36d0241e57e19",
+  "model_sha256": "1598f5e82e483ac77bc05ebf1f24caf83b9cc831f45d10b7440bb083a19b0e50",
   "model_type": "multi_output_ridge_regression",
   "schema_version": "runtime-forecast-model.v1",
   "selection_split": "validation",

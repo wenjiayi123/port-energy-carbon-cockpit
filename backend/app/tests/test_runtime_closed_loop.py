@@ -90,6 +90,8 @@ def test_forecast_is_real_current_input_inference_with_time_isolation() -> None:
     assert model["selection_split"] == "validation"
     assert model["test_split"] == "test"
     assert model["future_test_rows_accessed_during_inference"] is False
+    assert model["fit_solver"] == "augmented_least_squares"
+    assert model["coefficient_quantization_decimals"] == 8
     assert len(model["model_sha256"]) == 64
     assert all(
         evidence["held_out_test_mae"]["terminal_load_kw"] >= 0

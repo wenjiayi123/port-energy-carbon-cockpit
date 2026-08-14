@@ -123,9 +123,20 @@ class RuntimeForecastModel:
 
     @staticmethod
     def _fit(x: np.ndarray, y: np.ndarray, alpha: float) -> np.ndarray:
-        penalty = np.eye(x.shape[1], dtype=np.float64) * alpha
-        penalty[0, 0] = 0.0
-        return np.linalg.solve(x.T @ x + penalty, x.T @ y)
+        # Solve ridge regression as an augmented least-squares problem instead
+        # of forming X.T @ X.  The feature matrix contains strongly correlated
+        # engineering signals, so the normal equations amplify host BLAS
+        # differences and previously produced different evidence hashes on
+        # macOS and Linux.  The augmented system has a much lower effective
+        # condition number; explicit coefficient quantization then makes the
+        # published artifact reproducible without changing business-scale
+        # predictions.
+        regularizer = np.eye(x.shape[1], dtype=np.float64) * math.sqrt(alpha)
+        regularizer[0, 0] = 0.0
+        augmented_x = np.vstack((x, regularizer))
+        augmented_y = np.vstack((y, np.zeros((x.shape[1], y.shape[1]))))
+        beta, *_ = np.linalg.lstsq(augmented_x, augmented_y, rcond=None)
+        return np.round(beta, 8)
 
     def _ensure_fitted(self) -> None:
         with self._lock:
@@ -206,6 +217,8 @@ class RuntimeForecastModel:
                 "schema_version": "runtime-forecast-model.v1",
                 "model_type": "multi_output_ridge_regression",
                 "model_id": "public-calibrated-causal-ridge-v1",
+                "fit_solver": "augmented_least_squares",
+                "coefficient_quantization_decimals": 8,
                 "dataset_id": self.dataset.dataset_id,
                 "dataset_sha256": self.dataset.package_sha256,
                 "train_split": "train",
