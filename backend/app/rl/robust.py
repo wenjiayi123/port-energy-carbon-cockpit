@@ -58,6 +58,9 @@ class CausalForecastPortEnv(PortEnergyDispatchEnv):
         original_hour = self._hour
         original_queue = self._queue_teu
         original_soc = self._battery_soc
+        original_maritime_hold = self._maritime_hold_teu
+        original_customs_hold = self._customs_hold_teu
+        original_recovery = self._released_recovery_teu
         try:
             self._preview_origin_hour = original_hour
             self._hour = original_hour + int(hour_offset)
@@ -69,6 +72,9 @@ class CausalForecastPortEnv(PortEnergyDispatchEnv):
             self._hour = original_hour
             self._queue_teu = original_queue
             self._battery_soc = original_soc
+            self._maritime_hold_teu = original_maritime_hold
+            self._customs_hold_teu = original_customs_hold
+            self._released_recovery_teu = original_recovery
 
 
 @dataclass(frozen=True)

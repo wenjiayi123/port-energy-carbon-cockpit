@@ -13,6 +13,7 @@ router = APIRouter(tags=["evidence"])
 logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 LANDING_REPORT = PROJECT_ROOT / "reports" / "port_landing_benchmark_v4.json"
+REGULATORY_REPORT = PROJECT_ROOT / "reports" / "regulatory_resilience_v3.json"
 HISTORY_REPORTS = {
     "v3_public_benchmark": PROJECT_ROOT / "reports" / "offline_benchmark_v3.json",
     "v3_vessel_benchmark": PROJECT_ROOT / "reports" / "offline_benchmark_vessel_activity_v1.json",
@@ -22,7 +23,50 @@ HISTORY_REPORTS = {
     / "rl_td3_vessel_activity_100k"
     / "verification.json",
     "v4_runtime_forecast": PROJECT_ROOT / "reports" / "runtime_forecast_model_v1.json",
+    "regulatory_resilience_v1": PROJECT_ROOT / "reports" / "regulatory_resilience_v1.json",
+    "regulatory_resilience_v2": PROJECT_ROOT / "reports" / "regulatory_resilience_v2.json",
+    "regulatory_resilience_v3": REGULATORY_REPORT,
 }
+
+
+@router.get("/evidence/regulatory-resilience")
+def regulatory_resilience_evidence(response: Response) -> dict[str, Any]:
+    """Return the compact, qualified v4 inspection-delay energy evidence."""
+    try:
+        report_bytes = REGULATORY_REPORT.read_bytes()
+        report = json.loads(report_bytes)
+        required = {
+            "report_version",
+            "status",
+            "evidence_label",
+            "strategy",
+            "boundary",
+            "datasets",
+            "protocol",
+            "selected_seed",
+            "selected_artifact_sha256",
+            "business_metrics_vs_preserved_legacy",
+            "uncertainty",
+            "offline_admission_gate",
+            "history_preservation",
+            "preserved_failed_candidates",
+            "evidence_sha256",
+        }
+        if not isinstance(report, dict) or required - set(report):
+            raise ValueError("invalid regulatory evidence structure")
+    except Exception:
+        logger.exception("Regulatory resilience evidence could not be loaded")
+        raise HTTPException(status_code=503, detail="regulatory_evidence_unavailable") from None
+    file_sha256 = hashlib.sha256(report_bytes).hexdigest()
+    response.headers["ETag"] = f'"{file_sha256}"'
+    response.headers["Cache-Control"] = "public, max-age=60"
+    return {
+        **{key: report[key] for key in required},
+        "report_file_sha256": file_sha256,
+        "per_window_evidence_included": False,
+        "per_window_evidence_path": "reports/regulatory_resilience_v3.json",
+        "production_authority": False,
+    }
 PUBLIC_REPORT_FIELDS = (
     "report_version",
     "generated_at",
@@ -81,6 +125,9 @@ def evidence_history(response: Response) -> dict[str, Any]:
         landing, landing_hash = _load_history_report("v4_landing_benchmark")
         td3, td3_hash = _load_history_report("td3_blocked_candidate")
         runtime, runtime_hash = _load_history_report("v4_runtime_forecast")
+        regulatory_v1, regulatory_v1_hash = _load_history_report("regulatory_resilience_v1")
+        regulatory_v2, regulatory_v2_hash = _load_history_report("regulatory_resilience_v2")
+        regulatory_v3, regulatory_v3_hash = _load_history_report("regulatory_resilience_v3")
         td3_evaluation = td3["evaluation"]
         td3_policy = td3_evaluation["policy"]
         td3_metrics = td3_evaluation["metrics"]
@@ -167,6 +214,47 @@ def evidence_history(response: Response) -> dict[str, Any]:
                 "future_test_rows_accessed_during_inference"
             ],
             "report_file_sha256": runtime_hash,
+        },
+        {
+            "version": "regulatory-v1",
+            "evidence_id": "regulatory_resilience_v1_full_action_sac",
+            "status": regulatory_v1["status"],
+            "decision": "rejected_by_admission_gate",
+            "evidence_label": regulatory_v1["evidence_label"],
+            "algorithm": "SAC",
+            "failed_checks": [
+                item["name"]
+                for item in regulatory_v1["offline_admission_gate"]["checks"]
+                if not item["passed"]
+            ],
+            "metrics": regulatory_v1["business_metrics_vs_legacy_fixed"],
+            "report_file_sha256": regulatory_v1_hash,
+        },
+        {
+            "version": "regulatory-v2",
+            "evidence_id": "regulatory_resilience_v2_simple_shield",
+            "status": regulatory_v2["status"],
+            "decision": "rejected_by_forward_gate",
+            "evidence_label": regulatory_v2["evidence_label"],
+            "algorithm": "shielded SAC",
+            "failed_checks": [
+                item["name"]
+                for item in regulatory_v2["offline_admission_gate"]["checks"]
+                if not item["passed"]
+            ],
+            "metrics": regulatory_v2["business_metrics_vs_preserved_legacy"],
+            "report_file_sha256": regulatory_v2_hash,
+        },
+        {
+            "version": "regulatory-v3",
+            "evidence_id": "regulatory_resilience_v3_dominance_projected_sac",
+            "status": regulatory_v3["status"],
+            "decision": "qualified_offline_regulatory_resilience",
+            "evidence_label": regulatory_v3["evidence_label"],
+            "algorithm": "dominance-projected SAC",
+            "metrics": regulatory_v3["business_metrics_vs_preserved_legacy"],
+            "artifact_sha256": regulatory_v3["selected_artifact_sha256"],
+            "report_file_sha256": regulatory_v3_hash,
         },
     ]
     registry_hash = hashlib.sha256(

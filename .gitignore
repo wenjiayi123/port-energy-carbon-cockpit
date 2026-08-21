@@ -30,6 +30,9 @@ tmp/
 !reports/rl_tuning_ppo_10k_artifacts/*.zip
 !reports/rl_tuning_vessel_activity_10k_artifacts/*.zip
 !reports/rl_td3_vessel_activity_100k/*.zip
+!reports/regulatory_resilience_v1_artifacts/*.zip
+!reports/regulatory_resilience_v2_artifacts/*.zip
+!reports/regulatory_resilience_v3_artifacts/*.zip
 frontend/public/assets/*.tmp
 
 # Private/submission working material is not part of the open-source tree

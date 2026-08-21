@@ -1,0 +1,46 @@
+{
+  "report_version": "1.0",
+  "generated_at": "2026-08-21T17:00:00+08:00",
+  "purpose": "Pin the v4 source extension while keeping every prior report immutable and requiring its non-source evidence to reproduce.",
+  "extended_code_sha256": {
+    "backend/app/rl/environment.py": "dc405fecf30ef06a58342e7e49928fafcfeb1b7e9214a3c7c1dd38a6dae65ab2",
+    "backend/app/rl/robust.py": "52635783a9c93e901690431ce33ee30afe1fd48960e2a84261de5a836afdf029"
+  },
+  "legacy_executable_contracts": {
+    "v1_observations": 19,
+    "v2_observations": 25,
+    "v3_observations": 35,
+    "v1_continuous_actions": 4,
+    "v2_discrete_actions": 81,
+    "base_observation_keys": 19,
+    "operational_observation_keys": 6
+  },
+  "protected_reports": {
+    "offline_benchmark_v3.json": {
+      "report_sha256": "bef53f9da56a4b6eba80b94c7318454e288edfbd5ccfd9a4647ead5bf6630960",
+      "verifier": "offline_benchmark",
+      "expected_failed_checks": [
+        "environment_sha256"
+      ]
+    },
+    "offline_benchmark_vessel_activity_v1.json": {
+      "report_sha256": "45dde0ab3dab48205a9d460513e6cc13773c1d2bc7cfebc0ee03230272dcd8a4",
+      "verifier": "offline_benchmark",
+      "expected_failed_checks": [
+        "environment_sha256"
+      ]
+    },
+    "port_landing_benchmark_v4.json": {
+      "report_sha256": "0e19a6bcac9bb30b8127c8c8776483fc8c7f2c9381dcb1ef5401b8afc98bb093",
+      "verifier": "landing_benchmark",
+      "expected_failed_checks": [
+        "code_hashes"
+      ]
+    }
+  },
+  "boundary": {
+    "legacy_reports_rewritten": false,
+    "simulation_mode": true,
+    "production_authority": false
+  }
+}

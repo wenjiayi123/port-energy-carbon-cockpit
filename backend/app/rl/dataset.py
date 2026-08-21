@@ -75,6 +75,19 @@ OPTIONAL_NUMERIC_COLUMNS = {
     "grid_available_ratio",
     "shore_power_compatible_ratio",
     "renewable_power_available_kw",
+    "maritime_inspection_ratio",
+    "customs_inspection_ratio",
+    "maritime_release_ratio",
+    "customs_release_ratio",
+    "document_readiness_ratio",
+    "inspection_resource_available_ratio",
+    "regulatory_scenario_observed",
+    "expected_hold_hours",
+    "inspection_readiness_load_kw",
+    "regulatory_recovery_load_kw",
+    "inspection_auxiliary_kwh_per_teu_hour",
+    "released_staging_capacity_teu_per_hour",
+    "recovery_capacity_ratio",
 }
 OPERATIONAL_COLUMNS = {
     "vessels_at_anchor",
@@ -96,6 +109,16 @@ DEPLOYMENT_COLUMNS = {
     "shore_power_compatible_ratio",
     "renewable_power_available_kw",
 }
+REGULATORY_COLUMNS = {
+    "maritime_inspection_ratio",
+    "customs_inspection_ratio",
+    "maritime_release_ratio",
+    "customs_release_ratio",
+    "document_readiness_ratio",
+    "inspection_resource_available_ratio",
+    "regulatory_scenario_observed",
+    "expected_hold_hours",
+}
 RATIO_COLUMNS = {
     "shore_power_available_ratio",
     "berth_available_ratio",
@@ -103,6 +126,14 @@ RATIO_COLUMNS = {
     "yard_available_ratio",
     "grid_available_ratio",
     "shore_power_compatible_ratio",
+    "maritime_inspection_ratio",
+    "customs_inspection_ratio",
+    "maritime_release_ratio",
+    "customs_release_ratio",
+    "document_readiness_ratio",
+    "inspection_resource_available_ratio",
+    "regulatory_scenario_observed",
+    "recovery_capacity_ratio",
 }
 DRIFT_COLUMNS = {
     "loaded_import_teu",
@@ -280,6 +311,7 @@ class PortDataset:
             "PortEnergyDispatchEnv-v1",
             "PortEnergyDispatchEnv-v2",
             "PortEnergyDispatchEnv-v3",
+            "PortEnergyDispatchEnv-v4",
         }:
             raise ValueError(f"Unsupported environment_id: {environment_id}")
         return environment_id
@@ -328,7 +360,12 @@ class PortDataset:
     def operational_feature_coverage(self) -> dict[str, Any]:
         fields = sorted(
             OPERATIONAL_COLUMNS
-            | (DEPLOYMENT_COLUMNS if self.environment_id == "PortEnergyDispatchEnv-v3" else set())
+            | (
+                DEPLOYMENT_COLUMNS
+                if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}
+                else set()
+            )
+            | (REGULATORY_COLUMNS if self.environment_id == "PortEnergyDispatchEnv-v4" else set())
         )
         available = [name for name in fields if name in self.frame.columns]
         required = list(

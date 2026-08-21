@@ -16,6 +16,7 @@ from app.rl.environment import (
     DEPLOYMENT_OBSERVATION_KEYS,
     OBSERVATION_KEYS,
     OPERATIONAL_OBSERVATION_KEYS,
+    REGULATORY_OBSERVATION_KEYS,
     MPCPolicy,
     PortEnergyDispatchEnv,
     encode_continuous_controls,
@@ -201,6 +202,58 @@ def test_vessel_activity_controls_aggregate_shore_power_opportunity() -> None:
     _, _, _, _, info = env.step(action)
     assert info["shore_power_opportunity_kwh"] == pytest.approx(expected_kw)
     assert info["shore_power_kwh"] == pytest.approx(expected_kw)
+
+
+def test_v4_regulatory_contract_is_additive_and_authority_release_is_exogenous() -> None:
+    dataset_id = "port_la_2024_regulatory_resilience_hourly"
+    dataset = PortDataset.load(dataset_id)
+    assert dataset.environment_id == "PortEnergyDispatchEnv-v4"
+    assert len(dataset.frame) == 8_784
+    assert dataset.metadata["safety_boundary"] == {
+        "simulation_mode": True,
+        "live_data_verified": False,
+        "dispatch_allowed": False,
+        "production_authority": False,
+    }
+    env = PortEnergyDispatchEnv(
+        dataset=dataset_id,
+        split="train",
+        action_mode="continuous",
+        episode_hours=2,
+    )
+    observation, info = env.reset(seed=17, options={"row_index": 0})
+    assert len(observation) == 35 + len(REGULATORY_OBSERVATION_KEYS) == 48
+    assert env.action_space.shape == (6,)
+    assert info["environment_id"] == "PortEnergyDispatchEnv-v4"
+    discrete = PortEnergyDispatchEnv(
+        dataset=dataset_id,
+        split="train",
+        action_mode="discrete",
+        episode_hours=1,
+    )
+    assert discrete.action_space.n == 729
+
+    action = encode_continuous_controls(
+        {
+            "shore_power_ratio": 1.0,
+            "crane_ratio": 1.0,
+            "yard_ratio": 1.0,
+            "battery_power_ratio": 0.0,
+            "inspection_readiness_ratio": 1.0,
+            "recovery_priority_ratio": 1.0,
+        }
+    )
+    _, _, _, _, first = env.step(action)
+    assert first["maritime_released_teu"] == pytest.approx(
+        first["maritime_inspection_arrivals_teu"]
+        * float(dataset.split("train").iloc[0]["maritime_release_ratio"])
+    )
+    assert first["customs_released_teu"] == pytest.approx(
+        first["customs_inspection_arrivals_teu"]
+        * float(dataset.split("train").iloc[0]["customs_release_ratio"])
+    )
+    assert first["controls"]["inspection_readiness_ratio"] == 1.0
+    assert first["controls"]["recovery_priority_ratio"] == 1.0
 
 
 def test_live_port_contract_is_fail_closed_and_v3_affects_dispatch(

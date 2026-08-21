@@ -141,8 +141,12 @@ class TrainingService:
             "environment_id": dataset.environment_id,
             "observation_count": len(observation_keys_for_environment(dataset.environment_id)),
             "action_contract": {
-                "continuous": 4,
-                "dqn_discrete_combinations": 81,
+                "continuous": 6
+                if dataset.environment_id == "PortEnergyDispatchEnv-v4"
+                else 4,
+                "dqn_discrete_combinations": 729
+                if dataset.environment_id == "PortEnergyDispatchEnv-v4"
+                else 81,
             },
         }
         return config

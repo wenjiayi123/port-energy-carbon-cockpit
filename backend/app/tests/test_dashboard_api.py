@@ -244,6 +244,26 @@ def test_landing_benchmark_endpoint_exposes_increment_and_adverse_tradeoffs() ->
     assert "per_window" not in payload
 
 
+def test_regulatory_resilience_endpoint_exposes_qualified_increment_and_boundary() -> None:
+    response = client.get("/api/evidence/regulatory-resilience")
+    payload = response.json()
+    metrics = payload["business_metrics_vs_preserved_legacy"]
+
+    assert response.status_code == 200
+    assert response.headers["etag"].startswith('"')
+    assert payload["status"] == "qualified_offline"
+    assert payload["offline_admission_gate"]["status"] == "passed"
+    assert payload["boundary"]["authority_signals"] == "exogenous"
+    assert payload["production_authority"] is False
+    assert metrics["scenario_cost_reduction_pct"] == 0.666
+    assert metrics["carbon_reduction_pct"] == 0.688
+    assert metrics["total_delay_reduction_pct"] == 0.0
+    assert metrics["peak_change_pct"] == -0.601
+    assert payload["history_preservation"]["history_preserved"] is True
+    assert len(payload["preserved_failed_candidates"]) == 2
+    assert payload["per_window_evidence_included"] is False
+
+
 def test_evidence_history_preserves_blocked_candidate_without_local_paths() -> None:
     response = client.get("/api/evidence/history")
     payload = response.json()
@@ -253,7 +273,7 @@ def test_evidence_history_preserves_blocked_candidate_without_local_paths() -> N
     assert payload["schema_version"] == "history-evidence.v1"
     assert payload["history_preserved"] is True
     assert payload["production_authority"] is False
-    assert payload["entry_count"] == 5
+    assert payload["entry_count"] == 8
     blocked = entries["td3-rl-20260725-233109-6ac68e"]
     assert blocked["status"] == "blocked"
     assert blocked["decision"] == "rejected_by_admission_gate"
@@ -262,6 +282,15 @@ def test_evidence_history_preserves_blocked_candidate_without_local_paths() -> N
     assert entries["public-calibrated-causal-ridge-v1"][
         "future_test_rows_accessed_during_inference"
     ] is False
+    assert entries["regulatory_resilience_v1_full_action_sac"]["status"] == (
+        "blocked_candidate_preserved"
+    )
+    assert entries["regulatory_resilience_v2_simple_shield"]["status"] == (
+        "blocked_candidate_preserved"
+    )
+    assert entries["regulatory_resilience_v3_dominance_projected_sac"]["status"] == (
+        "qualified_offline"
+    )
     assert "/Users/" not in response.text
 
 

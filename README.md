@@ -89,7 +89,7 @@ This project places port energy use, shore power, equipment allocation, delay, c
 
 | 维度 / Dimension | 实际实现 / What is implemented |
 | --- | --- |
-| 实验内核 / Experiment core | Gymnasium v1/v2/v3 分层合同：19 维能碳基准、25 维逐日船舶活动增强、35 维实港接入合同；动作始终为 4 维连续或 81 个离散组合。 / Layered 19/25/35-observation Gymnasium contracts with the same four continuous controls or 81 explicit discrete actions. |
+| 实验内核 / Experiment core | Gymnasium v1/v2/v3/v4 分层合同：19 维能碳基准、25 维逐日船舶活动、35 维实港接入、48 维监管韧性；v1–v3 保持 4 维连续/81 离散，v4 增量为 6 维连续/729 离散。 / Layered 19/25/35/48-observation contracts; v1–v3 retain 4/81 actions while v4 adds two terminal-controlled inspection-recovery actions for 6/729. |
 | 算法矩阵 / Algorithm matrix | PPO、SAC、TD3、DQN 四种 RL 算法，加四步有限时域约束 MPC。 / Four RL algorithms—PPO, SAC, TD3, DQN—plus a constrained four-step finite-horizon MPC baseline. |
 | 训练边界 / Training boundary | `train` 无渲染拟合、`validation` 选型、完成后才在 `test` 生成轨迹。 / Non-rendering fit on `train`, selection on `validation`, and trajectory generation only during final `test` evaluation. |
 | 证据链 / Evidence chain | 配置、随机种子、CSV/元数据/组合包 SHA-256、回调指标、checkpoint、模型哈希、测试与验证结果。 / Config, seed, CSV/metadata/package SHA-256, callback metrics, checkpoints, model hash, evaluation, and verification evidence. |
@@ -188,9 +188,17 @@ v0.3.0 adds a deployment safety layer that is not counted as a sixth baseline: a
 
 ### 环境状态与目标 / Environment state and objective
 
-v1 的 19 维观测覆盖需求/预测、碳因子、电价、积压、电网余量、储能、时间、货类及累计指标；v2 再加入锚泊、靠泊、离港和在港时间等 6 项官方港口活动信号；实港 v3 继续加入天气、泊位/设备/电网可用率、岸电兼容和可再生能源 10 项强制输入。4 维动作控制岸电比例、岸桥启用比例、场内车辆启用比例和储能充放电功率。每一步显式计算处理量、队列、负荷、峰值越界、储能退化、辅助燃油、范围一/范围二排放、能耗与延误成本，并由动作屏蔽器约束电网容量、设备可用率、岸电兼容、SOC 与终端 SOC 可达性。
+v1 的 19 维观测覆盖需求/预测、碳因子、电价、积压、电网余量、储能、时间、货类及累计指标；v2 再加入 6 项港口活动信号；实港 v3 加入天气、泊位/设备/电网可用率、岸电兼容和可再生能源 10 项输入。新增 v4 在 v3 上再加入海事检查、海关检查、外生放行、资料/资源准备度、预计扣留时长以及三类状态队列，共 48 维；新增动作仅为码头可控的检查准备度和放行恢复优先级。检查选择、扣留和正式放行始终是外生信号，策略无监管决定权。
 
-v1 exposes 19 energy-dispatch observations; v2 adds six official vessel-activity signals; the real-port v3 contract adds ten mandatory weather, availability, shore-compatibility and renewable-power inputs. Four actions control shore power, active crane and yard fleets, and battery charge/discharge. Each step computes throughput, queue, load, peak violations, degradation, auxiliary fuel, Scope 1/2 emissions, energy and delay costs; action shields enforce grid, availability, compatibility, SOC and terminal-SOC reachability constraints.
+v1 exposes 19 energy-dispatch observations; v2 adds six vessel-activity signals; v3 adds ten deployment inputs. v4 reaches 48 observations by adding maritime/customs inspection, exogenous release, readiness, expected-hold and stateful queue signals. Its two new actions control terminal readiness and post-release recovery only; inspection, detention and official release remain outside policy authority.
+
+### 海事/海关检查延误的能碳传导 / Regulatory-delay energy-carbon resilience
+
+v4 显式建模“检查到达 → 海事/海关扣留队列 → 正式放行 → 码头恢复队列 → 岸桥/堆场追赶 → 负荷、峰值、成本和碳排”的后续链条。业务边界依据 [IMO Port State Control](https://www.imo.org/en/ourwork/iiis/pages/port%20state%20control.aspx) 与 [U.S. CBP intensive examination hold/release guidance](https://www.help.cbp.gov/s/article/Article-1268?language=en_US)：策略不能改变机关检查或放行，只能准备码头资源并安排放行后的恢复。
+
+三轮真实 SAC 训练均版本化保留：v1 全动作学习和 v2 简单门控未通过准入门；v3 冻结原四动作，以旧策略恢复服务量为下限，只学习额外恢复提案，并用最小准备能耗投影执行。在首次读取的冻结 2025 final challenge（48 个 24 小时窗口）上，v3 相对保留旧策略降低情景成本 **0.666%**（95% CI **0.6452%–0.6843%**）、碳排 **0.688%**、峰值 **0.601%**，同时总延误、监管链延误、吞吐和安全均不退化。完整证据见 [v3 report](reports/regulatory_resilience_v3.md)，v1/v2 失败结果也原样公开。
+
+这些结果是预声明监管压力情景，不是海事局、海关或码头现场 KPI；`simulation_mode=true`、`live_data_verified=false`、`dispatch_allowed=false`、`production_authority=false`。
 
 ## 可审计实验生命周期 / Auditable experiment lifecycle
 

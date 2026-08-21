@@ -18,9 +18,12 @@ cd "$ROOT/backend"
 "$PYTHON_BIN" -m pytest app/tests -q
 
 cd "$ROOT"
-PYTHONPATH=backend "$PYTHON_BIN" -m app.rl.benchmark verify reports/offline_benchmark_v3.json
-PYTHONPATH=backend "$PYTHON_BIN" -m app.rl.benchmark verify reports/offline_benchmark_vessel_activity_v1.json
-PYTHONPATH=backend "$PYTHON_BIN" -m app.rl.landing_benchmark verify reports/port_landing_benchmark_v4.json
+PYTHONPATH=backend "$PYTHON_BIN" -m app.rl.legacy_extension_verify verify reports/offline_benchmark_v3.json
+PYTHONPATH=backend "$PYTHON_BIN" -m app.rl.legacy_extension_verify verify reports/offline_benchmark_vessel_activity_v1.json
+PYTHONPATH=backend "$PYTHON_BIN" -m app.rl.legacy_extension_verify verify reports/port_landing_benchmark_v4.json
+PYTHONPATH=backend "$PYTHON_BIN" -m app.rl.regulatory_benchmark verify reports/regulatory_resilience_v1.json
+PYTHONPATH=backend "$PYTHON_BIN" -m app.rl.regulatory_shielded_benchmark verify reports/regulatory_resilience_v2.json
+PYTHONPATH=backend "$PYTHON_BIN" -m app.rl.regulatory_projected_benchmark verify reports/regulatory_resilience_v3.json
 "$PYTHON_BIN" scripts/export_runtime_evidence.py verify
 
 cd "$ROOT/frontend"

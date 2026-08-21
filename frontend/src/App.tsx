@@ -189,6 +189,7 @@ export function App() {
   const [integrationStatus, setIntegrationStatus] = useState<Record<string, any> | null>(null);
   const [auditStatus, setAuditStatus] = useState<Record<string, any> | null>(null);
   const [landingEvidence, setLandingEvidence] = useState<Record<string, any> | null>(null);
+  const [regulatoryEvidence, setRegulatoryEvidence] = useState<Record<string, any> | null>(null);
   const [evidenceHistory, setEvidenceHistory] = useState<Record<string, any> | null>(null);
   const [policyTest, setPolicyTest] = useState<Record<string, any> | null>(null);
   const [sailingStatus, setSailingStatus] = useState<Record<string, any> | null>(null);
@@ -375,6 +376,10 @@ export function App() {
   const landingStress = landingEvidence?.stress_tests as Record<string, any> | undefined;
   const stressEntries = Object.entries(landingStress ?? {}) as Array<[string, Record<string, any>]>;
   const historicalEvidenceEntries = Array.isArray(evidenceHistory?.entries) ? evidenceHistory.entries : [];
+  const regulatoryBusiness = regulatoryEvidence?.business_metrics_vs_preserved_legacy as Record<string, any> | undefined;
+  const regulatoryUncertainty = regulatoryEvidence?.uncertainty as Record<string, any> | undefined;
+  const regulatoryProtocol = regulatoryEvidence?.protocol as Record<string, any> | undefined;
+  const regulatoryGate = regulatoryEvidence?.offline_admission_gate as Record<string, any> | undefined;
 
   async function runDecisionImpact(report: DecisionImpactReport, task?: () => Promise<void> | void, showResultReport = true) {
     const runToken = impactRunToken.current + 1;
@@ -1129,15 +1134,18 @@ export function App() {
 
   async function refreshLandingEvidence() {
     try {
-      const [evidence, historyEvidence] = await Promise.all([
+      const [evidence, historyEvidence, regulatory] = await Promise.all([
         fetchJson('/api/evidence/landing-benchmark'),
         fetchJson('/api/evidence/history'),
+        fetchJson('/api/evidence/regulatory-resilience'),
       ]);
       setLandingEvidence(evidence);
       setEvidenceHistory(historyEvidence);
+      setRegulatoryEvidence(regulatory);
     } catch {
       setLandingEvidence(null);
       setEvidenceHistory(null);
+      setRegulatoryEvidence(null);
     }
   }
 
@@ -1548,6 +1556,64 @@ export function App() {
                   <span>注册阶段 <b>{latestRegisteredPolicy?.stage ?? '未注册'}</b></span>
                   <span>生产资格 <b>{latestRegisteredPolicy?.production_eligible ? '允许' : '禁止'}</b></span>
                 </div>
+                <section className="landing-evidence-board" aria-label="海事海关检查能碳韧性证据">
+                  <header>
+                    <div>
+                      <span>检查延误 → 能耗 / 碳排 / 成本 · v4 增量策略</span>
+                      <small>MARITIME + CUSTOMS HOLD / RELEASE RESILIENCE · NOT A FIELD KPI</small>
+                    </div>
+                    <b>{regulatoryGate?.status === 'passed' ? 'QUALIFIED OFFLINE' : 'LOADING'}</b>
+                  </header>
+                  <div className="landing-evidence-protocol">
+                    <span>环境合同 <b>48 维观测 · 6 连续动作 · DQN 729</b></span>
+                    <span>训练 <b>3 seeds × {Number(regulatoryProtocol?.steps_per_seed ?? 0).toLocaleString()} steps</b></span>
+                    <span>选型 <b>2024 validation only</b></span>
+                    <span>前向测试 <b>2025 frozen · 48 × 24h</b></span>
+                  </div>
+                  <div className="landing-business-grid">
+                    <article>
+                      <small>情景成本下降 · 对保留旧策略</small>
+                      <b>{formatNumber(regulatoryBusiness?.scenario_cost_reduction_pct, 3)}%</b>
+                      <span>95% CI {formatNumber(regulatoryUncertainty?.cost_reduction_ci95?.ci95_low_pct, 3)}–{formatNumber(regulatoryUncertainty?.cost_reduction_ci95?.ci95_high_pct, 3)}%</span>
+                    </article>
+                    <article>
+                      <small>碳排下降</small>
+                      <b>{formatNumber(regulatoryBusiness?.carbon_reduction_pct, 3)}%</b>
+                      <span>同一放行服务量</span>
+                    </article>
+                    <article>
+                      <small>峰值变化</small>
+                      <b>{formatNumber(regulatoryBusiness?.peak_change_pct, 3)}%</b>
+                      <span>负值表示削峰</span>
+                    </article>
+                    <article>
+                      <small>监管延误 / 吞吐 / 安全</small>
+                      <b>{formatNumber(regulatoryBusiness?.regulatory_delay_reduction_pct, 3)}%</b>
+                      <span>均不退化 · 0 safety violations</span>
+                    </article>
+                  </div>
+                  <div className="landing-increment-grid">
+                    <div className="landing-increment-positive">
+                      <strong>策略可控边界</strong>
+                      <span>学习动作 <b>检查准备度 + 放行恢复优先级</b></span>
+                      <span>保留动作 <b>岸电 / 岸桥 / 堆场 / 储能</b></span>
+                      <span>业务投影 <b>恢复服务量不低于旧策略</b></span>
+                      <span>历史完整 <b>{regulatoryEvidence?.history_preservation?.file_count ?? '--'} 个文件哈希一致</b></span>
+                    </div>
+                    <div className="landing-increment-tradeoff">
+                      <strong>监管与生产边界</strong>
+                      <span>检查选择 / 扣留 / 正式放行 <b>外生信号</b></span>
+                      <span>现场监管遥测 <b>未接入</b></span>
+                      <span>v1 / v2 失败候选 <b>保留并公开</b></span>
+                      <span>生产授权 <b>FALSE · fail closed</b></span>
+                    </div>
+                  </div>
+                  <footer>
+                    <span>模型哈希 <b>{String(regulatoryEvidence?.selected_artifact_sha256 ?? '').slice(0, 16) || '--'}…</b></span>
+                    <span>证据哈希 <b>{String(regulatoryEvidence?.evidence_sha256 ?? '').slice(0, 16) || '--'}…</b></span>
+                    <span>边界 <b>冻结监管压力情景，不是现场 KPI</b></span>
+                  </footer>
+                </section>
                 <section className="landing-evidence-board" aria-label="v4 因果落地评测证据">
                   <header>
                     <div>
@@ -1671,7 +1737,7 @@ export function App() {
                   <footer>
                     <span>训练数据 <b>{rlStatus?.config?.dataset_id ?? 'port_la_2020_2024_vessel_activity_hourly'}</b></span>
                     <span>观测 <b>{rlStatus?.config?.observation_count ?? 25} 维</b></span>
-                    <span>动作 <b>连续 4 / DQN 81</b></span>
+                    <span>动作 <b>v1–v3: 4/81 · v4: 6/729</b></span>
                     <span>训练渲染 <b>OFF</b></span>
                     <span>测试回放 <b>HELD-OUT ONLY</b></span>
                   </footer>

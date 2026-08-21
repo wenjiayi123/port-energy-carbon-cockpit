@@ -59,6 +59,38 @@ deployment_contract:
     - shore_power_compatibility_registry
     - identity_and_audit
 
+regulatory_resilience_contract:
+  environment_id: PortEnergyDispatchEnv-v4
+  evidence_label: PREDECLARED_REGULATORY_ENERGY_STRESS_SCENARIO_NOT_FIELD_KPI
+  extends: PortEnergyDispatchEnv-v3
+  observations:
+    exogenous_authority_signals:
+      - maritime_inspection_ratio
+      - customs_inspection_ratio
+      - maritime_release_ratio
+      - customs_release_ratio
+      - expected_hold_hours
+    terminal_readiness_signals:
+      - document_readiness_ratio
+      - inspection_resource_available_ratio
+      - regulatory_scenario_observed
+    stateful_queues:
+      - maritime_hold_queue_teu
+      - customs_hold_queue_teu
+      - released_recovery_queue_teu
+  additional_actions:
+    - inspection_readiness_ratio
+    - recovery_priority_ratio
+  authority_boundary:
+    - inspection_selection_is_exogenous
+    - detention_is_exogenous
+    - official_release_is_exogenous
+    - policy_controls_terminal_readiness_and_recovery_only
+  action_contract:
+    continuous: 6
+    dqn_discretization: "3×3×3×3×3×3 = 729 auditable combinations"
+  production_authority: false
+
 ports:
   - id: port_la_public_benchmark
     name: Port of Los Angeles 2020-2025 energy-carbon benchmark
@@ -91,6 +123,29 @@ ports:
     regulatory_sources:
       - https://www.imo.org/en/mediacentre/hottopics/pages/cutting-ghg-emissions.aspx
     note: Adds official daily anchor, berth, departure and dwell observations.
+
+  - id: port_la_regulatory_resilience_benchmark
+    name: Port of Los Angeles 2024 maritime/customs inspection energy-carbon resilience scenario
+    mode: offline_public_benchmark
+    timezone: America/Los_Angeles
+    currency: CNY
+    dataset_id: port_la_2024_regulatory_resilience_hourly
+    environment_id: PortEnergyDispatchEnv-v4
+    production_dispatch_authorized: false
+    adapters: {}
+    regulatory_profile:
+      - IMO Port State Control inspection and detention boundary
+      - U.S. CBP cargo hold and official release boundary
+      - Inspection and release inputs are frozen stress variables, not authority records
+    regulatory_sources:
+      - https://www.imo.org/en/ourwork/iiis/pages/port%20state%20control.aspx
+      - https://www.help.cbp.gov/s/article/Article-1268?language=en_US
+      - https://www.help.cbp.gov/s/article/Article-1267
+    authority_boundary:
+      inspection_and_release: exogenous
+      terminal_readiness_and_recovery: policy_controllable
+      production_authority: false
+    note: Propagates authority holds into terminal delay, auxiliary energy, peak load, cost and carbon without claiming field telemetry.
 
   - id: port_la_live_template
     name: Port of Los Angeles production connector template

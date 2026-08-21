@@ -78,6 +78,11 @@ DEFAULT_ENVIRONMENT_PARAMETERS = {
     "demand_charge_cny_per_kw": 0.0,
     "vessel_auxiliary_demand_kw": 650.0,
     "shore_power_available_ratio": 1.0,
+    "inspection_readiness_load_kw": 240.0,
+    "regulatory_recovery_load_kw": 520.0,
+    "inspection_auxiliary_kwh_per_teu_hour": 0.08,
+    "released_staging_capacity_teu_per_hour": 900.0,
+    "recovery_capacity_ratio": 0.35,
 }
 
 OBSERVATION_KEYS = (
@@ -121,6 +126,22 @@ DEPLOYMENT_OBSERVATION_KEYS = (
     "shore_power_compatible_ratio",
     "renewable_power_available_kw",
 )
+REGULATORY_OBSERVATION_KEYS = (
+    "maritime_inspection_ratio",
+    "customs_inspection_ratio",
+    "maritime_release_ratio",
+    "customs_release_ratio",
+    "document_readiness_ratio",
+    "inspection_resource_available_ratio",
+    "regulatory_scenario_observed",
+    "expected_hold_hours",
+    "maritime_hold_queue_teu",
+    "customs_hold_queue_teu",
+    "released_recovery_queue_teu",
+    "previous_inspection_readiness_action",
+    "previous_recovery_priority_action",
+)
+REGULATORY_DATA_KEYS = REGULATORY_OBSERVATION_KEYS[:8]
 
 
 def observation_keys_for_environment(environment_id: str) -> tuple[str, ...]:
@@ -130,6 +151,13 @@ def observation_keys_for_environment(environment_id: str) -> tuple[str, ...]:
         return OBSERVATION_KEYS + OPERATIONAL_OBSERVATION_KEYS
     if environment_id == "PortEnergyDispatchEnv-v3":
         return OBSERVATION_KEYS + OPERATIONAL_OBSERVATION_KEYS + DEPLOYMENT_OBSERVATION_KEYS
+    if environment_id == "PortEnergyDispatchEnv-v4":
+        return (
+            OBSERVATION_KEYS
+            + OPERATIONAL_OBSERVATION_KEYS
+            + DEPLOYMENT_OBSERVATION_KEYS
+            + REGULATORY_OBSERVATION_KEYS
+        )
     raise ValueError(f"Unsupported environment_id: {environment_id}")
 
 
@@ -167,9 +195,11 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             set(OPERATIONAL_OBSERVATION_KEYS)
             if self.environment_id == "PortEnergyDispatchEnv-v2"
             else set(OPERATIONAL_OBSERVATION_KEYS + DEPLOYMENT_OBSERVATION_KEYS)
-            if self.environment_id == "PortEnergyDispatchEnv-v3"
+            if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}
             else set()
         )
+        if self.environment_id == "PortEnergyDispatchEnv-v4":
+            required_observations |= set(REGULATORY_DATA_KEYS)
         if required_observations:
             missing_operational = required_observations - set(self.frame.columns)
             if missing_operational:
@@ -180,7 +210,11 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         train_frame = self.dataset.split("train")
         self._operational_normalizers = {
             name: max(1.0, float(train_frame[name].quantile(0.95)))
-            for name in OPERATIONAL_OBSERVATION_KEYS + DEPLOYMENT_OBSERVATION_KEYS
+            for name in (
+                OPERATIONAL_OBSERVATION_KEYS
+                + DEPLOYMENT_OBSERVATION_KEYS
+                + REGULATORY_DATA_KEYS
+            )
             if name in train_frame.columns
         }
         configured_parameters = self.dataset.metadata.get("environment_parameters") or {}
@@ -195,10 +229,16 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         self.render_mode = render_mode
         self.episode_hours = max(1, min(744, int(episode_hours)))
         self.reward_weights = self._normalize_weights(reward_weights or DEFAULT_REWARD_WEIGHTS)
+        regulatory = self.environment_id == "PortEnergyDispatchEnv-v4"
         self.action_space = (
-            spaces.Discrete(81)
+            spaces.Discrete(729 if regulatory else 81)
             if action_mode == "discrete"
-            else spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.float32)
+            else spaces.Box(
+                low=-1.0,
+                high=1.0,
+                shape=(6 if regulatory else 4,),
+                dtype=np.float32,
+            )
         )
         self.observation_space = spaces.Box(
             low=0.0,
@@ -211,6 +251,11 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         self._queue_teu = 0.0
         self._battery_soc = self._parameter_default("battery_initial_soc")
         self._last_battery_power_ratio = 0.0
+        self._maritime_hold_teu = 0.0
+        self._customs_hold_teu = 0.0
+        self._released_recovery_teu = 0.0
+        self._last_inspection_readiness_ratio = 0.0
+        self._last_recovery_priority_ratio = 0.0
         self._episode_start_period = ""
         self._trajectory: list[dict[str, Any]] = []
         self._totals: dict[str, float] = {}
@@ -241,6 +286,11 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             options.get("battery_soc", self._parameter("battery_initial_soc"))
         )
         self._last_battery_power_ratio = 0.0
+        self._maritime_hold_teu = 0.0
+        self._customs_hold_teu = 0.0
+        self._released_recovery_teu = 0.0
+        self._last_inspection_readiness_ratio = 0.0
+        self._last_recovery_priority_ratio = 0.0
         self._episode_start_period = str(self._row()["period"])
         self._trajectory = []
         self._totals = {
@@ -268,6 +318,17 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "peak_kw": 0.0,
             "crane_activation_ratio_sum": 0.0,
             "yard_activation_ratio_sum": 0.0,
+            "maritime_inspection_arrivals_teu": 0.0,
+            "customs_inspection_arrivals_teu": 0.0,
+            "maritime_released_teu": 0.0,
+            "customs_released_teu": 0.0,
+            "processed_recovery_teu": 0.0,
+            "regulatory_delay_minutes": 0.0,
+            "regulatory_auxiliary_energy_kwh": 0.0,
+            "inspection_readiness_energy_kwh": 0.0,
+            "recovery_energy_kwh": 0.0,
+            "inspection_readiness_ratio_sum": 0.0,
+            "recovery_priority_ratio_sum": 0.0,
         }
         return self._observation(), {
             "dataset_id": self.dataset.dataset_id,
@@ -292,6 +353,13 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         self._queue_teu = transition["queue_teu"]
         self._battery_soc = transition["battery_soc"]
         self._last_battery_power_ratio = controls["battery_power_ratio"]
+        self._maritime_hold_teu = transition["maritime_hold_queue_teu"]
+        self._customs_hold_teu = transition["customs_hold_queue_teu"]
+        self._released_recovery_teu = transition["released_recovery_queue_teu"]
+        self._last_inspection_readiness_ratio = controls.get(
+            "inspection_readiness_ratio", 0.0
+        )
+        self._last_recovery_priority_ratio = controls.get("recovery_priority_ratio", 0.0)
         for key in (
             "energy_kwh",
             "carbon_kg",
@@ -315,6 +383,17 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "battery_constraint_projection_kwh",
             "crane_activation_ratio_sum",
             "yard_activation_ratio_sum",
+            "maritime_inspection_arrivals_teu",
+            "customs_inspection_arrivals_teu",
+            "maritime_released_teu",
+            "customs_released_teu",
+            "processed_recovery_teu",
+            "regulatory_delay_minutes",
+            "regulatory_auxiliary_energy_kwh",
+            "inspection_readiness_energy_kwh",
+            "recovery_energy_kwh",
+            "inspection_readiness_ratio_sum",
+            "recovery_priority_ratio_sum",
         ):
             self._totals[key] += float(transition[key])
         self._totals["reward"] += float(transition["reward"])
@@ -343,19 +422,25 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             value = int(action)
             if not self.action_space.contains(value):
                 raise ValueError(f"Discrete action out of range: {value}")
-            shore_level, crane_level, yard_level, battery_level = np.unravel_index(
-                value, (3, 3, 3, 3)
-            )
-            return {
+            shape = (3, 3, 3, 3, 3, 3) if self.environment_id == "PortEnergyDispatchEnv-v4" else (3, 3, 3, 3)
+            levels = np.unravel_index(value, shape)
+            shore_level, crane_level, yard_level, battery_level = levels[:4]
+            controls = {
                 "shore_power_ratio": (0.0, 0.5, 1.0)[shore_level],
                 "crane_ratio": (0.60, 0.80, 1.00)[crane_level],
                 "yard_ratio": (0.60, 0.80, 1.00)[yard_level],
-                # Positive discharges to the port load; negative charges.
                 "battery_power_ratio": (-1.0, 0.0, 1.0)[battery_level],
             }
-        vector = np.asarray(action, dtype=np.float32).reshape(4)
+            if self.environment_id == "PortEnergyDispatchEnv-v4":
+                controls.update(
+                    inspection_readiness_ratio=(0.0, 0.5, 1.0)[levels[4]],
+                    recovery_priority_ratio=(0.0, 0.5, 1.0)[levels[5]],
+                )
+            return controls
+        action_count = 6 if self.environment_id == "PortEnergyDispatchEnv-v4" else 4
+        vector = np.asarray(action, dtype=np.float32).reshape(action_count)
         vector = np.clip(vector, -1.0, 1.0)
-        return {
+        controls = {
             "shore_power_ratio": float((vector[0] + 1.0) / 2.0),
             # Ratios are fractions of the available equipment fleet. Values
             # above 1.0 would imply operation beyond rated capacity and are
@@ -364,6 +449,12 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "yard_ratio": float(0.60 + (vector[2] + 1.0) * 0.20),
             "battery_power_ratio": float(vector[3]),
         }
+        if self.environment_id == "PortEnergyDispatchEnv-v4":
+            controls.update(
+                inspection_readiness_ratio=float((vector[4] + 1.0) / 2.0),
+                recovery_priority_ratio=float((vector[5] + 1.0) / 2.0),
+            )
+        return controls
 
     def score_action(self, controls: dict[str, float]) -> float:
         """Return one-step cost without mutating state; used by the MPC baseline."""
@@ -381,6 +472,9 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         original_hour = self._hour
         original_queue = self._queue_teu
         original_soc = self._battery_soc
+        original_maritime_hold = self._maritime_hold_teu
+        original_customs_hold = self._customs_hold_teu
+        original_recovery = self._released_recovery_teu
         try:
             self._hour = original_hour + int(hour_offset)
             self._queue_teu = original_queue if queue_teu is None else float(queue_teu)
@@ -390,6 +484,9 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             self._hour = original_hour
             self._queue_teu = original_queue
             self._battery_soc = original_soc
+            self._maritime_hold_teu = original_maritime_hold
+            self._customs_hold_teu = original_customs_hold
+            self._released_recovery_teu = original_recovery
 
     def summary(self) -> dict[str, Any]:
         return {
@@ -398,6 +495,9 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "period": self._episode_start_period,
             "ending_battery_soc": self._battery_soc,
             "ending_queue_teu": self._queue_teu,
+            "ending_maritime_hold_teu": self._maritime_hold_teu,
+            "ending_customs_hold_teu": self._customs_hold_teu,
+            "ending_released_recovery_teu": self._released_recovery_teu,
         }
 
     def _row(self):
@@ -465,7 +565,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
                 1.0,
             )
         )
-        if self.environment_id == "PortEnergyDispatchEnv-v3":
+        if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}:
             availability *= float(
                 np.clip(
                     self._row_value("shore_power_compatible_ratio"),
@@ -532,22 +632,88 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         if self.environment_id in {
             "PortEnergyDispatchEnv-v2",
             "PortEnergyDispatchEnv-v3",
+            "PortEnergyDispatchEnv-v4",
         }:
             values.extend(
                 self._row_value(name) / self._operational_normalizers.get(name, 1.0)
                 for name in OPERATIONAL_OBSERVATION_KEYS
             )
-        if self.environment_id == "PortEnergyDispatchEnv-v3":
+        if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}:
             values.extend(
                 self._row_value(name) / self._operational_normalizers.get(name, 1.0)
                 for name in DEPLOYMENT_OBSERVATION_KEYS
+            )
+        if self.environment_id == "PortEnergyDispatchEnv-v4":
+            values.extend(
+                self._row_value(name) / self._operational_normalizers.get(name, 1.0)
+                for name in REGULATORY_DATA_KEYS
+            )
+            values.extend(
+                (
+                    self._maritime_hold_teu / 5_000.0,
+                    self._customs_hold_teu / 5_000.0,
+                    self._released_recovery_teu / 5_000.0,
+                    self._last_inspection_readiness_ratio,
+                    self._last_recovery_priority_ratio,
+                )
             )
         observation = np.array(values, dtype=np.float32)
         return np.clip(observation, 0.0, 1.5)
 
     def _calculate_transition(self, controls: dict[str, float]) -> dict[str, Any]:
         row = self._row()
-        demand_teu = self._demand_teu() + self._queue_teu
+        base_demand_teu = self._demand_teu()
+        regulatory = self.environment_id == "PortEnergyDispatchEnv-v4"
+        inspection_readiness_ratio = float(
+            np.clip(controls.get("inspection_readiness_ratio", 0.5), 0.0, 1.0)
+        )
+        recovery_priority_ratio = float(
+            np.clip(controls.get("recovery_priority_ratio", 0.5), 0.0, 1.0)
+        )
+        maritime_inspection_arrivals_teu = 0.0
+        customs_inspection_arrivals_teu = 0.0
+        maritime_released_teu = 0.0
+        customs_released_teu = 0.0
+        maritime_hold_queue_teu = 0.0
+        customs_hold_queue_teu = 0.0
+        released_recovery_available_teu = 0.0
+        if regulatory:
+            maritime_ratio = float(np.clip(self._row_value("maritime_inspection_ratio"), 0, 1))
+            customs_ratio = float(np.clip(self._row_value("customs_inspection_ratio"), 0, 1))
+            combined_ratio = maritime_ratio + customs_ratio
+            if combined_ratio > 0.85:
+                maritime_ratio *= 0.85 / combined_ratio
+                customs_ratio *= 0.85 / combined_ratio
+            maritime_inspection_arrivals_teu = base_demand_teu * maritime_ratio
+            customs_inspection_arrivals_teu = base_demand_teu * customs_ratio
+            maritime_hold_before_release = (
+                self._maritime_hold_teu + maritime_inspection_arrivals_teu
+            )
+            customs_hold_before_release = self._customs_hold_teu + customs_inspection_arrivals_teu
+            maritime_released_teu = maritime_hold_before_release * float(
+                np.clip(self._row_value("maritime_release_ratio"), 0, 1)
+            )
+            customs_released_teu = customs_hold_before_release * float(
+                np.clip(self._row_value("customs_release_ratio"), 0, 1)
+            )
+            maritime_hold_queue_teu = max(
+                0.0, maritime_hold_before_release - maritime_released_teu
+            )
+            customs_hold_queue_teu = max(
+                0.0, customs_hold_before_release - customs_released_teu
+            )
+            released_recovery_available_teu = (
+                self._released_recovery_teu
+                + maritime_released_teu
+                + customs_released_teu
+            )
+        regular_demand_teu = (
+            base_demand_teu
+            - maritime_inspection_arrivals_teu
+            - customs_inspection_arrivals_teu
+            + self._queue_teu
+        )
+        demand_teu = regular_demand_teu + released_recovery_available_teu
         crane_availability = (
             float(
                 np.clip(
@@ -556,7 +722,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
                     1.0,
                 )
             )
-            if self.environment_id == "PortEnergyDispatchEnv-v3"
+            if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}
             else 1.0
         )
         yard_availability = (
@@ -567,7 +733,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
                     1.0,
                 )
             )
-            if self.environment_id == "PortEnergyDispatchEnv-v3"
+            if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}
             else 1.0
         )
         berth_availability = (
@@ -578,7 +744,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
                     1.0,
                 )
             )
-            if self.environment_id == "PortEnergyDispatchEnv-v3"
+            if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}
             else 1.0
         )
         crane_availability *= berth_availability
@@ -593,13 +759,65 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             * controls["yard_ratio"]
             * yard_availability
         )
-        processed_teu = min(demand_teu, crane_capacity, yard_capacity)
-        queue_teu = max(0.0, demand_teu - processed_teu)
-        delay_minutes = queue_teu / max(1.0, min(crane_capacity, yard_capacity)) * 60.0
+        joint_capacity = min(crane_capacity, yard_capacity)
+        inspection_resource_available_ratio = (
+            float(np.clip(self._row_value("inspection_resource_available_ratio"), 0, 1))
+            if regulatory
+            else 0.0
+        )
+        readiness_capacity_teu = (
+            self._parameter("released_staging_capacity_teu_per_hour")
+            * inspection_resource_available_ratio
+            * (0.20 + 0.80 * inspection_readiness_ratio)
+            if regulatory
+            else 0.0
+        )
+        recovery_capacity_teu = (
+            joint_capacity
+            * self._parameter("recovery_capacity_ratio")
+            * recovery_priority_ratio
+            if regulatory
+            else 0.0
+        )
+        processed_recovery_teu = min(
+            released_recovery_available_teu,
+            readiness_capacity_teu,
+            recovery_capacity_teu,
+            joint_capacity,
+        )
+        processed_regular_teu = min(
+            regular_demand_teu, max(0.0, joint_capacity - processed_recovery_teu)
+        )
+        processed_teu = processed_regular_teu + processed_recovery_teu
+        queue_teu = max(0.0, regular_demand_teu - processed_regular_teu)
+        released_recovery_queue_teu = max(
+            0.0, released_recovery_available_teu - processed_recovery_teu
+        )
+        operational_delay_minutes = queue_teu / max(1.0, joint_capacity) * 60.0
+        regulatory_delay_minutes = (
+            (
+                maritime_hold_queue_teu
+                + customs_hold_queue_teu
+                + released_recovery_queue_teu
+            )
+            / max(1.0, base_demand_teu)
+            * 60.0
+            if regulatory
+            else 0.0
+        )
+        delay_minutes = operational_delay_minutes + regulatory_delay_minutes
 
         shore_demand_kw = self._shore_power_opportunity_kw()
         shore_power_kwh = shore_demand_kw * controls["shore_power_ratio"]
-        auxiliary_energy_kwh = shore_demand_kw - shore_power_kwh
+        regulatory_auxiliary_energy_kwh = (
+            (maritime_hold_queue_teu + customs_hold_queue_teu)
+            * self._parameter("inspection_auxiliary_kwh_per_teu_hour")
+            if regulatory
+            else 0.0
+        )
+        auxiliary_energy_kwh = (
+            shore_demand_kw - shore_power_kwh + regulatory_auxiliary_energy_kwh
+        )
         auxiliary_fuel_liters = auxiliary_energy_kwh / max(
             0.001, self._parameter("fuel_kwh_per_liter")
         )
@@ -608,7 +826,31 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         )
         crane_load_kw = self._parameter("crane_load_kw") * controls["crane_ratio"]
         yard_load_kw = self._parameter("yard_load_kw") * controls["yard_ratio"]
-        gross_load_kw = base_load_kw + crane_load_kw + yard_load_kw + shore_power_kwh
+        regulatory_event_active = regulatory and bool(
+            maritime_inspection_arrivals_teu
+            + customs_inspection_arrivals_teu
+            + released_recovery_available_teu
+        )
+        inspection_readiness_energy_kwh = (
+            self._parameter("inspection_readiness_load_kw") * inspection_readiness_ratio
+            if regulatory_event_active
+            else 0.0
+        )
+        recovery_energy_kwh = (
+            self._parameter("regulatory_recovery_load_kw")
+            * processed_recovery_teu
+            / max(1.0, readiness_capacity_teu)
+            if processed_recovery_teu > 0
+            else 0.0
+        )
+        gross_load_kw = (
+            base_load_kw
+            + crane_load_kw
+            + yard_load_kw
+            + shore_power_kwh
+            + inspection_readiness_energy_kwh
+            + recovery_energy_kwh
+        )
         battery_capacity = self._parameter("battery_capacity_kwh")
         battery_power_limit = self._parameter("battery_power_kw")
         charge_efficiency = self._parameter("battery_charge_efficiency")
@@ -624,7 +866,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
                     1.0,
                 )
             )
-            if self.environment_id == "PortEnergyDispatchEnv-v3"
+            if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}
             else 1.0
         )
         grid_capacity_kw = self._parameter("grid_capacity_kw") * grid_availability
@@ -664,6 +906,12 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             + self._parameter("crane_load_kw")
             + self._parameter("yard_load_kw")
             + self._parameter("shore_demand_kw")
+            + (
+                self._parameter("inspection_readiness_load_kw")
+                + self._parameter("regulatory_recovery_load_kw")
+                if regulatory
+                else 0.0
+            )
         )
         conservative_charge_limit = max(
             0.0, min(battery_power_limit, grid_capacity_kw - worst_case_base_load)
@@ -704,7 +952,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
 
         renewable_power_kw = (
             self._row_value("renewable_power_available_kw")
-            if self.environment_id == "PortEnergyDispatchEnv-v3"
+            if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}
             else 0.0
         )
         renewable_energy_kwh = min(max(0.0, load_kw), renewable_power_kw)
@@ -751,7 +999,14 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             ),
         }
         throughput_bonus = 0.65 * processed_teu / max(1.0, demand_teu)
-        reward = throughput_bonus + sum(
+        regulatory_service_bonus = (
+            0.20
+            * processed_recovery_teu
+            / max(1.0, released_recovery_available_teu)
+            if regulatory
+            else 0.0
+        )
+        reward = throughput_bonus + regulatory_service_bonus + sum(
             self.reward_weights[key] * value for key, value in terms.items()
         )
         return {
@@ -786,6 +1041,20 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "demand_charge_cost_cny": float(demand_charge_cost_cny),
             "crane_activation_ratio_sum": float(controls["crane_ratio"]),
             "yard_activation_ratio_sum": float(controls["yard_ratio"]),
+            "maritime_inspection_arrivals_teu": float(maritime_inspection_arrivals_teu),
+            "customs_inspection_arrivals_teu": float(customs_inspection_arrivals_teu),
+            "maritime_released_teu": float(maritime_released_teu),
+            "customs_released_teu": float(customs_released_teu),
+            "maritime_hold_queue_teu": float(maritime_hold_queue_teu),
+            "customs_hold_queue_teu": float(customs_hold_queue_teu),
+            "released_recovery_queue_teu": float(released_recovery_queue_teu),
+            "processed_recovery_teu": float(processed_recovery_teu),
+            "regulatory_delay_minutes": float(regulatory_delay_minutes),
+            "regulatory_auxiliary_energy_kwh": float(regulatory_auxiliary_energy_kwh),
+            "inspection_readiness_energy_kwh": float(inspection_readiness_energy_kwh),
+            "recovery_energy_kwh": float(recovery_energy_kwh),
+            "inspection_readiness_ratio_sum": inspection_readiness_ratio if regulatory else 0.0,
+            "recovery_priority_ratio_sum": recovery_priority_ratio if regulatory else 0.0,
             "safety_violations": float(safety_violations),
             "peak_violation_steps": float(peak_violation),
             "delay_violation_steps": float(delay_violation),
@@ -804,7 +1073,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         hour = timestamp.hour if timestamp else self._hour % 24
         aggregate_label = (
             f"AGGREGATED-{int(self._row_value('vessels_at_berth'))}-VESSELS"
-            if self.environment_id == "PortEnergyDispatchEnv-v2"
+            if self.environment_id in {"PortEnergyDispatchEnv-v2", "PortEnergyDispatchEnv-v4"}
             else f"PUBLIC-DATA-{str(row['period'])}"
         )
         return {
@@ -815,7 +1084,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "source_id": str(row["source_id"]),
             "vessel_id": aggregate_label,
             "berth_id": "PORT-AGG"
-            if self.environment_id == "PortEnergyDispatchEnv-v2"
+            if self.environment_id in {"PortEnergyDispatchEnv-v2", "PortEnergyDispatchEnv-v4"}
             else f"B{(hour % 4) + 1}",
             "vessels_at_anchor": self._row_value("vessels_at_anchor"),
             "vessels_at_berth": self._row_value("vessels_at_berth"),
@@ -830,6 +1099,19 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "delay_minutes": round(float(transition["delay_minutes"]), 3),
             "processed_teu": round(float(transition["processed_teu"]), 3),
             "queue_teu": round(float(transition["queue_teu"]), 3),
+            "maritime_hold_queue_teu": round(
+                float(transition["maritime_hold_queue_teu"]), 3
+            ),
+            "customs_hold_queue_teu": round(
+                float(transition["customs_hold_queue_teu"]), 3
+            ),
+            "released_recovery_queue_teu": round(
+                float(transition["released_recovery_queue_teu"]), 3
+            ),
+            "processed_recovery_teu": round(float(transition["processed_recovery_teu"]), 3),
+            "regulatory_delay_minutes": round(
+                float(transition["regulatory_delay_minutes"]), 3
+            ),
             "load_kw": round(float(transition["load_kw"]), 3),
             "peak_violation_kw": round(float(transition["peak_violation_kw"]), 3),
             "cost_cny": round(float(transition["cost"]), 3),
@@ -845,7 +1127,9 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
                 f"policy action: shore={float(transition['shore_power_ratio']):.2f}, "
                 f"battery={float(transition['battery_power_kw']):+.0f}kW, "
                 f"load={float(transition['load_kw']):.0f}kW, "
-                f"queue={float(transition['queue_teu']):.1f}TEU"
+                f"queue={float(transition['queue_teu']):.1f}TEU, "
+                f"regulatory_hold="
+                f"{float(transition['maritime_hold_queue_teu']) + float(transition['customs_hold_queue_teu']):.1f}TEU"
             ),
         }
 
@@ -938,10 +1222,17 @@ class MPCPolicy:
                         )
                     )
             beam = sorted(expanded, key=search_rank)[: self.beam_width]
-        return min(
+        selected = min(
             beam,
             key=lambda item: item[0] + self.terminal_soc_weight * abs(item[2] - target_soc),
         )[3]
+        if env.environment_id == "PortEnergyDispatchEnv-v4":
+            selected = {
+                **selected,
+                "inspection_readiness_ratio": 0.5,
+                "recovery_priority_ratio": 0.5,
+            }
+        return selected
 
     @staticmethod
     def _transition_cost(transition: dict[str, Any]) -> float:
@@ -971,17 +1262,69 @@ class FixedDispatchPolicy:
         }
 
     def predict(self, env: PortEnergyDispatchEnv) -> dict[str, float]:
-        del env
-        return dict(self.controls)
+        controls = dict(self.controls)
+        if env.environment_id == "PortEnergyDispatchEnv-v4":
+            controls.update(
+                inspection_readiness_ratio=0.35,
+                recovery_priority_ratio=0.35,
+            )
+        return controls
+
+
+class RegulatoryResiliencePolicy:
+    """Auditable non-learning comparator for inspection-release recovery.
+
+    Authority inspection and release signals remain exogenous. The policy only
+    allocates terminal readiness, cargo-recovery effort, equipment and storage.
+    """
+
+    def predict(self, env: PortEnergyDispatchEnv) -> dict[str, float]:
+        release_pressure = float(
+            np.clip(
+                env._row_value("maritime_release_ratio")
+                + env._row_value("customs_release_ratio"),
+                0.0,
+                1.0,
+            )
+        )
+        hold_pressure = float(
+            np.clip(
+                (env._maritime_hold_teu + env._customs_hold_teu) / 2_000.0,
+                0.0,
+                1.0,
+            )
+        )
+        recovery_pressure = float(
+            np.clip(env._released_recovery_teu / 1_500.0, 0.0, 1.0)
+        )
+        readiness = float(np.clip(0.30 + 0.45 * hold_pressure + 0.25 * release_pressure, 0, 1))
+        recovery = float(np.clip(0.25 + 0.65 * recovery_pressure + 0.10 * release_pressure, 0, 1))
+        resource_ratio = float(np.clip(0.72 + 0.25 * max(recovery, hold_pressure), 0.60, 1.0))
+        price = float(env._row()["electricity_price_per_kwh"])
+        carbon = float(env._row()["grid_carbon_kg_per_kwh"])
+        battery = 0.45 if (price > 2.0 or carbon > 0.45) else -0.20 if price < 1.2 else 0.0
+        return {
+            "shore_power_ratio": 1.0,
+            "crane_ratio": resource_ratio,
+            "yard_ratio": resource_ratio,
+            "battery_power_ratio": battery,
+            "inspection_readiness_ratio": readiness,
+            "recovery_priority_ratio": recovery,
+        }
 
 
 def encode_continuous_controls(controls: dict[str, float]) -> np.ndarray:
-    return np.array(
-        [
+    values = [
             controls["shore_power_ratio"] * 2.0 - 1.0,
             (controls["crane_ratio"] - 0.60) / 0.20 - 1.0,
             (controls["yard_ratio"] - 0.60) / 0.20 - 1.0,
             controls.get("battery_power_ratio", 0.0),
-        ],
-        dtype=np.float32,
-    )
+    ]
+    if "inspection_readiness_ratio" in controls or "recovery_priority_ratio" in controls:
+        values.extend(
+            [
+                controls.get("inspection_readiness_ratio", 0.5) * 2.0 - 1.0,
+                controls.get("recovery_priority_ratio", 0.5) * 2.0 - 1.0,
+            ]
+        )
+    return np.array(values, dtype=np.float32)
