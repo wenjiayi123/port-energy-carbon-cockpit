@@ -40,7 +40,7 @@ required_paths=(
   "$ROOT/docs/RL_PIPELINE.md"
   "$ROOT/docs/DATASETS.md"
   "$ROOT/docs/MODULE_AUDIT.md"
-  "$ROOT/docs/RESUME_CLAIMS.md"
+  "$ROOT/docs/PROJECT_METRICS.md"
   "$ROOT/docs/TECHNICAL_REVIEW_2026-08.md"
   "$ROOT/docs/RUNTIME_DATA_CONTRACT.md"
   "$ROOT/docs/CLOSED_LOOP_ACCEPTANCE.md"

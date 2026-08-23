@@ -16,11 +16,7 @@ resolve_pnpm() {
     return 0
   fi
 
-  # Codex Desktop bundles an isolated Node/pnpm runtime that is not always on
-  # the user's interactive Terminal PATH.  Reuse it when present without
-  # installing or modifying any global package manager state.
   for candidate in \
-    "${HOME}/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback/pnpm" \
     "/opt/homebrew/bin/pnpm" \
     "/usr/local/bin/pnpm"
   do
@@ -49,7 +45,7 @@ if [ -z "$PNPM_BIN" ]; then
         ;;
     esac
   fi
-  echo "Node.js 20+ with Corepack is required; no project, Codex, Homebrew, or npm runtime was found." >&2
+  echo "Node.js 20+ with Corepack is required; pnpm, Corepack, or npm was not found." >&2
   echo "Install Node.js 20+, then run: corepack enable && corepack prepare pnpm@11.7.0 --activate" >&2
   exit 1
 fi

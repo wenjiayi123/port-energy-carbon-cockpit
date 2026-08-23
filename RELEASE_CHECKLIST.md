@@ -1,6 +1,6 @@
-# Release checklist / 发布清单
+# Maintainer checklist / 维护清单
 
-## Source and evidence / 源码与证据
+## Source and tests / 源码与测试
 
 - [ ] `make test`, `make build`, and `make validate` pass from a clean checkout.
 - [ ] Ruff, frontend audit, and Linux dependency audit pass.
@@ -14,17 +14,17 @@
 - [ ] Browser acceptance completes one current-input forecast → recommendation → safety projection →
   dual approval → simulation execution → KPI feedback → rollback path and one fail-closed loss path.
 - [ ] `GET /api/evidence/history` exposes archived/champion/current/blocked evidence without local paths.
-- [ ] Resume/release claims retain the offline-scenario comparator qualifier.
+- [ ] Public metrics retain the offline-scenario comparator qualifier.
 
 ## GitHub sync and review / GitHub 同步与复核
 
 - [ ] Configure the local remote and push this verified source state.
-- [ ] Confirm the public repository displays the new benchmark and resume-claim boundaries.
+- [ ] Confirm the public repository displays the benchmark scope correctly.
 - [ ] CI and container jobs pass on the default branch.
 - [ ] Repository description, topics, license, Discussions, Issues, and vulnerability alerts are configured.
 - [ ] No secret, email, local absolute path, or proprietary artifact appears in the Git history.
 - [ ] Draft release notes describe the offline benchmark boundary.
-- [ ] Do not push, create a PR or publish a release until the owner explicitly approves the local result.
+- [ ] Review the final diff and validation results before pushing.
 
 ## Public repository controls / 公开仓库控制
 

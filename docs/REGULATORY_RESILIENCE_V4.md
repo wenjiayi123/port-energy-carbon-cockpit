@@ -45,7 +45,7 @@ v3 在 48 个独立 24 小时测试窗口上，相对既有策略：
 - 重建数据：`make data-regulatory`
 - 重跑训练：`make regulatory-benchmark`
 - 校验证据：`make verify-regulatory-benchmark`
-- 全量发布检查：`make release-check`
+- 完整项目检查：`make release-check`
 
 ## 生产边界
 

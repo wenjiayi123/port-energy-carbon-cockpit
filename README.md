@@ -27,20 +27,20 @@
 
 ## 项目概览 / Project overview
 
-| HR 首屏信息 / First-screen fact | 已实现 / Implemented |
+| 项目要点 / Project fact | 已实现 / Implemented |
 | --- | --- |
 | 业务问题 | 在岸电、储能、光伏、暖通、充电、冷藏箱、作业服务与电网约束之间协同优化能耗、峰值、成本、碳排、延误和设备寿命。 |
 | 系统架构 | `公开数据/历史数据 → 实时模拟器 → 质量门禁 → 数字孪生 → Ridge 预测 → MPC/SOP 对照 → 安全投影 → 双人审批 → 模拟执行 → 回执/KPI/审计链`。 |
 | 实时模拟器 | 以洛杉矶港逐日船舶活动、EIA 电网/电价、eGRID 碳因子为校准底座，用守恒关系、设备状态机和工程约束生成稳定 `runtime-telemetry.v1`。 |
 | 实港替换面 | 保留 TOS、AIS/VTS、PLC/SCADA、EMS、BMS、BA、电表和气象适配位；现场只替换适配器、字段映射和标定参数，不重写状态/动作/业务合同。 |
 | 算法覆盖 | PPO、SAC、TD3、DQN、约束 MPC、风险感知 MPC 与当前状态 SOP 强基线；训练/验证/盲测按时间隔离，训练不渲染，测试才回放。 |
-| 当前可核验价值 | v4 公开数据因果留出评测相对固定满资源基线：碳排 `-8.792%` 、情景成本 `-8.094%`、峰值 `-2.983%`、约束满足 `100%`；不是现场 KPI。实时 Ridge 模型的 1h 终端负荷 held-out MAE 为 `416.493 kW`。 |
+| 当前基准结果 | v4 公开数据因果留出评测相对固定满资源基线：碳排 `-8.792%` 、情景成本 `-8.094%`、峰值 `-2.983%`、约束满足 `100%`；不是现场 KPI。实时 Ridge 模型的 1h 终端负荷 held-out MAE 为 `416.493 kW`。 |
 | 信任边界 | `simulation_mode=true`、`live_data_verified=false`、`dispatch_allowed=false`、`production_authority=false`；需求响应收益仅是未结算的工程估算。 |
-| 本地验收 | 首次执行 `make bootstrap`，之后 `make demo`；驾驶舱 `http://127.0.0.1:5173/`，OpenAPI `http://127.0.0.1:8808/docs`，点击顶栏“实时闭环”完成端到端验收。 |
+| 本地运行 | 首次执行 `make bootstrap`，之后 `make demo`；驾驶舱 `http://127.0.0.1:5173/`，OpenAPI `http://127.0.0.1:8808/docs`，点击顶栏“实时闭环”体验完整流程。 |
 
 > 系统已在公开数据校准的实时模拟环境中完成端到端闭环；数据合同、模型推理、安全投影、执行回执和审计链均可运行。接入真实港口时，主要工作是替换数据与设备适配器、完成现场标定、影子运行及生产验收。
 
-闭环合同和可复现验收见 [Runtime data contract](docs/RUNTIME_DATA_CONTRACT.md) 与 [Closed-loop acceptance](docs/CLOSED_LOOP_ACCEPTANCE.md)；2026-08-14 逐项审计见 [Audit report](docs/AUDIT_2026-08-14.md)。以下版本化指标与历史证据保持原样、不覆盖。
+接口字段与运行流程见 [Runtime data contract](docs/RUNTIME_DATA_CONTRACT.md) 和 [Closed-loop workflow](docs/CLOSED_LOOP_ACCEPTANCE.md)；版本变化记录在 [CHANGELOG](CHANGELOG.md)。
 
 <table>
   <tr>
@@ -450,8 +450,8 @@ cd backend
 | Godot 航行模拟器 | 可选桌面进程连接器 / optional desktop process connector | 训练证据或生产控制通道 / training evidence or a production control channel |
 | 调度执行 | `dry_run=true`，生产资格恒为 false / dry-run only, eligibility always false | 自主设备控制 / autonomous equipment control |
 
-在接入真实港口前，必须完成 TOS/EMS 只读适配、参数校准、计量血缘、身份权限、shadow mode、回滚演练、人工验收和独立安全联锁。完整门槛见 [生产就绪说明](docs/PRODUCTION_READINESS.md) 与 [威胁模型](docs/THREAT_MODEL.md)。<br>
-Before a real-port integration, provide read-only TOS/EMS adapters, parameter calibration, meter lineage, identity controls, shadow mode, rollback drills, operator acceptance, and an independent safety interlock. See [production readiness](docs/PRODUCTION_READINESS.md) and the [threat model](docs/THREAT_MODEL.md).
+接入真实港口需要完成 TOS/EMS 只读适配、参数校准、计量血缘、身份权限、shadow mode、回滚演练、人工验收和独立安全联锁。现场集成说明见 [Site integration](docs/PRODUCTION_READINESS.md)，安全设计见[威胁模型](docs/THREAT_MODEL.md)。<br>
+Real-port integration requires read-only TOS/EMS adapters, parameter calibration, meter lineage, identity controls, shadow mode, rollback drills, operator acceptance, and an independent safety interlock. See [site integration](docs/PRODUCTION_READINESS.md) and the [threat model](docs/THREAT_MODEL.md).
 
 ## 安全与供应链 / Security and supply chain
 
@@ -461,7 +461,6 @@ Before a real-port integration, provide read-only TOS/EMS adapters, parameter ca
 - 实港快照使用逐适配器 HMAC、payload SHA-256、递增序列、唯一 snapshot ID 与源级时效门禁。
 - HTTP 数据集参数限制在注册目录，策略 ID 使用格式白名单，避免路径穿越。
 - CI 包含 Ruff、backend/RL 测试、数据校验、前端构建、依赖审计与容器构建。
-- CodeQL、Dependency Review 与 OpenSSF Scorecard 在仓库公开后启用；私有预审阶段保持跳过，避免 GitHub Free 私有功能门槛造成假失败。
 - Actions 使用完整 commit SHA；Dependabot 按月分组，控制更新噪声。
 
 - Production refuses to start without `API_AUTH_MODE=api_key`; keys require at least 24 characters and support viewer/operator/admin roles.
@@ -470,7 +469,6 @@ Before a real-port integration, provide read-only TOS/EMS adapters, parameter ca
 - Port snapshots use per-adapter HMAC, payload SHA-256, monotonic sequence, unique snapshot ID and source freshness gates.
 - HTTP dataset references are confined to the registry and strategy IDs are format-allowlisted against path traversal.
 - CI covers Ruff, backend/RL tests, dataset validation, frontend build, dependency audits, and container builds.
-- CodeQL, Dependency Review, and OpenSSF Scorecard activate after the repository becomes public; they remain skipped during private review to avoid false failures from GitHub Free private-feature limits.
 - Actions are pinned to full commit SHAs; Dependabot updates are grouped monthly to control noise.
 
 安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。 / Report vulnerabilities privately according to [SECURITY.md](SECURITY.md).
@@ -492,7 +490,7 @@ pnpm audit --audit-level high
 ```
 
 > Intel macOS 仅能解析旧 PyTorch 2.2.2 wheel，当前已知漏洞使其只能作为兼容开发环境。安全发布门槛以 Linux CI/容器中解析的当前 PyTorch 版本为准，且不得加载不可信模型。<br>
-> Intel macOS resolves only the legacy PyTorch 2.2.2 wheel; known vulnerabilities make it a compatibility-only development environment. The security release gate is the current Linux CI/container resolution, and untrusted model files must never be loaded.
+> Intel macOS resolves only the legacy PyTorch 2.2.2 wheel; known vulnerabilities make it a compatibility-only development environment. The supported security baseline is the current Linux CI/container resolution, and untrusted model files must never be loaded.
 
 ## 仓库结构 / Repository map
 
@@ -518,11 +516,9 @@ scripts/        安装、运行、校验与数据准备 / bootstrap, run, valida
 - [Datasets and field contract / 数据与字段契约](docs/DATASETS.md)
 - [Data card / 数据卡](docs/DATA_CARD.md)
 - [Model card / 模型卡](docs/MODEL_CARD.md)
-- [Module audit / 模块事实审计](docs/MODULE_AUDIT.md)
-- [Production readiness / 生产就绪门槛](docs/PRODUCTION_READINESS.md)
+- [Site integration / 现场集成](docs/PRODUCTION_READINESS.md)
 - [Threat model / 威胁模型](docs/THREAT_MODEL.md)
 - [Asset provenance / 视觉资产来源](docs/ASSET_PROVENANCE.md)
-- [Open-source release checklist / 开源发布清单](docs/OPEN_SOURCE_CHECKLIST.md)
 
 ## 社区与治理 / Community and governance
 

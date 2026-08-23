@@ -1,6 +1,6 @@
-# Resume claims and evidence
+# Project metrics and scope
 
-## Recommended Chinese entry
+## Project summary
 
 **【工程5】CarbonOps 智慧港口 AI 能碳调度系统（独立全栈自研）**
 
@@ -33,7 +33,7 @@
 Stable-Baselines3/PyTorch（PPO/SAC/TD3/DQN）+ 约束 MPC + Pandas/NumPy +
 Docker Compose/Nginx + GitHub Actions/CodeQL
 
-## Claim ledger
+## Metric status
 
 | Claim | Status | Evidence |
 |---|---|---|
@@ -48,7 +48,7 @@ Docker Compose/Nginx + GitHub Actions/CodeQL
 | RL convergence or superiority | not established | do not infer from smoke or short tuning runs |
 | Real tariff, terminal telemetry, or field savings | not established | price, TEU allocation, physical coefficients and costs remain scenario inputs |
 
-## Required public wording
+## Reporting scope
 
 Keep “公开数据离线情景”, the exact strong comparator, and “非港口实测 KPI” next to
 the numeric result. Re-run:
