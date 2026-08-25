@@ -1390,11 +1390,13 @@
 /* Full-screen port command center, matched to the supplied 1680 x 945 reference. */
 .port-command-shell {
   position: relative;
+  box-sizing: border-box;
   width: 100vw;
   height: 100vh;
   min-width: 1180px;
   min-height: 720px;
-  padding: 10px;
+  /* Keep a fixed Xiaoyi dock outside every business control hitbox. */
+  padding: 10px 88px 10px 10px;
   overflow: auto;
   background:
     radial-gradient(circle at 50% 0%, rgba(0, 119, 199, 0.12), transparent 38%),
@@ -2694,13 +2696,13 @@
   to { stroke-dashoffset: 0; }
 }
 
-@media (max-width: 1350px) {
+@media (max-width: 1424px) {
   .command-header { grid-template-columns: 330px minmax(0, 1fr) 365px; }
   .command-title-block { gap: 7px; }
   .command-developer-badge { padding: 4px 6px; }
   .command-developer-badge b { font-size: 9px; }
   .command-weather > span { padding: 0 5px; }
-  .command-main-grid { grid-template-columns: 250px minmax(520px, 1fr) 420px; }
+  .command-main-grid { grid-template-columns: 240px minmax(510px, 1fr) 416px; }
   .command-kpi b { font-size: 14px; }
   .command-kpi-icon { width: 27px; height: 27px; }
   .command-kpi { grid-template-columns: 27px minmax(0, 1fr); gap: 5px; }
@@ -4902,6 +4904,41 @@ input[type="range"] {
   display: block;
   height: 12px;
   margin: 0 0 3px;
+}
+
+.carbon-price-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 11px;
+  border: 1px solid rgba(71, 193, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(7, 28, 43, 0.68);
+  color: #d8f5ff;
+  font-size: 12px;
+}
+
+.carbon-price-control span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.carbon-price-control small {
+  color: #7f9dac;
+  font-size: 9px;
+}
+
+.carbon-price-control input {
+  width: 118px;
+  padding: 7px 9px;
+  border: 1px solid rgba(39, 203, 191, 0.36);
+  border-radius: 6px;
+  background: rgba(3, 20, 31, 0.92);
+  color: #5ce1d1;
+  font-weight: 800;
+  text-align: right;
 }
 
 .preference-value {

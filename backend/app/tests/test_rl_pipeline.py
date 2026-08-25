@@ -460,6 +460,56 @@ def test_dataset_cache_invalidates_when_package_changes(tmp_path, monkeypatch) -
     assert second.frame.iloc[-1]["total_teu"] == pytest.approx(3.0)
 
 
+def test_training_history_skips_newer_control_run_without_callback_metrics(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setattr(training_module, "RUNS_DIR", tmp_path)
+    runs = (
+        ("rl-20260825-143526-aaaaaa", "ppo", True),
+        ("rl-20260825-143527-bbbbbb", "mpc", False),
+    )
+    for run_id, algorithm, has_metrics in runs:
+        run_dir = tmp_path / run_id
+        run_dir.mkdir()
+        artifact = run_dir / ("model.zip" if algorithm == "ppo" else "mpc_policy.json")
+        artifact.write_text("evidence", encoding="utf-8")
+        manifest = {
+            "job_id": run_id,
+            "policy_version": f"{algorithm}-{run_id}",
+            "status": "completed",
+            "step": 32 if has_metrics else 0,
+            "started_at": "2026-08-25T06:00:00Z",
+            "completed_at": "2026-08-25T06:01:00Z",
+            "duration_sec": 60,
+            "run_dir": str(run_dir),
+            "artifact_path": str(artifact),
+            "artifact_sha256": "recorded",
+            "config": {
+                "algorithm": algorithm,
+                "objective_id": "carbon_min",
+                "dataset_id": "test_dataset",
+                "dataset_sha256": "dataset-sha",
+                "data_file": "test_dataset",
+                "environment_id": "PortEnergyDispatchEnv-v2",
+                "seed": 7,
+            },
+        }
+        (run_dir / "manifest.json").write_text(
+            json.dumps(manifest), encoding="utf-8"
+        )
+        if has_metrics:
+            (run_dir / "metrics.jsonl").write_text(
+                json.dumps({"step": 32, "reward": 1.25, "episode_complete": True})
+                + "\n",
+                encoding="utf-8",
+            )
+
+    history = TrainingService().history()
+    assert history["run_id"] == "rl-20260825-143526-aaaaaa"
+    assert history["algorithm"] == "PPO"
+    assert history["series"][0]["reward"] == pytest.approx(1.25)
+
+
 def test_auto_strategy_selection_skips_smoke_and_blocked_runs(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(policy_selection, "RUNS_DIR", tmp_path)
     for run_id, steps, verification_status in (

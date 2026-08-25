@@ -101,7 +101,7 @@ const operationalDefinitions: Record<string, OperationalDefinition> = {
   'renewable-mix': { zh: '能源来源数据边界', en: 'Energy-source data boundary', scopeZh: '当前只有 eGRID 综合排放因子', scopeEn: 'Only an aggregate eGRID factor is available', descriptionZh: '当前数据不含光伏、风电或分时电源结构，因此不生成伪比例。', descriptionEn: 'No synthetic solar or wind shares are generated.', primaryZh: '查看数据边界', primaryEn: 'Inspect data boundary', mode: 'renewable' },
   'carbon-market': { zh: '碳排趋势与配额', en: 'Carbon trend and quota', scopeZh: '碳强度、碳排趋势与碳成本', scopeEn: 'Carbon intensity, trend, and cost', descriptionZh: '按当前碳价与低碳偏好重新计算碳排、配额和成本影响。', descriptionEn: 'Recompute emissions, quota, and cost impact using the active carbon price and low-carbon preference.', primaryZh: '重算碳排与配额', primaryEn: 'Recompute carbon and quota', mode: 'carbon' },
   'cost-analysis': { zh: '综合成本分析', en: 'Operating cost analysis', scopeZh: '能耗、时延与碳成本', scopeEn: 'Energy, delay, and carbon cost', descriptionZh: '刷新综合成本模型，保留当前策略权重和安全约束。', descriptionEn: 'Refresh the operating-cost model while retaining current policy weights and safety constraints.', primaryZh: '刷新成本分析', primaryEn: 'Refresh cost analysis', mode: 'refresh' },
-  'strategy-comparison': { zh: '控制基线与 RL 策略对比', en: 'Control baseline versus RL comparison', scopeZh: '能耗、碳排与成本基线', scopeEn: 'Energy, carbon, and cost baselines', descriptionZh: '在独立测试集上对比 MPC 控制基线与已训练 RL 策略。', descriptionEn: 'Compare the MPC control baseline and trained RL policy on the held-out split.', primaryZh: '运行策略对比', primaryEn: 'Run policy comparison', mode: 'comparison' },
+  'strategy-comparison': { zh: '控制基线与策略证据对比', en: 'Control baseline and policy evidence', scopeZh: '能耗、碳排、成本与约束基线', scopeEn: 'Energy, carbon, cost, and constraint baselines', descriptionZh: '在独立测试集上读取已登记的策略、模型预测控制与固定资源基线评估；未通过门禁的强化学习候选不作为上线策略。', descriptionEn: 'Read registered policy, MPC, and fixed-resource evaluation evidence on the held-out split; blocked RL candidates are not treated as deployable.', primaryZh: '载入离线对比证据', primaryEn: 'Load offline comparison evidence', mode: 'comparison' },
   'recommendation-0': { zh: '检查泊位资源动作', en: 'Inspect berth resource action', scopeZh: '当前测试时间步', scopeEn: 'Current held-out test step', descriptionZh: '检查环境输出的泊位、岸桥和车辆资源比例。', descriptionEn: 'Inspect environment berth, crane, and vehicle ratios.', primaryZh: '查看当前动作', primaryEn: 'Inspect current action', mode: 'berth' },
   'recommendation-1': { zh: '检查岸电动作', en: 'Inspect shore-power action', scopeZh: '当前测试时间步', scopeEn: 'Current held-out test step', descriptionZh: '查看岸电比例、负荷和排放结果。', descriptionEn: 'Inspect shore-power ratio, load, and emissions.', primaryZh: '查看岸电动作', primaryEn: 'Inspect shore action', mode: 'shore' },
   'recommendation-2': { zh: '检查测试步资源动作', en: 'Inspect test-step resource action', scopeZh: '环境输出的岸桥资源比例', scopeEn: 'Crane resource ratio from the environment', descriptionZh: '定位对应测试步并读取策略输出，不改写生产岸桥计划。', descriptionEn: 'Inspect the matching test step without changing a production crane plan.', primaryZh: '查看资源动作', primaryEn: 'Inspect resource action', mode: 'crane' },
@@ -197,6 +197,7 @@ export function App() {
   const [replayPlaying, setReplayPlaying] = useState(true);
   const [xiaoyiOpenToken, setXiaoyiOpenToken] = useState(0);
   const [xiaoyiTrainingOpenToken, setXiaoyiTrainingOpenToken] = useState(0);
+  const [xiaoyiTrainingObjectiveId, setXiaoyiTrainingObjectiveId] = useState('carbon_min');
   const [activeOperation, setActiveOperation] = useState<string | null>(null);
   const [operationBusy, setOperationBusy] = useState(false);
   const [operationHistory, setOperationHistory] = useState<Record<string, string>>({});
@@ -367,8 +368,11 @@ export function App() {
   const onlineRouteCount = routeEntries.filter(([, online]) => online).length;
   const systemHealthyCount = topologyNodes.filter((node) => node.online).length;
   const activePreference = preferenceLabel(greenPreference);
-  const currentRlAlgorithm = String(rlStatus?.config?.algorithm ?? 'SAC').toUpperCase();
+  const currentRlAlgorithm = String(rlStatus?.config?.algorithm ?? marl?.strategy ?? 'MPC').toUpperCase();
   const latestRegisteredPolicy = Array.isArray(modelRegistry?.policies) ? modelRegistry.policies[0] : null;
+  const policyTestRegisteredPolicy = Array.isArray(modelRegistry?.policies)
+    ? modelRegistry.policies.find((policy: Record<string, any>) => policy.policy_id === policyTest?.policy?.policy_id) ?? latestRegisteredPolicy
+    : latestRegisteredPolicy;
   const landingBusiness = landingEvidence?.business_metrics_vs_fixed_full_resources as Record<string, any> | undefined;
   const algorithmIncrement = landingEvidence?.algorithm_increment_vs_causal_legacy_mpc as Record<string, any> | undefined;
   const landingProtocol = landingEvidence?.protocol as Record<string, any> | undefined;
@@ -447,6 +451,8 @@ export function App() {
     const isShore = definition.mode === 'shore';
     const algorithm = ['shore', 'carbon', 'renewable', 'peak'].includes(definition.mode)
       ? `${currentRlAlgorithm} · Continuous RL`
+      : definition.mode === 'comparison'
+        ? `${currentRlAlgorithm} · Held-out policy evaluation`
       : ['berth', 'crane', 'yard', 'agv', 'traffic'].includes(definition.mode)
         ? 'RL Policy · PortEnergyDispatchEnv'
         : '约束规则引擎 · 离线快照';
@@ -462,7 +468,9 @@ export function App() {
       algorithm,
       algorithmDetail: isShore
         ? 'SAC 适合连续权重调度：提高岸电奖励，同时保留峰值负荷、延误、泊位互斥和人工确认护栏。'
-        : 'Gymnasium adapter 将策略动作转换为统一的泊位、岸桥、车辆、能源与堆场事件，再由约束层校验。',
+        : definition.mode === 'comparison'
+          ? '从策略登记表读取已通过完整性、数据漂移与安全门禁的留出集评估，不重复运行、不覆盖原证据。'
+          : 'Gymnasium adapter 将策略动作转换为统一的泊位、岸桥、车辆、能源与堆场事件，再由约束层校验。',
       objective: isShore ? '岸电接入收益最大化 + 峰值与延误受控' : definition.descriptionZh,
       scope: definition.scopeZh,
       phases: executing
@@ -763,6 +771,7 @@ export function App() {
     const firstConnectedIndex = shoreWindowCards.findIndex((point) => point.shore_power_connected);
     let nextPreference = greenPreference;
     let notice = `${definition.zh}离线分析已完成。`;
+    let comparisonResult: Record<string, any> | null = null;
 
     setOperationBusy(true);
     setActivePanel(null);
@@ -837,12 +846,31 @@ export function App() {
           await recomputeOperationalSnapshot(nextPreference, notice);
           break;
         case 'comparison': {
-          const data = await fetchJson('/api/rl/simulate', {
-            method: 'POST',
-            body: JSON.stringify({ strategy_id: 'auto:latest', source: 'operation_detail_comparison' }),
-          });
+          const comparisonRegistry = modelRegistry ?? await fetchJson('/api/rl/registry');
+          if (!modelRegistry) setModelRegistry(comparisonRegistry);
+          const eligiblePolicies = Array.isArray(comparisonRegistry?.policies)
+            ? comparisonRegistry.policies.filter((policy: Record<string, any>) => (
+              ['verified_offline', 'validated_offline'].includes(String(policy.stage))
+              && policy.artifact_integrity === 'verified'
+              && policy.evaluation_status === 'tested'
+            ))
+            : [];
+          const comparisonPolicy = eligiblePolicies.find((policy: Record<string, any>) => policy.stage === 'verified_offline')
+            ?? eligiblePolicies.find((policy: Record<string, any>) => policy.stage === 'validated_offline');
+          if (!comparisonPolicy?.policy_id) {
+            throw new Error('no_offline_policy_evidence');
+          }
+          const data = {
+            policy: {
+              policy_id: comparisonPolicy.policy_id,
+              policy_version: comparisonPolicy.policy_version,
+              algorithm: comparisonPolicy.algorithm,
+            },
+            metrics: comparisonPolicy.evaluation_metrics,
+          };
+          comparisonResult = { ...data, registry_stage: comparisonPolicy.stage };
           setPolicyTest(data);
-          notice = `策略对比完成：减排 ${formatNumber(data.metrics?.carbon_reduction_pct, 1)}%，安全越界 ${data.metrics?.safety_violations ?? 0}。`;
+          notice = `已登记的离线策略证据已载入：${String(data.policy.algorithm ?? '当前登记策略').toUpperCase()} 相对固定资源基线减排 ${formatNumber(data.metrics?.fixed_baseline_carbon_reduction_pct, 1)}%，安全越界 ${data.metrics?.safety_violations ?? 0}；未通过门禁的强化学习候选仍不可上线。`;
           setPanelNotice(notice);
           break;
         }
@@ -883,11 +911,24 @@ export function App() {
     } finally {
       setOperationBusy(false);
     }
+    return comparisonResult;
   }
 
   async function executeOperationalActionWithImpact(actionId: string) {
-    await runDecisionImpact(operationalImpact(actionId, true), async () => {
-      await executeOperationalAction(actionId);
+    const report = operationalImpact(actionId, true);
+    await runDecisionImpact(report, async () => {
+      const result = await executeOperationalAction(actionId);
+      if (actionId === 'strategy-comparison' && result) {
+        const metrics = (result.metrics ?? {}) as Record<string, any>;
+        const algorithm = String(result.policy?.algorithm ?? result.algorithm ?? '当前登记策略').toUpperCase();
+        report.algorithm = `${algorithm} · 留出集策略评估`;
+        report.results = [
+          { label: '登记策略', value: algorithm, detail: String(result.registry_stage ?? '离线已验证'), tone: 'blue' },
+          { label: '相对固定资源基线减排', value: `${formatNumber(metrics.fixed_baseline_carbon_reduction_pct, 1)}%`, detail: '统一测试分区', tone: 'green' },
+          { label: '相对固定资源基线成本', value: `${formatNumber(metrics.fixed_baseline_cost_saving_pct, 1)}%`, detail: '统一测试分区', tone: 'blue' },
+          { label: '安全越界', value: String(metrics.safety_violations ?? 0), detail: '未通过门禁的候选不上线', tone: 'amber' },
+        ];
+      }
       setActiveOperation(null);
     });
   }
@@ -905,7 +946,7 @@ export function App() {
     if (['renewable-mix', 'recommendation-5'].includes(actionId)) return '分时能源结构未接入';
     if (['carbon-market'].includes(actionId)) return `${formatNumber((marl?.total_carbon_kg ?? 0) / 1000, 1)} tCO2e`;
     if (['cost-analysis'].includes(actionId)) return `¥${formatNumber(marl?.total_cost_cny, 0)}`;
-    if (['strategy-comparison'].includes(actionId)) return `减排 ${formatNumber(policyTest?.metrics?.carbon_reduction_pct, 1)}%`;
+    if (['strategy-comparison'].includes(actionId)) return `相对固定资源基线减排 ${formatNumber(policyTest?.metrics?.fixed_baseline_carbon_reduction_pct, 1)}% · 安全越界 ${policyTest?.metrics?.safety_violations ?? '--'}`;
     if (['alerts'].includes(actionId)) return `${systemHealthyCount}/${topologyNodes.length} 个系统在线`;
     if (['recommendation-1', 'berth-b04'].includes(actionId)) return `${shoreConnectedCount} 个岸电窗口已接入`;
     if (['recommendation-4'].includes(actionId)) return `峰值 ${formatNumber(maxPeakLoadKw / 1000, 2)} MW`;
@@ -1177,6 +1218,7 @@ export function App() {
   async function startMarlTraining() {
     setActivePanel('marl');
     setReplayPlaying(true);
+    setXiaoyiTrainingObjectiveId('carbon_min');
     setXiaoyiTrainingOpenToken((token) => token + 1);
     setPanelNotice('已打开小懿训练工作台；请检查算法、注册数据集、全部参数和风险提示，并人工确认后再启动。');
   }
@@ -1201,15 +1243,32 @@ export function App() {
     setReplayPlaying(true);
     setPanelBusy(true);
     try {
-      const data = await fetchJson('/api/rl/simulate', {
-        method: 'POST',
-        body: JSON.stringify({
-          strategy_id: rlStatus?.job_id ?? 'auto:latest',
-          source: 'topbar_marl_panel',
-        }),
-      });
+      const registry = await fetchJson('/api/rl/registry');
+      setModelRegistry(registry);
+      const policies = Array.isArray(registry?.policies) ? registry.policies as Array<Record<string, any>> : [];
+      const hasUsableEvidence = (policy: Record<string, any>) => (
+        ['verified_offline', 'validated_offline'].includes(String(policy.stage))
+        && policy.artifact_integrity === 'verified'
+        && policy.evaluation_status === 'tested'
+      );
+      const requestedPolicy = policies.find((policy) => policy.policy_id === rlStatus?.job_id);
+      const evidencePolicy = (requestedPolicy && hasUsableEvidence(requestedPolicy) ? requestedPolicy : null)
+        ?? policies.find((policy) => policy.stage === 'verified_offline' && hasUsableEvidence(policy))
+        ?? policies.find(hasUsableEvidence);
+      if (!evidencePolicy) throw new Error('no_registered_policy_test_evidence');
+      const data = {
+        status: 'tested',
+        summary: `已读取 ${String(evidencePolicy.algorithm ?? '策略').toUpperCase()} 的登记留出集评测证据。`,
+        policy: {
+          policy_id: evidencePolicy.policy_id,
+          policy_version: evidencePolicy.policy_version,
+          algorithm: evidencePolicy.algorithm,
+        },
+        metrics: evidencePolicy.evaluation_metrics,
+      };
       setPolicyTest(data);
-      setPanelNotice(`策略测试完成：减排 ${formatNumber(data.metrics?.carbon_reduction_pct, 1)}%，安全越界 ${data.metrics?.safety_violations ?? 0}。`);
+      const requestedPending = requestedPolicy && requestedPolicy.policy_id !== evidencePolicy.policy_id;
+      setPanelNotice(`已读取登记策略测试：${String(evidencePolicy.algorithm ?? '策略').toUpperCase()} 相对固定资源基线减排 ${formatNumber(data.metrics?.fixed_baseline_carbon_reduction_pct, 1)}%，安全越界 ${data.metrics?.safety_violations ?? 0}${requestedPending ? '；最新候选尚未完成独立评测，未冒充为已测试策略' : ''}。`);
     } catch (error) {
       setPanelNotice(`策略测试失败：${String(error)}`);
     } finally {
@@ -1220,32 +1279,9 @@ export function App() {
   async function startShorePowerTraining() {
     setActivePanel('shore');
     setReplayPlaying(true);
-    setPanelBusy(true);
-    try {
-      const data = await fetchJson('/api/rl/train/start', {
-        method: 'POST',
-        body: JSON.stringify({
-          confirm: true,
-          source: 'topbar_shore_panel',
-          config: {
-            objective_id: 'shore_power_priority',
-            objective_label: '岸电优先目标',
-            algorithm: 'sac',
-            scenario: 'port_la_vessel_activity_benchmark',
-            dataset_id: 'port_la_2020_2024_vessel_activity_hourly',
-            total_steps: 100000,
-            seed: 20260720,
-            reward_weights: { shore_power: 0.44, carbon: 0.24, delay: 0.12, safety: 0.20, storage: 0.08 },
-          },
-        }),
-      });
-      setRlStatus(data.result ?? data);
-      setPanelNotice(`岸电优先训练已启动：${data.result?.policy_version ?? 'policy pending'}`);
-    } catch (error) {
-      setPanelNotice(`岸电训练启动失败：${String(error)}`);
-    } finally {
-      setPanelBusy(false);
-    }
+    setXiaoyiTrainingObjectiveId('shore_power_priority');
+    setXiaoyiTrainingOpenToken((token) => token + 1);
+    setPanelNotice('已打开岸电优先训练复核；参数、数据集、峰值负荷风险和停止条件需人工确认后才启动。');
   }
 
   function applyShorePowerPreference() {
@@ -1346,6 +1382,8 @@ export function App() {
   const selectedOperationalModel = selectedOperationalDefinition
     ? ['shore', 'carbon', 'renewable', 'peak'].includes(selectedOperationalDefinition.mode)
       ? `${currentRlAlgorithm} · Continuous RL`
+      : selectedOperationalDefinition.mode === 'comparison'
+        ? `${currentRlAlgorithm} · 已登记留出集评估`
       : ['berth', 'crane', 'yard', 'agv', 'traffic'].includes(selectedOperationalDefinition.mode)
         ? 'RL Policy · PortEnergyDispatchEnv'
         : '约束规则引擎 · Offline Snapshot'
@@ -1783,14 +1821,14 @@ export function App() {
                       <b>{policyTest?.status ?? '待测试'}</b>
                     </div>
                     <div className="policy-score-grid">
-                      <span>减排 <b>{policyMetrics ? `${formatNumber(policyMetrics.carbon_reduction_pct, 1)}%` : '--'}</b></span>
+                      <span>固定资源基线减排 <b>{policyMetrics ? `${formatNumber(policyMetrics.fixed_baseline_carbon_reduction_pct ?? policyMetrics.carbon_reduction_pct, 1)}%` : '--'}</b></span>
+                      <span>固定资源基线成本 <b>{policyMetrics ? `${formatNumber(policyMetrics.fixed_baseline_cost_saving_pct ?? policyMetrics.cost_saving_pct, 1)}%` : '--'}</b></span>
                       <span>岸电提升 <b>{policyMetrics ? `${formatNumber(policyMetrics.shore_power_gain_pct, 1)}%` : '--'}</b></span>
-                      <span>成本节省 <b>{policyMetrics ? `${formatNumber(policyMetrics.cost_saving_pct, 1)}%` : '--'}</b></span>
                       <span>安全越界 <b>{policyMetrics?.safety_violations ?? 0}</b></span>
-                      <span>制品完整性 <b>{latestRegisteredPolicy?.artifact_integrity ?? '--'}</b></span>
-                      <span>数据一致性 <b>{latestRegisteredPolicy?.dataset_status ?? '--'}</b></span>
-                      <span>数据偏移 <b>{latestRegisteredPolicy?.drift?.status ?? '--'}</b></span>
-                      <span>制品哈希 <b>{latestRegisteredPolicy?.artifact_sha256?.slice(0, 12) ?? '--'}</b></span>
+                      <span>制品完整性 <b>{policyTestRegisteredPolicy?.artifact_integrity ?? '--'}</b></span>
+                      <span>数据一致性 <b>{policyTestRegisteredPolicy?.dataset_status ?? '--'}</b></span>
+                      <span>数据偏移 <b>{policyTestRegisteredPolicy?.drift?.status ?? '--'}</b></span>
+                      <span>制品哈希 <b>{policyTestRegisteredPolicy?.artifact_sha256?.slice(0, 12) ?? '--'}</b></span>
                     </div>
                     <p className="policy-summary">{policyTest?.summary ?? '运行策略测试后，这里会显示减排、岸电、成本和安全护栏的综合结果。'}</p>
                     <div className="training-log-feed">
@@ -1817,7 +1855,7 @@ export function App() {
                     onClick={() => controlMarlTraining('stop')}
                   ><Square size={14} />停止训练</button>
                   <button type="button" onClick={() => refreshRlStatus()}><Radio size={14} />查看训练状态</button>
-                  <button type="button" onClick={runPolicyTest}><Gauge size={14} />运行策略测试</button>
+                  <button type="button" onClick={runPolicyTest}><Gauge size={14} />读取登记策略测试</button>
                 </div>
               </>
             )}
@@ -1839,6 +1877,18 @@ export function App() {
                   value={greenPreference}
                   onChange={(event) => setGreenPreference(Number(event.target.value))}
                 />
+                <label className="carbon-price-control">
+                  <span>碳价情景 <small>元／吨二氧化碳当量</small></span>
+                  <input
+                    aria-label="碳价情景"
+                    type="number"
+                    min="0"
+                    max="1000"
+                    step="5"
+                    value={carbonPrice}
+                    onChange={(event) => setCarbonPrice(Math.min(1000, Math.max(0, Number(event.target.value) || 0)))}
+                  />
+                </label>
                 <div className="carbon-impact-console">
                   <div className="carbon-mode-card">
                     <span>当前调度模式</span>
@@ -2066,6 +2116,7 @@ export function App() {
         currentCarbonPrice={carbonPrice}
         externalOpenToken={xiaoyiOpenToken}
         externalTrainingToken={xiaoyiTrainingOpenToken}
+        externalTrainingObjectiveId={xiaoyiTrainingObjectiveId}
         onSetGreenPreference={(value, label) => {
           applyDashboardPreference(value, label, value >= 0.86 ? 'shore' : 'carbon');
         }}

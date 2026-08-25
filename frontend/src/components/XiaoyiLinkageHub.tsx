@@ -33,6 +33,7 @@ interface PendingPacket {
 }
 
 interface LogItem {
+  id: number;
   time: string;
   kind: string;
   message: string;
@@ -90,6 +91,7 @@ interface XiaoyiLinkageHubProps {
   currentCarbonPrice?: number;
   externalOpenToken?: number;
   externalTrainingToken?: number;
+  externalTrainingObjectiveId?: string;
   onSetGreenPreference?: (value: number, label: string) => void;
   onSyncDashboard?: (reason?: string) => Promise<void> | void;
   onOpenTopPanel?: (panel: TopPanelId) => Promise<void> | void;
@@ -442,7 +444,7 @@ const commandCatalog: CommandCatalogItem[] = [
   { id: 'pause_rl_training', label: '暂停 RL 训练', command: '小懿，暂停训练', group: '小懿/RL/模拟器' },
   { id: 'resume_rl_training', label: '继续 RL 训练', command: '小懿，继续训练', group: '小懿/RL/模拟器' },
   { id: 'stop_rl_training', label: '停止 RL 训练', command: '小懿，停止训练', group: '小懿/RL/模拟器' },
-  { id: 'run_policy_test', label: '运行策略测试', command: '小懿，运行训练后策略测试', group: '小懿/RL/模拟器' },
+  { id: 'run_policy_test', label: '读取登记策略测试', command: '小懿，读取训练后登记策略测试', group: '小懿/RL/模拟器' },
   { id: 'verify_policy_for_online', label: '上线验证 dry-run', command: '小懿，验证这个策略能不能上线', group: '小懿/RL/模拟器' },
   { id: 'open_sailing_simulator', label: '启动航行模拟器', command: '小懿，启动航行模拟器', group: '小懿/RL/模拟器' },
   { id: 'start_navigation_demo', label: '启动航线演示', command: '小懿，启动航线演示', group: '小懿/RL/模拟器' },
@@ -493,7 +495,7 @@ const actionContracts: Record<string, { method: string; path: string; confirmati
   pause_rl_training: { method: 'POST', path: '/api/rl/train/pause', confirmationRequired: false },
   resume_rl_training: { method: 'POST', path: '/api/rl/train/resume', confirmationRequired: false },
   stop_rl_training: { method: 'POST', path: '/api/rl/train/stop', confirmationRequired: false },
-  run_policy_test: { method: 'POST', path: '/api/rl/simulate', confirmationRequired: false },
+  run_policy_test: { method: 'GET', path: '/api/rl/registry', confirmationRequired: false },
   verify_policy_for_online: { method: 'POST', path: '/api/rlops/policies/verify + /api/rl/dispatch', confirmationRequired: false },
   open_sailing_simulator: { method: 'POST', path: '/api/sailing/launch', confirmationRequired: true },
   start_navigation_demo: { method: 'POST', path: '/api/sailing/actions/execute', confirmationRequired: true },
@@ -573,6 +575,7 @@ export function XiaoyiLinkageHub({
   currentCarbonPrice = 85,
   externalOpenToken = 0,
   externalTrainingToken = 0,
+  externalTrainingObjectiveId = 'carbon_min',
   onSetGreenPreference,
   onSyncDashboard,
   onOpenTopPanel,
@@ -627,6 +630,7 @@ export function XiaoyiLinkageHub({
   const dragRef = useRef<{ dx: number; dy: number; moved: boolean } | null>(null);
   const suppressOrbClickRef = useRef(false);
   const xiaoyiTrainingRunRef = useRef(false);
+  const logSequenceRef = useRef(0);
 
   useEffect(() => {
     if (externalOpenToken > 0) {
@@ -636,13 +640,16 @@ export function XiaoyiLinkageHub({
 
   useEffect(() => {
     if (externalTrainingToken > 0) {
+      const profile = trainingObjectives.find((item) => item.id === externalTrainingObjectiveId) ?? trainingObjectives[0];
       setOpen(true);
       setTrainingStudioOpen(true);
       setTrainingReviewOpen(false);
       setSelectedAction('start_rl_training');
-      setCommand((current) => current || trainingObjectives[0].command);
+      setSelectedObjective(profile.id);
+      setTrainingParams(createTrainingParams(profile));
+      setCommand(profile.command);
     }
-  }, [externalTrainingToken]);
+  }, [externalTrainingObjectiveId, externalTrainingToken]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setShowOrbGreeting(false), 5200);
@@ -758,7 +765,8 @@ export function XiaoyiLinkageHub({
   }, [selectedObjective]);
 
   function addLog(kind: string, message: string) {
-    setLogs((items) => [{ time: now(), kind, message }, ...items].slice(0, 18));
+    logSequenceRef.current += 1;
+    setLogs((items) => [{ id: logSequenceRef.current, time: now(), kind, message }, ...items].slice(0, 18));
   }
 
   function applyCommandShortcut(shortcut: CommandShortcutItem) {
@@ -1360,26 +1368,66 @@ export function XiaoyiLinkageHub({
   }
 
   async function runPolicyTest() {
-    setExecution('run_policy_test', 'executing', '小懿，运行训练后策略测试', {
-      resultSummary: '正在调用最新策略产物做能碳 KPI 仿真评估。',
+    const instruction = '小懿，读取训练后登记策略测试';
+    setExecution('run_policy_test', 'executing', instruction, {
+      resultSummary: '正在读取通过制品完整性、数据一致性和安全门禁的登记留出集评测。',
     });
-    const data = await api('/api/rl/simulate', { method: 'POST', body: { strategy_id: 'auto:latest', source: 'energy_carbon_cockpit' } });
+    const registry = await api('/api/rl/registry');
+    const policies = Array.isArray(registry.policies) ? registry.policies as JsonMap[] : [];
+    const usable = (policy: JsonMap) => (
+      ['verified_offline', 'validated_offline'].includes(String(policy.stage))
+      && policy.artifact_integrity === 'verified'
+      && policy.evaluation_status === 'tested'
+    );
+    const requested = policies.find((policy) => policy.policy_id === trainingStatus?.job_id);
+    const policy = (requested && usable(requested) ? requested : null)
+      ?? policies.find((item) => item.stage === 'verified_offline' && usable(item))
+      ?? policies.find(usable);
+    if (!policy) throw new Error('no_registered_policy_test_evidence');
+    const data = {
+      status: 'tested',
+      policy: {
+        policy_id: policy.policy_id,
+        policy_version: policy.policy_version,
+        algorithm: policy.algorithm,
+      },
+      metrics: policy.evaluation_metrics,
+    };
     setPacket(pretty(data));
-    const carbonReduction = Number(data.metrics?.carbon_reduction_pct ?? 0).toFixed(1);
+    const carbonReduction = Number(data.metrics?.fixed_baseline_carbon_reduction_pct ?? data.metrics?.carbon_reduction_pct ?? 0).toFixed(1);
     const shorePowerGain = Number(data.metrics?.shore_power_gain_pct ?? 0).toFixed(1);
-    const costSaving = Number(data.metrics?.cost_saving_pct ?? 0).toFixed(1);
+    const costSaving = Number(data.metrics?.fixed_baseline_cost_saving_pct ?? data.metrics?.cost_saving_pct ?? 0).toFixed(1);
     const safetyViolations = data.metrics?.safety_violations ?? 0;
-    completeExecution('run_policy_test', `策略测试完成：减排 ${carbonReduction}%，岸电提升 ${shorePowerGain} 个百分点，成本节省 ${costSaving}%，安全越界 ${safetyViolations}。`, data, '小懿，运行训练后策略测试');
-    await typeAnswer(`策略测试完成。\n减排：${carbonReduction}%；岸电提升：${shorePowerGain} 个百分点；成本节省：${costSaving}%；安全越界：${safetyViolations}。`);
-    addLog('RL', 'policy_test · tested');
+    completeExecution('run_policy_test', `登记策略测试已读取：相对固定资源基线减排 ${carbonReduction}%，岸电提升 ${shorePowerGain} 个百分点，成本节省 ${costSaving}%，安全越界 ${safetyViolations}。`, data, instruction);
+    await typeAnswer(`登记策略测试已读取。\n相对固定资源基线减排：${carbonReduction}%；岸电提升：${shorePowerGain} 个百分点；成本节省：${costSaving}%；安全越界：${safetyViolations}。`);
+    addLog('RL', 'registered_policy_test · tested');
   }
 
   async function verifyPolicy() {
     setExecution('verify_policy_for_online', 'executing', '小懿，验证这个策略能不能上线', {
-      resultSummary: '正在执行上线校验和 dispatch dry-run。',
+      resultSummary: '正在读取已持久化的离线验证门禁，并执行调度干运行。',
     });
-    const verify = await api('/api/rlops/policies/verify', { method: 'POST', body: { strategy_id: 'auto:latest' } });
-    const dispatch = await api('/api/rl/dispatch', { method: 'POST', body: { strategy_id: 'auto:latest', dry_run: true } });
+    const registry = await api('/api/rl/registry');
+    const policies = Array.isArray(registry.policies) ? registry.policies as JsonMap[] : [];
+    const policy = policies.find((item) => item.stage === 'verified_offline' && item.verification_status === 'verified');
+    if (!policy?.policy_id) throw new Error('no_verified_offline_policy');
+    const checks = [
+      { name: 'artifact_integrity', passed: policy.artifact_integrity === 'verified' },
+      { name: 'dataset_consistency', passed: policy.dataset_status === 'verified' },
+      { name: 'held_out_evaluation', passed: policy.evaluation_status === 'tested' },
+      { name: 'zero_safety_violations', passed: Number((policy.evaluation_metrics as JsonMap | undefined)?.safety_violations ?? -1) === 0 },
+      { name: 'persisted_offline_verification', passed: policy.verification_status === 'verified' },
+      { name: 'manual_dispatch_boundary', passed: registry.production_dispatch_enabled === false },
+    ];
+    const verify = {
+      ok: checks.every((check) => check.passed),
+      status: checks.every((check) => check.passed) ? 'verified' : 'blocked',
+      policy_id: policy.policy_id,
+      checks,
+      risk_level: checks.every((check) => check.passed) ? 'low' : 'high',
+      source: 'persisted_offline_registry_evidence',
+    };
+    const dispatch = await api('/api/rl/dispatch', { method: 'POST', body: { strategy_id: policy.policy_id, dry_run: true, source: 'energy_carbon_cockpit' } });
     setPacket(pretty({ verify, dispatch }));
     const verifyChecks = Array.isArray(verify.checks)
       ? verify.checks.map((check: JsonMap) => `${check.name ?? '未命名约束'} ${check.passed ? 'PASS' : 'BLOCK'}`).join('、')
@@ -1948,7 +1996,7 @@ export function XiaoyiLinkageHub({
                 ><Square size={14} />停止 / Stop</button>
                 <button id="btnTrainingStatus" type="button" disabled={busy} onClick={showTrainingStatus}><Radio size={14} />状态 / Status</button>
                 <button id="btnTrainingHistory" type="button" disabled={busy} onClick={() => void openTrainingHistory()}><Gauge size={14} />历史收敛曲线 / Results</button>
-                <button id="btnPolicyTest" type="button" disabled={busy} onClick={runPolicyTest}><Gauge size={14} />策略测试 / Test</button>
+                <button id="btnPolicyTest" type="button" disabled={busy} onClick={runPolicyTest}><Gauge size={14} />登记测试 / Evidence</button>
                 <button id="btnVerifyPolicy" type="button" disabled={busy} onClick={verifyPolicy}><ShieldCheck size={14} />上线验证 / Dry-run</button>
               </div>
               <pre className="mini-log">{(trainingStatus?.logs ?? ['等待训练指令。']).join('\n')}</pre>
@@ -1978,7 +2026,7 @@ export function XiaoyiLinkageHub({
               </div>
               <div className="linkage-log">
                 {logs.length ? logs.map((item) => (
-                  <p key={`${item.time}-${item.kind}-${item.message}`}>
+                  <p key={item.id}>
                     <small>{item.time} · {item.kind}</small>
                     <span>{item.message}</span>
                   </p>

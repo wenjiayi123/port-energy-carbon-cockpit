@@ -313,6 +313,7 @@ class TrainingService:
 
     def registry(self) -> dict[str, Any]:
         policies: list[dict[str, Any]] = []
+        dataset_evidence_cache: dict[str, dict[str, Any]] = {}
         for manifest_path in sorted(RUNS_DIR.glob("*/manifest.json"), reverse=True):
             try:
                 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -337,18 +338,32 @@ class TrainingService:
             dataset_status = "unavailable"
             drift: dict[str, Any] = {"status": "unavailable"}
             current_dataset_sha256 = None
-            try:
-                dataset = PortDataset.load(config["data_file"])
-                current_dataset_sha256 = dataset.package_sha256
+            data_file = str(config.get("data_file") or "")
+            if data_file not in dataset_evidence_cache:
+                try:
+                    dataset = PortDataset.load(data_file)
+                    dataset_evidence_cache[data_file] = {
+                        "package_sha256": dataset.package_sha256,
+                        "drift": dataset.drift_report(),
+                    }
+                except Exception:
+                    logger.exception("Model-registry dataset drift calculation failed")
+                    dataset_evidence_cache[data_file] = {
+                        "package_sha256": None,
+                        "drift": {
+                            "status": "unavailable",
+                            "error": "dataset_drift_unavailable",
+                        },
+                    }
+            dataset_evidence = dataset_evidence_cache[data_file]
+            current_dataset_sha256 = dataset_evidence["package_sha256"]
+            drift = dataset_evidence["drift"]
+            if current_dataset_sha256:
                 dataset_status = (
                     "verified"
                     if current_dataset_sha256 == config.get("dataset_sha256")
                     else "changed"
                 )
-                drift = dataset.drift_report()
-            except Exception:
-                logger.exception("Model-registry dataset drift calculation failed")
-                drift = {"status": "unavailable", "error": "dataset_drift_unavailable"}
             evaluation_path = run_dir / "evaluation.json"
             verification_path = run_dir / "verification.json"
             evaluation = (
@@ -612,7 +627,13 @@ class TrainingService:
                 "checkpoints": [],
                 "title": "No completed training runs",
             }
-        manifest = self._resolve_manifest(items[0]["strategy_id"])
+        selected_strategy_id = items[0]["strategy_id"]
+        for item in items:
+            candidate_metrics = RUNS_DIR / item["strategy_id"] / "metrics.jsonl"
+            if candidate_metrics.exists() and candidate_metrics.read_text(encoding="utf-8").strip():
+                selected_strategy_id = item["strategy_id"]
+                break
+        manifest = self._resolve_manifest(selected_strategy_id)
         metric_path = Path(manifest["run_dir"]) / "metrics.jsonl"
         series: list[dict[str, Any]] = []
         if metric_path.exists():
