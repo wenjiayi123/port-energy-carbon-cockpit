@@ -309,6 +309,168 @@ export function App() {
     { label: '人工确认边界', value: rlStatus?.status === 'running' ? '训练中' : 'dry-run', ok: true },
   ];
   const carbonMarket = snapshot?.carbon_market;
+  const carbonInventory = snapshot?.carbon_inventory;
+  const carbonInventorySources = carbonInventory?.source_categories ?? [];
+  const carbonInventoryCoverage = carbonInventory?.coverage ?? {};
+  const measurementVerification = snapshot?.measurement_verification;
+  const measurementVerificationGates = measurementVerification?.gates ?? [];
+  const measurementVerificationPassedGates = measurementVerificationGates.filter((gate) => gate.passed).length;
+  const measurementVerificationResults = measurementVerification?.results ?? {};
+  const carbonAssets = snapshot?.carbon_assets;
+  const carbonAssetGates = carbonAssets?.gates ?? [];
+  const carbonAssetPassedGates = carbonAssetGates.filter((gate) => gate.passed).length;
+  const carbonAssetPositions = carbonAssets?.positions ?? {};
+  const carbonAssetSettlement = carbonAssets?.settlement ?? {};
+  const commercialSettlement = snapshot?.commercial_settlement;
+  const commercialSettlementSources = commercialSettlement?.source_readiness ?? {};
+  const commercialSettlementGates = commercialSettlement?.gates ?? [];
+  const commercialSettlementPassedGates = commercialSettlementGates.filter((gate) => gate.passed).length;
+  const commercialBilling = commercialSettlement?.billing ?? {};
+  const commercialMarkets = commercialSettlement?.market_settlements ?? {};
+  const commercialCertificates = commercialSettlement?.renewable_procurement ?? {};
+  const commercialTenantAllocation = commercialSettlement?.tenant_allocation ?? {};
+  const commercialEconomics = commercialSettlement?.investment_economics ?? {};
+  const commercialReceivedDomains = new Set<string>(commercialSettlementSources.received_domains ?? []);
+  const commercialSignedDomains = new Set<string>(commercialSettlementSources.signed_domains ?? []);
+  const commercialDomainLabels: Record<string, string> = {
+    utility_tariff_invoice: '电价与账单',
+    revenue_metering: '收入电表',
+    demand_response: '需求响应',
+    ancillary_services: '辅助服务',
+    power_purchase_agreement: '购电协议',
+    renewable_certificate_registry: '绿证登记簿',
+    tenant_billing: '租户计费',
+    investment_and_mv: '投资与核证',
+  };
+  const portCollaboration = snapshot?.port_collaboration;
+  const collaborationSources = portCollaboration?.source_readiness ?? {};
+  const collaborationGates = portCollaboration?.gates ?? [];
+  const collaborationPassedGates = collaborationGates.filter((gate) => gate.passed).length;
+  const collaborationJit = portCollaboration?.jit_arrival ?? {};
+  const collaborationBerth = portCollaboration?.green_berth ?? {};
+  const collaborationShore = portCollaboration?.shore_power ?? {};
+  const collaborationFuel = portCollaboration?.alternative_fuel ?? {};
+  const collaborationIncentives = portCollaboration?.incentives ?? {};
+  const collaborationBenefits = portCollaboration?.benefit_sharing ?? {};
+  const collaborationReceivedDomains = new Set<string>(collaborationSources.received_domains ?? []);
+  const collaborationSignedDomains = new Set<string>(collaborationSources.signed_domains ?? []);
+  const collaborationDomainLabels: Record<string, string> = {
+    vessel_operator_plan: '船公司航次计划',
+    port_call_platform: '港口调用平台',
+    terminal_berth_operations: '码头泊位作业',
+    shore_power_operator: '岸电运营计费',
+    alternative_fuel_facility: '替代燃料设施',
+    port_tariff_authority: '港口费率机构',
+    corridor_governance_ledger: '绿色走廊治理台账',
+  };
+  const energyCarbonManagement = snapshot?.energy_carbon_management;
+  const managementGates = energyCarbonManagement?.gates ?? [];
+  const managementPassedGates = managementGates.filter((gate) => gate.passed).length;
+  const managementPdca = energyCarbonManagement?.pdca ?? {};
+  const managementPerformance = energyCarbonManagement?.performance ?? {};
+  const operationsEnergyPlan = snapshot?.operations_energy_plan;
+  const operationsEnergyGates = operationsEnergyPlan?.gates ?? [];
+  const operationsEnergyPassedGates = operationsEnergyGates.filter((gate) => gate.passed).length;
+  const operationsEnergySources = operationsEnergyPlan?.source_readiness ?? {};
+  const operationsEnergyKpis = operationsEnergyPlan?.kpis ?? {};
+  const operationsEnergyReceivedDomains = new Set<string>(operationsEnergySources.received_domains ?? []);
+  const operationsEnergySignedDomains = new Set<string>(operationsEnergySources.signed_domains ?? []);
+  const operationsEnergyDomainLabels: Record<string, string> = {
+    ais_and_vessel_calls: '船舶与到港',
+    berth_plan: '泊位计划',
+    crane_work_orders: '岸桥任务',
+    yard_inventory: '堆场库存',
+    truck_appointments: '集卡预约',
+    reefer_monitoring: '冷藏箱监测',
+    shore_power_registry: '岸电档案',
+    energy_management_system: '能源管理',
+  };
+  const electricalNetwork = snapshot?.electrical_network;
+  const electricalNetworkSources = electricalNetwork?.source_readiness ?? {};
+  const electricalNetworkSummary = electricalNetwork?.network_summary ?? {};
+  const electricalNetworkGates = electricalNetwork?.gates ?? [];
+  const electricalNetworkPassedGates = electricalNetworkGates.filter((gate) => gate.passed).length;
+  const electricalNetworkReceivedDomains = new Set<string>(electricalNetworkSources.received_domains ?? []);
+  const electricalNetworkSignedDomains = new Set<string>(electricalNetworkSources.signed_domains ?? []);
+  const electricalNetworkDomainLabels: Record<string, string> = {
+    single_line_topology: '单线拓扑',
+    scada_switchgear: '开关柜遥信',
+    power_quality_meters: '电能质量',
+    transformer_monitoring: '变压器监测',
+    charging_management: '充电管理',
+    battery_management_system: '电池管理',
+  };
+  const algorithmProduction = snapshot?.algorithm_production;
+  const algorithmProductionSources = algorithmProduction?.source_readiness ?? {};
+  const algorithmQualification = algorithmProduction?.qualification_summary ?? {};
+  const algorithmSeedSeason = algorithmProduction?.multi_seed_cross_season ?? {};
+  const algorithmForecast = algorithmProduction?.probabilistic_forecast ?? {};
+  const algorithmOod = algorithmProduction?.ood_monitoring ?? {};
+  const algorithmExplainability = algorithmProduction?.explainability ?? {};
+  const algorithmReachability = algorithmProduction?.action_reachability ?? {};
+  const algorithmLatency = algorithmProduction?.realtime_performance ?? {};
+  const algorithmFaults = algorithmProduction?.fault_campaign ?? {};
+  const algorithmHuman = algorithmProduction?.human_oversight ?? {};
+  const algorithmOffline = algorithmProduction?.known_offline_evidence ?? {};
+  const algorithmProductionGates = algorithmProduction?.gates ?? [];
+  const algorithmProductionPassedGates = algorithmProductionGates.filter((gate) => gate.passed).length;
+  const algorithmReceivedDomains = new Set<string>(algorithmProductionSources.received_domains ?? []);
+  const algorithmSignedDomains = new Set<string>(algorithmProductionSources.signed_domains ?? []);
+  const algorithmDomainLabels: Record<string, string> = {
+    experiment_registry: '实验与制品注册',
+    forecast_calibration: '概率预测标定',
+    runtime_monitoring: '运行监测与解释',
+    execution_receipts: '动作可达回执',
+    fault_campaign: '故障注入演练',
+    human_review_log: '人工复核与否决',
+  };
+  const enterpriseSecurity = snapshot?.enterprise_security;
+  const enterpriseSecuritySources = enterpriseSecurity?.source_readiness ?? {};
+  const enterpriseSecurityControls = enterpriseSecurity?.current_repository_controls ?? {};
+  const enterpriseSecurityIdentity = enterpriseSecurity?.identity_and_access ?? {};
+  const enterpriseSecurityTenant = enterpriseSecurity?.tenant_isolation ?? {};
+  const enterpriseSecurityPlatform = enterpriseSecurity?.messaging_and_timeseries ?? {};
+  const enterpriseSecurityRecovery = enterpriseSecurity?.availability_and_recovery ?? {};
+  const enterpriseSecurityAudit = enterpriseSecurity?.audit_and_monitoring ?? {};
+  const enterpriseSecurityPki = enterpriseSecurity?.pki_and_key_management ?? {};
+  const enterpriseSecurityOt = enterpriseSecurity?.ot_security ?? {};
+  const enterpriseSecurityGates = enterpriseSecurity?.gates ?? [];
+  const enterpriseSecurityPassedGates = enterpriseSecurityGates.filter((gate) => gate.passed).length;
+  const enterpriseSecurityReceivedDomains = new Set<string>(enterpriseSecuritySources.received_domains ?? []);
+  const enterpriseSecuritySignedDomains = new Set<string>(enterpriseSecuritySources.signed_domains ?? []);
+  const enterpriseSecurityDomainLabels: Record<string, string> = {
+    identity_provider: '企业身份提供方',
+    authorization_and_tenant_control: '授权与租户控制',
+    message_and_timeseries_platform: '消息与时序平台',
+    ha_orchestrator: '高可用编排',
+    backup_dr_platform: '备份与灾难恢复',
+    worm_siem_platform: 'WORM 与 SIEM',
+    pki_key_management: 'PKI 与密钥管理',
+    ot_security_monitor: '运行技术安全监测',
+    enterprise_governance: '企业安全治理',
+  };
+  const siteCutover = snapshot?.site_cutover_readiness;
+  const siteCutoverSources = siteCutover?.source_readiness ?? {};
+  const siteCutoverDomains = siteCutover?.domain_evidence ?? [];
+  const siteCutoverGates = siteCutover?.gates ?? [];
+  const siteCutoverOperational = siteCutover?.operational_acceptance ?? {};
+  const siteCutoverApprovals = siteCutover?.approval_summary ?? {};
+  const siteCutoverPassedGates = siteCutoverGates.filter((gate) => gate.passed).length;
+  const siteCutoverDomainLabels: Record<string, string> = {
+    live_port_data: '实港实时数据',
+    measurement_and_calibration: '现场计量与标定',
+    production_execution: '生产执行通道',
+    long_horizon_shadow: '长周期影子验证',
+    port_emissions_inventory: '港口排放清单',
+    energy_carbon_management: '能碳管理体系',
+    operations_energy_coupling: '业务—能量耦合',
+    electrical_network: '电力系统模型',
+    algorithm_production: '算法生产资格',
+    carbon_asset_compliance: '碳资产合规',
+    commercial_settlement: '商业结算',
+    port_collaboration: '港航生态协同',
+    enterprise_ot_security: '企业与运行技术安全',
+  };
   const carbonSourceEntries = Object.entries(snapshot?.carbon_model.source_breakdown_kg ?? {})
     .sort(([, left], [, right]) => right - left)
     .slice(0, 4);
@@ -1475,20 +1637,66 @@ export function App() {
 
           <div className="top-action-content">
             {activePanel === 'runtime' && (
-              <RuntimeClosedLoopPanel
-                snapshot={runtimeSnapshot}
-                forecast={runtimeForecast}
-                decision={runtimeDecision}
-                history={runtimeHistory}
-                busy={runtimeBusy}
-                onRefresh={refreshRuntime}
-                onCreateDecision={createRuntimeDecision}
-                onApprove={approveRuntimeDecision}
-                onExecute={executeRuntimeDecision}
-                onRollback={rollbackRuntimeDecision}
-                onInject={injectRuntimeScenario}
-                onControl={controlRuntime}
-              />
+              <>
+                <RuntimeClosedLoopPanel
+                  snapshot={runtimeSnapshot}
+                  forecast={runtimeForecast}
+                  decision={runtimeDecision}
+                  history={runtimeHistory}
+                  integrationStatus={integrationStatus}
+                  busy={runtimeBusy}
+                  onRefresh={refreshRuntime}
+                  onCreateDecision={createRuntimeDecision}
+                  onApprove={approveRuntimeDecision}
+                  onExecute={executeRuntimeDecision}
+                  onRollback={rollbackRuntimeDecision}
+                  onInject={injectRuntimeScenario}
+                  onControl={controlRuntime}
+                />
+                <section className="electrical-network-board" aria-label="港口配电数字孪生评估">
+                  <header>
+                    <div>
+                      <span>港口配电数字孪生</span>
+                      <small>SINGLE-LINE · POWER FLOW · POWER QUALITY · N-1 · ISLAND · ASSET LIFE</small>
+                    </div>
+                    <b>{String(electricalNetwork?.status ?? 'blocked').toUpperCase()}</b>
+                  </header>
+                  <div className="electrical-network-summary">
+                    <span>可信源域<b>{electricalNetworkSources.domain_count ?? 0} / {electricalNetworkSources.required_domain_count ?? 6}</b><small>六源实时、对齐并独立验签</small></span>
+                    <span>发布门禁<b>{electricalNetworkPassedGates} / {electricalNetworkGates.length || 14}</b><small>拓扑、电能质量和韧性全通过</small></span>
+                    <span>母线 / 支路<b>{electricalNetworkSummary.bus_count ?? 0} / {electricalNetworkSummary.branch_count ?? 0}</b><small>必须来自获批单线图，不由聚合值推造</small></span>
+                    <span>电压范围<b>{electricalNetworkSummary.minimum_voltage_pu == null ? '--' : `${formatNumber(electricalNetworkSummary.minimum_voltage_pu, 3)}–${formatNumber(electricalNetworkSummary.maximum_voltage_pu, 3)} pu`}</b><small>潮流估计与电表实测共同门禁</small></span>
+                    <span>最大载荷<b>{electricalNetworkSummary.maximum_branch_loading_pct == null ? '--' : `${formatNumber(electricalNetworkSummary.maximum_branch_loading_pct, 1)}%`}</b><small>馈线、变压器与无功能力</small></span>
+                    <span>电压总谐波畸变<b>{electricalNetworkSummary.maximum_voltage_thd_pct == null ? '--' : `${formatNumber(electricalNetworkSummary.maximum_voltage_thd_pct, 2)}%`}</b><small>逐次谐波平方和与实测值取严</small></span>
+                    <span>变压器热点<b>{electricalNetworkSummary.maximum_transformer_hot_spot_c == null ? '--' : `${formatNumber(electricalNetworkSummary.maximum_transformer_hot_spot_c, 1)} °C`}</b><small>同时累计等效寿命损失</small></span>
+                    <span>N-1 / 孤岛<b>{electricalNetworkSummary.n_minus_one_passed == null ? '--' : `${electricalNetworkSummary.n_minus_one_passed} / ${electricalNetworkSummary.island_scenarios_passed}`}</b><small>故障转供通过数 / 孤岛场景通过数</small></span>
+                    <span>充电等待<b>{electricalNetworkSummary.maximum_expected_charging_wait_minutes == null ? '--' : `${formatNumber(electricalNetworkSummary.maximum_expected_charging_wait_minutes, 1)} min`}</b><small>可用枪数、到达率和服务时长</small></span>
+                    <span>储能质保<b>{electricalNetworkSummary.storage_warranty_ready == null ? '--' : electricalNetworkSummary.storage_warranty_ready ? 'READY' : 'BLOCKED'}</b><small>功率、荷电、健康、温度、吞吐和循环</small></span>
+                  </div>
+                  <div className="electrical-network-domains">
+                    {(electricalNetworkSources.required_domains ?? Object.keys(electricalNetworkDomainLabels)).map((domain: string) => (
+                      <span className={electricalNetworkSignedDomains.has(domain) ? 'passed' : electricalNetworkReceivedDomains.has(domain) ? 'received' : 'blocked'} key={domain}>
+                        <i />
+                        <b>{electricalNetworkDomainLabels[domain] ?? domain}</b>
+                        <small>{electricalNetworkSignedDomains.has(domain) ? '已验签' : electricalNetworkReceivedDomains.has(domain) ? '已接收·未验签' : '未接入'}</small>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="electrical-network-gates">
+                    {electricalNetworkGates.map((gate) => (
+                      <span className={gate.passed ? 'passed' : 'blocked'} key={gate.gate_id}>
+                        <i />
+                        <b>{gate.label_zh}</b>
+                        <small>{gate.passed ? '通过' : '阻断'}</small>
+                      </span>
+                    ))}
+                  </div>
+                  <footer>
+                    <span>这是签名证据驱动的工程筛查模型，不替代短路计算、继电保护整定、现场倒闸票和调度许可。</span>
+                    <b>ADVISORY ONLY · SWITCHING = {electricalNetwork?.production_boundary?.switching_command_allowed ? 'TRUE' : 'FALSE'} · PROTECTION SETTINGS = {electricalNetwork?.production_boundary?.protection_setting_change_allowed ? 'TRUE' : 'FALSE'} · ISLAND COMMAND = {electricalNetwork?.production_boundary?.islanding_command_allowed ? 'TRUE' : 'FALSE'}</b>
+                  </footer>
+                </section>
+              </>
             )}
             {activePanel === 'simulation' && (
               <>
@@ -1498,6 +1706,45 @@ export function App() {
                   <span>Gymnasium <b>{snapshot?.rl_environment.status ?? '--'}</b></span>
                   <span>模拟器 <b>{sailingStatus?.process?.running ? `运行中 pid=${sailingStatus.process.pid}` : sailingStatus?.label ?? '待检查'}</b></span>
                 </div>
+                <section className="operations-energy-board" aria-label="业务能量联合计划">
+                  <header>
+                    <div>
+                      <span>业务—能量联合计划</span>
+                      <small>NAMED VESSEL + BERTH + CRANE + YARD + TRUCK + REEFER + SHORE POWER + EMS</small>
+                    </div>
+                    <b>{String(operationsEnergyPlan?.status ?? 'blocked').toUpperCase()}</b>
+                  </header>
+                  <div className="operations-energy-summary">
+                    <span>可信源域<b>{operationsEnergySources.domain_count ?? 0} / {operationsEnergySources.required_domain_count ?? 8}</b><small>八源必须实时、对齐并逐源验签</small></span>
+                    <span>发布门禁<b>{operationsEnergyPassedGates} / {operationsEnergyGates.length || 12}</b><small>业务与能量硬约束全部通过</small></span>
+                    <span>计划箱量<b>{operationsEnergyKpis.planned_moves_teu == null ? '--' : `${formatNumber(operationsEnergyKpis.planned_moves_teu, 1)} TEU`}</b><small>不用离线聚合量伪装具名任务</small></span>
+                    <span>岸电服务<b>{operationsEnergyKpis.shore_energy_kwh == null ? '--' : `${formatNumber(operationsEnergyKpis.shore_energy_kwh, 1)} kWh`}</b><small>逐船兼容与最低服务量</small></span>
+                    <span>电网峰值<b>{operationsEnergyKpis.peak_grid_import_kw == null ? '--' : `${formatNumber(operationsEnergyKpis.peak_grid_import_kw, 1)} kW`}</b><small>含备用容量与储能联合约束</small></span>
+                    <span>期末荷电状态<b>{operationsEnergyKpis.terminal_storage_soc_pct == null ? '--' : `${formatNumber(operationsEnergyKpis.terminal_storage_soc_pct, 1)}%`}</b><small>储能效率、功率及期末约束</small></span>
+                  </div>
+                  <div className="operations-energy-domains">
+                    {(operationsEnergySources.required_domains ?? Object.keys(operationsEnergyDomainLabels)).map((domain: string) => (
+                      <span className={operationsEnergySignedDomains.has(domain) ? 'passed' : operationsEnergyReceivedDomains.has(domain) ? 'received' : 'blocked'} key={domain}>
+                        <i />
+                        <b>{operationsEnergyDomainLabels[domain] ?? domain}</b>
+                        <small>{operationsEnergySignedDomains.has(domain) ? '已验签' : operationsEnergyReceivedDomains.has(domain) ? '已接收·未验签' : '未接入'}</small>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="operations-energy-gates">
+                    {operationsEnergyGates.map((gate) => (
+                      <span className={gate.passed ? 'passed' : 'blocked'} key={gate.gate_id}>
+                        <i />
+                        <b>{gate.label_zh}</b>
+                        <small>{gate.passed ? '通过' : '阻断'}</small>
+                      </span>
+                    ))}
+                  </div>
+                  <footer>
+                    <span>全门禁通过也只能用于人工复核与影子运行；生产指令网关、联锁和现场回滚未在本项授权。</span>
+                    <b>ADVISORY ONLY · TOS WRITEBACK = {operationsEnergyPlan?.production_boundary?.tos_writeback_allowed ? 'TRUE' : 'FALSE'} · EQUIPMENT DISPATCH = {operationsEnergyPlan?.production_boundary?.equipment_dispatch_allowed ? 'TRUE' : 'FALSE'}</b>
+                  </footer>
+                </section>
                 <div className="action-command-row">
                   <button type="button" onClick={toggleReplayWithImpact}>
                     {replayPlaying ? <Pause size={14} /> : <Play size={14} />}{replayPlaying ? '暂停窗口' : '播放窗口'}
@@ -1594,6 +1841,55 @@ export function App() {
                   <span>注册阶段 <b>{latestRegisteredPolicy?.stage ?? '未注册'}</b></span>
                   <span>生产资格 <b>{latestRegisteredPolicy?.production_eligible ? '允许' : '禁止'}</b></span>
                 </div>
+                <section className="algorithm-production-board" aria-label="算法生产资格证据">
+                  <header>
+                    <div>
+                      <span>算法生产资格·冠军/挑战者放行门</span>
+                      <small>MULTI-SEED + FOUR-SEASON + CALIBRATION + OOD + SHADOW ASSURANCE</small>
+                    </div>
+                    <b>{String(algorithmProduction?.status ?? 'blocked').toUpperCase()}</b>
+                  </header>
+                  <div className="algorithm-production-summary">
+                    <span>可信证据源<b>{algorithmProductionSources.domain_count ?? 0} / {algorithmProductionSources.required_domain_count ?? 6}</b><small>六域实时、对齐并独立验签</small></span>
+                    <span>生产门禁<b>{algorithmProductionPassedGates} / {algorithmProductionGates.length || 15}</b><small>任一失败都不得晋级</small></span>
+                    <span>种子 / 季节<b>{algorithmSeedSeason.distinct_seeds ?? 0} / {algorithmSeedSeason.covered_seasons?.length ?? 0}</b><small>最低 3 seeds × 春夏秋冬</small></span>
+                    <span>预测区间覆盖<b>{algorithmForecast.empirical_interval_coverage == null ? '--' : `${formatNumber(Number(algorithmForecast.empirical_interval_coverage) * 100, 1)}%`}</b><small>按现场真值统计，不用近似标准差代替</small></span>
+                    <span>OOD 命中 / 误报<b>{algorithmOod.true_positive_rate == null ? '--' : `${formatNumber(Number(algorithmOod.true_positive_rate) * 100, 1)} / ${formatNumber(Number(algorithmOod.false_positive_rate) * 100, 1)}%`}</b><small>检出后必须抑制建议并回退</small></span>
+                    <span>解释局部保真<b>{algorithmExplainability.mean_local_fidelity == null ? '--' : formatNumber(algorithmExplainability.mean_local_fidelity, 3)}</b><small>归因、反事实和决策前生成</small></span>
+                    <span>动作回执<b>{algorithmReachability.receipt_count ?? 0}</b><small>限幅、速率、联锁与跟踪误差</small></span>
+                    <span>P95 / P99 时延<b>{algorithmLatency.p95_ms == null ? '--' : `${formatNumber(algorithmLatency.p95_ms, 0)} / ${formatNumber(algorithmLatency.p99_ms, 0)} ms`}</b><small>单调时钟端到端样本</small></span>
+                    <span>故障覆盖<b>{algorithmFaults.passed_fault_types?.length ?? 0} / {algorithmFaults.required_fault_types?.length ?? 0}</b><small>检出、失效关闭、回退和零危险动作</small></span>
+                    <span>人工否决<b>{algorithmHuman.veto_count ?? 0} / {algorithmHuman.review_count ?? 0}</b><small>否决率 {algorithmHuman.veto_rate == null ? '--' : `${formatNumber(Number(algorithmHuman.veto_rate) * 100, 1)}%`}</small></span>
+                  </div>
+                  <div className="algorithm-production-domains">
+                    {(algorithmProductionSources.required_domains ?? Object.keys(algorithmDomainLabels)).map((domain: string) => (
+                      <span className={algorithmSignedDomains.has(domain) ? 'passed' : algorithmReceivedDomains.has(domain) ? 'received' : 'blocked'} key={domain}>
+                        <i />
+                        <b>{algorithmDomainLabels[domain] ?? domain}</b>
+                        <small>{algorithmSignedDomains.has(domain) ? '已验签' : algorithmReceivedDomains.has(domain) ? '已接收·未验签' : '未接入'}</small>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="algorithm-production-gates">
+                    {algorithmProductionGates.map((gate) => (
+                      <span className={gate.passed ? 'passed' : 'blocked'} key={gate.gate_id} title={typeof gate.evidence === 'string' ? gate.evidence : gate.gate_id}>
+                        <i />
+                        <b>{gate.label_zh}</b>
+                        <small>{gate.passed ? 'PASS' : 'BLOCKED'}</small>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="algorithm-negative-evidence">
+                    <strong>现有负向结果原样保留</strong>
+                    <span>风险感知 MPC 对旧 MPC：碳 <b>{formatNumber(algorithmOffline.risk_aware_vs_causal_legacy_mpc?.carbon_reduction_pct, 4)}%</b>，成本 <b>{formatNumber(algorithmOffline.risk_aware_vs_causal_legacy_mpc?.cost_reduction_pct, 4)}%</b>，峰值 <b>{formatNumber(algorithmOffline.risk_aware_vs_causal_legacy_mpc?.peak_reduction_pct, 4)}%</b></span>
+                    <span>电网降额 10% 场景软备用越界改善率 <b>{formatNumber(algorithmOffline.grid_derating_10pct?.reserve_breach_reduction_pct, 4)}%</b>（负值表示退化）</span>
+                    <span>结论 <b>先补生产证据，不新增算法</b></span>
+                  </div>
+                  <footer>
+                    <span>候选 <b>{algorithmQualification.candidate_policy_id ?? 'risk-aware-mpc-v4-candidate'}</b> ↔ 基线 <b>{algorithmQualification.baseline_policy_id ?? 'causal-legacy-mpc-v3'}</b></span>
+                    <b>ADVISORY ONLY · AUTO PROMOTION = {algorithmProduction?.production_boundary?.automatic_policy_promotion_allowed ? 'TRUE' : 'FALSE'} · AUTONOMOUS DISPATCH = {algorithmProduction?.production_boundary?.autonomous_dispatch_allowed ? 'TRUE' : 'FALSE'} · PRODUCTION AUTHORITY = {algorithmProduction?.production_boundary?.production_authority ? 'TRUE' : 'FALSE'}</b>
+                  </footer>
+                </section>
                 <section className="landing-evidence-board" aria-label="海事海关检查能碳韧性证据">
                   <header>
                     <div>
@@ -1863,10 +2159,40 @@ export function App() {
             {activePanel === 'carbon' && (
               <>
                 <div className="action-stat-grid">
-                  <span>范围一·辅机燃油 <b>{formatNumber((snapshot?.carbon_model.scope1_auxiliary_fuel_kg ?? 0) / 1000, 2)} t</b></span>
+                  <span>历史情景口径·范围一辅机 <b>{formatNumber((snapshot?.carbon_model.scope1_auxiliary_fuel_kg ?? 0) / 1000, 2)} t</b></span>
                   <span>范围二·所在地法 <b>{formatNumber((snapshot?.carbon_model.scope2_location_based_kg ?? 0) / 1000, 2)} t</b></span>
                   <span>范围二·市场法 <b>{snapshot?.carbon_model.scope2_market_based_kg == null ? '未接入' : `${formatNumber(snapshot.carbon_model.scope2_market_based_kg / 1000, 2)} t`}</b></span>
                   <span>核算保证 <b>{snapshot?.carbon_model.assurance_status ?? '待检查'}</b></span>
+                </div>
+                <div className="action-stat-grid carbon-inventory-summary">
+                  <span>港口排放源覆盖 <b>{carbonInventoryCoverage.co2e_calculated_count ?? 0} / {carbonInventoryCoverage.source_category_count ?? 7}</b></span>
+                  <span>现场实测源类 <b>{carbonInventoryCoverage.live_measured_count ?? 0} / {carbonInventoryCoverage.source_category_count ?? 7}</b></span>
+                  <span>污染物数据覆盖 <b>{carbonInventoryCoverage.criteria_pollutant_ready_count ?? 0} / {carbonInventoryCoverage.criteria_pollutant_count ?? 8}</b></span>
+                  <span>核证门禁 <b>{String(carbonInventory?.assurance?.status ?? 'blocked').toUpperCase()}</b></span>
+                </div>
+                <div className="action-stat-grid measurement-verification-summary">
+                  <span>计量核证状态 <b>{String(measurementVerification?.status ?? 'blocked').toUpperCase()}</b></span>
+                  <span>核证证据门禁 <b>{measurementVerificationPassedGates} / {measurementVerificationGates.length || 11}</b></span>
+                  <span>现场计量覆盖 <b>{formatNumber(measurementVerification?.data_quality?.coverage_pct, 1)}%</b></span>
+                  <span>现场核证减排 <b>{measurementVerificationResults.verified_carbon_reduction_kg == null ? '不可用' : `${formatNumber(measurementVerificationResults.verified_carbon_reduction_kg / 1000, 3)} tCO₂e`}</b></span>
+                </div>
+                <div className="action-stat-grid carbon-asset-summary">
+                  <span>碳资产履约状态 <b>{String(carbonAssets?.status ?? 'blocked').toUpperCase()}</b></span>
+                  <span>履约证据门禁 <b>{carbonAssetPassedGates} / {carbonAssetGates.length || 12}</b></span>
+                  <span>登记簿核证余额 <b>{carbonAssetPositions.verified_registry_balance_tco2e == null ? '不可用' : `${formatNumber(carbonAssetPositions.verified_registry_balance_tco2e, 3)} tCO₂e`}</b></span>
+                  <span>已核证注销量 <b>{carbonAssetPositions.verified_retired_tco2e == null ? '不可用' : `${formatNumber(carbonAssetPositions.verified_retired_tco2e, 3)} tCO₂e`}</b></span>
+                </div>
+                <div className="action-stat-grid commercial-settlement-summary">
+                  <span>商业结算状态 <b>{String(commercialSettlement?.status ?? 'blocked').toUpperCase()}</b></span>
+                  <span>来源与闸门 <b>{commercialSettlementSources.domain_count ?? 0} / {commercialSettlementSources.required_domain_count ?? 8} · {commercialSettlementPassedGates} / {commercialSettlementGates.length || 16}</b></span>
+                  <span>核证账单总额 <b>{commercialBilling.verified_utility_invoice_total == null ? '不可用' : `${formatNumber(commercialBilling.verified_utility_invoice_total, 2)} ${commercialBilling.currency ?? ''}`}</b></span>
+                  <span>核证投资回收期 <b>{commercialEconomics.verified_portfolio_simple_payback_years == null ? '不可用' : `${formatNumber(commercialEconomics.verified_portfolio_simple_payback_years, 2)} 年`}</b></span>
+                </div>
+                <div className="action-stat-grid management-system-summary">
+                  <span>能源与碳管理体系 <b>{String(energyCarbonManagement?.status ?? 'blocked').toUpperCase()}</b></span>
+                  <span>管理证据门禁 <b>{managementPassedGates} / {managementGates.length || 15}</b></span>
+                  <span>计划—实施—检查—改进 <b>{managementPdca.cycle_complete ? '闭环' : '未闭环'}</b></span>
+                  <span>独立保证 <b>{energyCarbonManagement?.assurance?.independent_assurance_evidence_accepted ? '证据已接受' : '未接受'}</b></span>
                 </div>
                 <input
                   className="top-panel-slider"
@@ -1918,6 +2244,150 @@ export function App() {
                       </span>
                     ))}
                   </div>
+                  <div className="carbon-inventory-board">
+                    <header>
+                      <span>港口完整源类清单 <small>缺失值保持不可用，不按零排放处理</small></span>
+                      <b>{carbonInventory?.schema_version ?? 'port-emissions-inventory.v1'} · {String(carbonInventory?.evidence_sha256 ?? '').slice(0, 10) || '--'}</b>
+                    </header>
+                    {carbonInventorySources.map((source) => (
+                      <article className={source.co2e_kg == null ? 'unavailable' : 'calculated'} key={source.source_id}>
+                        <span>
+                          <b>{source.label_zh}</b>
+                          <small>{source.label_en}</small>
+                        </span>
+                        <em>{source.ghg_scope.split('_').join(' ')}</em>
+                        <strong>{source.co2e_kg == null ? '不可用' : `${formatNumber(source.co2e_kg / 1000, 2)} tCO₂e`}</strong>
+                        <i>{source.evidence_class.split('_').join(' ')}</i>
+                      </article>
+                    ))}
+                    <footer>
+                      <span>组织边界：{String(carbonInventory?.reporting_boundary?.organizational_boundary ?? '未建立')}</span>
+                      <span>监管报送：{carbonInventory?.production_boundary?.regulatory_submission_allowed ? '允许' : '禁止'}</span>
+                    </footer>
+                  </div>
+                  <div className="measurement-verification-board">
+                    <header>
+                      <span>节能减排计量与核证 <small>现场基线、报告期、调整、不确定性与独立复核</small></span>
+                      <b>{measurementVerification?.schema_version ?? 'energy-carbon-measurement-verification.v1'} · {String(measurementVerification?.evidence_sha256 ?? '').slice(0, 10) || '--'}</b>
+                    </header>
+                    <div className="measurement-verification-results">
+                      <span>现场核证节能量<b>{measurementVerificationResults.verified_energy_savings_kwh == null ? '--' : `${formatNumber(measurementVerificationResults.verified_energy_savings_kwh, 2)} kWh`}</b><small>未通过全部门禁时不提供数值</small></span>
+                      <span>现场核证减排量<b>{measurementVerificationResults.verified_carbon_reduction_kg == null ? '--' : `${formatNumber(measurementVerificationResults.verified_carbon_reduction_kg, 2)} kgCO₂e`}</b><small>独立复核证据必须已接受</small></span>
+                      <span>离线情景节能差值<b>{formatNumber((measurementVerificationResults.scenario_energy_difference_kwh ?? 0) / 1000, 2)} MWh</b><small>仅为同轨迹策略对照</small></span>
+                      <span>离线情景减排差值<b>{formatNumber((measurementVerificationResults.scenario_carbon_difference_kg ?? 0) / 1000, 2)} tCO₂e</b><small>不可表述为现场节能绩效</small></span>
+                    </div>
+                    <div className="measurement-verification-gates">
+                      {measurementVerificationGates.map((gate) => (
+                        <span className={gate.passed ? 'passed' : 'blocked'} key={gate.gate_id}>
+                          <i />
+                          <b>{gate.label_zh}</b>
+                          <small>{gate.passed ? '证据通过' : String(gate.evidence ?? '证据缺失')}</small>
+                        </span>
+                      ))}
+                    </div>
+                    <footer>
+                      <span>软件本身不是独立核证方；财务结算和监管报送保持禁止。</span>
+                      <b>FIELD SAVINGS VERIFIED = {measurementVerification?.production_boundary?.field_savings_verified ? 'TRUE' : 'FALSE'}</b>
+                    </footer>
+                  </div>
+                  <div className="carbon-asset-board">
+                    <header>
+                      <span>碳资产与配额履约 <small>登记簿账户、配额批次、交易结算、双人审批与注销证明</small></span>
+                      <b>{carbonAssets?.schema_version ?? 'carbon-asset-compliance.v1'} · {String(carbonAssets?.evidence_sha256 ?? '').slice(0, 10) || '--'}</b>
+                    </header>
+                    <div className="carbon-asset-results">
+                      <span>经核证履约排放量<b>{carbonAssetPositions.verified_emissions_tco2e == null ? '--' : `${formatNumber(carbonAssetPositions.verified_emissions_tco2e, 3)} tCO₂e`}</b><small>必须来自独立核证排放清单</small></span>
+                      <span>经核证履约义务<b>{carbonAssetPositions.verified_obligation_tco2e == null ? '--' : `${formatNumber(carbonAssetPositions.verified_obligation_tco2e, 3)} tCO₂e`}</b><small>按已批准计划规则计算</small></span>
+                      <span>登记簿确认注销量<b>{carbonAssetPositions.verified_retired_tco2e == null ? '--' : `${formatNumber(carbonAssetPositions.verified_retired_tco2e, 3)} tCO₂e`}</b><small>缺少签名证明时保持不可用</small></span>
+                      <span>核证资金净流出<b>{carbonAssetSettlement.verified_net_cash_outflow_cny == null ? '--' : `${formatNumber(carbonAssetSettlement.verified_net_cash_outflow_cny, 2)} ${carbonAssetSettlement.currency ?? ''}`}</b><small>软件不发起真实资金划转</small></span>
+                      <span>离线情景排放量<b>{formatNumber(carbonAssetPositions.scenario_emission_ton, 2)} tCO₂e</b><small>仅为公开数据策略情景</small></span>
+                      <span>离线配额参考值<b>{formatNumber(carbonAssetPositions.scenario_quota_reference_ton, 2)} tCO₂e</b><small>等于控制基线，不是监管分配</small></span>
+                    </div>
+                    <div className="carbon-asset-gates">
+                      {carbonAssetGates.map((gate) => (
+                        <span className={gate.passed ? 'passed' : 'blocked'} key={gate.gate_id}>
+                          <i />
+                          <b>{gate.label_zh}</b>
+                          <small>{gate.passed ? '证据通过' : String(gate.evidence ?? '证据缺失')}</small>
+                        </span>
+                      ))}
+                    </div>
+                    <footer>
+                      <span>情景碳价和基线等额“配额”不构成真实碳资产；本软件不是登记簿、交易所或资金结算机构。</span>
+                      <b>TRADE EXECUTION = {carbonAssets?.production_boundary?.trade_execution_allowed ? 'TRUE' : 'FALSE'} · REGULATORY SUBMISSION = {carbonAssets?.production_boundary?.regulatory_submission_allowed ? 'TRUE' : 'FALSE'}</b>
+                    </footer>
+                  </div>
+                  <div className="commercial-settlement-board">
+                    <header>
+                      <span>商业结算与边际减排成本 <small>真实电价、需量费、市场结算、购电协议、绿证、租户分摊和投资经济性</small></span>
+                      <b>{commercialSettlement?.schema_version ?? 'commercial-settlement-assessment.v1'} · {String(commercialSettlement?.evidence_sha256 ?? '').slice(0, 10) || '--'}</b>
+                    </header>
+                    <div className="commercial-settlement-results">
+                      <span>公用事业账单<b>{commercialBilling.verified_utility_invoice_total == null ? '--' : `${formatNumber(commercialBilling.verified_utility_invoice_total, 2)} ${commercialBilling.currency ?? ''}`}</b><small>逐时段电量、最大需量和税费重构</small></span>
+                      <span>需求响应到账<b>{commercialMarkets.verified_demand_response_revenue == null ? '--' : `${formatNumber(commercialMarkets.verified_demand_response_revenue, 2)} ${commercialBilling.currency ?? ''}`}</b><small>工程估算不进入此字段</small></span>
+                      <span>辅助服务到账<b>{commercialMarkets.verified_ancillary_service_revenue == null ? '--' : `${formatNumber(commercialMarkets.verified_ancillary_service_revenue, 2)} ${commercialBilling.currency ?? ''}`}</b><small>必须有运营方结算单与回执</small></span>
+                      <span>购电协议成本<b>{commercialMarkets.verified_ppa_cost == null ? '--' : `${formatNumber(commercialMarkets.verified_ppa_cost, 2)} ${commercialBilling.currency ?? ''}`}</b><small>合同、交付、账单和付款一致</small></span>
+                      <span>已注销绿证<b>{commercialCertificates.verified_retired_certificate_mwh == null ? '--' : `${formatNumber(commercialCertificates.verified_retired_certificate_mwh, 3)} MWh`}</b><small>唯一序列、受益人和期间均需匹配</small></span>
+                      <span>租户分摊总额<b>{commercialTenantAllocation.verified_allocated_total == null ? '--' : `${formatNumber(commercialTenantAllocation.verified_allocated_total, 2)} ${commercialBilling.currency ?? ''}`}</b><small>总表、同时需量和分项金额三重对账</small></span>
+                      <span>组合简单回收期<b>{commercialEconomics.verified_portfolio_simple_payback_years == null ? '--' : `${formatNumber(commercialEconomics.verified_portfolio_simple_payback_years, 2)} 年`}</b><small>仅引用独立复核量测核证结果</small></span>
+                      <span>边际减排成本措施<b>{commercialEconomics.verified_macc?.length ?? 0}</b><small>按单位减排成本排序并累计减排量</small></span>
+                    </div>
+                    <div className="commercial-settlement-domains">
+                      {(commercialSettlementSources.required_domains ?? Object.keys(commercialDomainLabels)).map((domain: string) => (
+                        <span className={commercialSignedDomains.has(domain) ? 'passed' : commercialReceivedDomains.has(domain) ? 'received' : 'blocked'} key={domain}>
+                          <i />
+                          <b>{commercialDomainLabels[domain] ?? domain}</b>
+                          <small>{commercialSignedDomains.has(domain) ? '签名有效' : commercialReceivedDomains.has(domain) ? '已接收待验签' : '未接入'}</small>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="commercial-settlement-gates">
+                      {commercialSettlementGates.map((gate) => (
+                        <span className={gate.passed ? 'passed' : 'blocked'} key={gate.gate_id}>
+                          <i />
+                          <b>{gate.label_zh}</b>
+                          <small>{gate.passed ? '证据与计算通过' : typeof gate.evidence === 'string' ? gate.evidence : '证据不足或对账失败'}</small>
+                        </span>
+                      ))}
+                    </div>
+                    <footer>
+                      <span>证据包通过仍不授权划款、市场投标、绿证交易、租户开票或会计记账；所有生产动作须由外部责任系统和人工批准。</span>
+                      <b>PAYMENT = FALSE · MARKET BID = FALSE · ACCOUNTING POST = FALSE</b>
+                    </footer>
+                  </div>
+                  <div className="management-system-board">
+                    <header>
+                      <span>可审计能源与碳管理体系 <small>ISO 50001:2018 / Amd 1:2024 与 ISO 14064-1:2018 版本化证据闭环</small></span>
+                      <b>{energyCarbonManagement?.schema_version ?? 'energy-carbon-management-system.v1'} · {String(energyCarbonManagement?.evidence_sha256 ?? '').slice(0, 10) || '--'}</b>
+                    </header>
+                    <div className="management-stage-strip">
+                      <span><small>PLAN</small><b>{managementPdca.plan_passed ?? 0} / {managementPdca.plan_total ?? 6}</b></span>
+                      <span><small>DO</small><b>{managementPdca.do_passed ?? 0} / {managementPdca.do_total ?? 4}</b></span>
+                      <span><small>CHECK</small><b>{managementPdca.check_passed ?? 0} / {managementPdca.check_total ?? 2}</b></span>
+                      <span><small>ACT</small><b>{managementPdca.act_passed ?? 0} / {managementPdca.act_total ?? 2}</b></span>
+                      <span><small>ASSURANCE</small><b>{energyCarbonManagement?.assurance?.independent_assurance_evidence_accepted ? '1 / 1' : '0 / 1'}</b></span>
+                    </div>
+                    <div className="management-performance-grid">
+                      <span>主要能源使用覆盖<b>{formatNumber(managementPerformance.significant_energy_use_coverage_pct, 1)}%</b><small>由能源评审和现场分表共同证明</small></span>
+                      <span>现场监测完整率<b>{formatNumber(managementPerformance.monitoring_coverage_pct, 1)}%</b><small>缺失记录不能按完整数据处理</small></span>
+                      <span>能源绩效参数目标<b>{managementPerformance.objectives_on_target ?? 0} / {managementPerformance.objectives_total ?? 0}</b><small>目标、责任人、期限和行动计划一一对应</small></span>
+                      <span>审核发现未关闭<b>{energyCarbonManagement?.audit?.open_finding_count ?? '--'}</b><small>任一未关闭或未经有效性验证即阻断</small></span>
+                    </div>
+                    <div className="management-system-gates">
+                      {managementGates.map((gate) => (
+                        <span className={gate.passed ? 'passed' : 'blocked'} key={gate.gate_id}>
+                          <i />
+                          <em>{gate.stage}</em>
+                          <b>{gate.label_zh}</b>
+                          <small>{gate.passed ? '证据通过' : String(gate.evidence ?? '证据缺失')}</small>
+                        </span>
+                      ))}
+                    </div>
+                    <footer>
+                      <span>门禁全通过只表示证据包完整且签名有效；认证、温室气体核证意见和监管报送仍由外部获授权机构决定。</span>
+                      <b>ISO 50001 CERTIFIED = FALSE · ISO 14064-1 VERIFIED = FALSE · REGULATORY SUBMISSION = FALSE</b>
+                    </footer>
+                  </div>
                 </div>
                 <div className="action-command-row">
                   <button type="button" onClick={() => setGreenPreference(0.25)}>效率优先</button>
@@ -1934,6 +2404,44 @@ export function App() {
                   <span>提升 <b>{formatNumber(shorePowerGain, 1)} 个百分点</b></span>
                   <span>替代减排 <b>{formatNumber((snapshot?.carbon_model.shore_power_reduction_kg ?? 0) / 1000, 2)} t</b></span>
                   <span>联动窗口 <b>{shoreConnectedCount} / {shoreWindowCards.length || 0} 个</b></span>
+                </div>
+                <div className="port-collaboration-board">
+                  <header>
+                    <span>港航生态协同与绿色航运走廊 <small>准时到港、绿色泊位、岸电、替代燃料、港口费激励和船港收益分配</small></span>
+                    <b>{portCollaboration?.schema_version ?? 'port-call-collaboration.v1'} · {String(portCollaboration?.evidence_sha256 ?? '').slice(0, 10) || '--'}</b>
+                  </header>
+                  <div className="port-collaboration-results">
+                    <span>协同核验状态<b>{String(portCollaboration?.status ?? 'blocked').toUpperCase()}</b><small>{collaborationSources.domain_count ?? 0}/{collaborationSources.required_domain_count ?? 7} 来源 · {collaborationPassedGates}/{collaborationGates.length || 15} 闸门</small></span>
+                    <span>准时到港核证航次<b>{collaborationJit.verified_call_count == null ? '不可用' : collaborationJit.verified_call_count}</b><small>须有船公司接受、到港与燃油证据</small></span>
+                    <span>核证航行节油<b>{collaborationJit.verified_fuel_savings_tonnes == null ? '不可用' : `${formatNumber(collaborationJit.verified_fuel_savings_tonnes, 3)} t`}</b><small>剩余航程、建议航速和实际燃油重算</small></span>
+                    <span>绿色泊位分配<b>{collaborationBerth.verified_assignment_count == null ? '不可用' : collaborationBerth.verified_assignment_count}</b><small>透明计分、同组公平排序和批准</small></span>
+                    <span>岸电核证预约<b>{collaborationShore.verified_reservation_count == null ? '不可用' : collaborationShore.verified_reservation_count}</b><small>{collaborationShore.verified_energy_kwh == null ? '计量与账单尚未核验' : `${formatNumber(collaborationShore.verified_energy_kwh, 2)} kWh`}</small></span>
+                    <span>替代燃料已备服务<b>{collaborationFuel.verified_ready_service_count == null ? '不可用' : collaborationFuel.verified_ready_service_count}</b><small>{collaborationFuel.verified_served_quantity_tonnes == null ? '许可、安全与服务回执尚未核验' : `${formatNumber(collaborationFuel.verified_served_quantity_tonnes, 3)} t`}</small></span>
+                    <span>绿色港口费减免<b>{collaborationIncentives.verified_discount_amount == null ? '不可用' : `${formatNumber(collaborationIncentives.verified_discount_amount, 2)} ${collaborationIncentives.currency ?? ''}`}</b><small>资格、封顶规则、账单和付款回执</small></span>
+                    <span>船港共享减排价值<b>{collaborationBenefits.verified_total_benefit_value == null ? '不可用' : `${formatNumber(collaborationBenefits.verified_total_benefit_value, 2)} ${collaborationBenefits.currency ?? ''}`}</b><small>独立核证减排与双方分成完整对账</small></span>
+                  </div>
+                  <div className="port-collaboration-domains">
+                    {(collaborationSources.required_domains ?? Object.keys(collaborationDomainLabels)).map((domain: string) => (
+                      <span className={collaborationSignedDomains.has(domain) ? 'passed' : collaborationReceivedDomains.has(domain) ? 'received' : 'blocked'} key={domain}>
+                        <i />
+                        <b>{collaborationDomainLabels[domain] ?? domain}</b>
+                        <small>{collaborationSignedDomains.has(domain) ? '签名有效' : collaborationReceivedDomains.has(domain) ? '已接收待验签' : '未接入'}</small>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="port-collaboration-gates">
+                    {collaborationGates.map((gate) => (
+                      <span className={gate.passed ? 'passed' : 'blocked'} key={gate.gate_id}>
+                        <i />
+                        <b>{gate.label_zh}</b>
+                        <small>{gate.passed ? '证据与计算通过' : typeof gate.evidence === 'string' ? gate.evidence : '证据不足或对账失败'}</small>
+                      </span>
+                    ))}
+                  </div>
+                  <footer>
+                    <span>证据包通过仍不授权船舶航速、泊位回写、岸电合闸、燃料加注、港口开票或收益划转；生产动作由外部责任系统和有权人员执行。</span>
+                    <b>SPEED = FALSE · BERTH WRITEBACK = FALSE · SHORE SWITCH = FALSE · FUEL AUTH = FALSE · INVOICE = FALSE · TRANSFER = FALSE</b>
+                  </footer>
                 </div>
                 <div className="shore-dispatch-board">
                   {shoreWindowCards.map((point, index) => (
@@ -2041,6 +2549,96 @@ export function App() {
                   <span>RL <b>{apiHealth?.linkage?.summary?.rl ?? '待检查'}</b></span>
                   <span>模拟器 <b>{apiHealth?.linkage?.summary?.sailing ?? '待检查'}</b></span>
                 </div>
+                <div className="site-cutover-board">
+                  <header>
+                    <span>实港投产总门禁 <small>十三域同站点、同租户、同窗口、同截止时点 · 180 天影子 · 回滚演练 · 六方签字</small></span>
+                    <b>{siteCutover?.schema_version ?? 'site-cutover-readiness.v1'} · {String(siteCutover?.evidence_sha256 ?? '').slice(0, 10) || '--'}</b>
+                  </header>
+                  <div className="site-cutover-results">
+                    <span>总体结论<b>{String(siteCutover?.status ?? 'blocked').toUpperCase()}</b><small>{siteCutoverSources.accepted_domain_count ?? 0}/{siteCutoverSources.required_domain_count ?? 13} 验收域 · {siteCutoverPassedGates}/{siteCutoverGates.length || 16} 总门禁</small></span>
+                    <span>仓库报告<b>{siteCutoverSources.repository_report_count ?? 0}/13</b><small>仅证明代码与报告合同存在</small></span>
+                    <span>现场签名域<b>{siteCutoverSources.signed_domain_count ?? 0}/13</b><small>签名还必须绑定唯一责任域</small></span>
+                    <span>核证影子期<b>{siteCutoverOperational.verified_shadow_days == null ? '不可用' : `${siteCutoverOperational.verified_shadow_days} 天`}</b><small>至少 180 天并覆盖规定场景</small></span>
+                    <span>实时适配器<b>{siteCutoverOperational.verified_live_adapter_count == null ? '不可用' : `${siteCutoverOperational.verified_live_adapter_count}/6`}</b><small>必须持续签名、时效和原子对齐</small></span>
+                    <span>核证计量覆盖<b>{siteCutoverOperational.verified_meter_coverage_pct == null ? '不可用' : `${formatNumber(siteCutoverOperational.verified_meter_coverage_pct, 1)}%`}</b><small>分路计量与标定均须 100%</small></span>
+                    <span>核证回滚<b>{siteCutoverOperational.verified_rollback_minutes == null ? '不可用' : `${formatNumber(siteCutoverOperational.verified_rollback_minutes, 1)} min`}</b><small>人工接管和外部指令网关演练</small></span>
+                    <span>六方绑定批准<b>{siteCutoverApprovals.all_bound_to_package ? '6/6' : `${siteCutoverApprovals.signed_roles?.length ?? 0}/6`}</b><small>签字绑定同一完整包摘要</small></span>
+                  </div>
+                  <div className="site-cutover-domains">
+                    {siteCutoverDomains.map((item) => {
+                      const accepted = item.signature_valid === true && item.independently_accepted === true;
+                      const repositoryOnly = item.repository_report_available === true;
+                      return (
+                        <span className={accepted ? 'passed' : repositoryOnly ? 'repository' : 'blocked'} key={item.domain}>
+                          <i />
+                          <b>{siteCutoverDomainLabels[item.domain] ?? item.domain}</b>
+                          <small>{accepted ? '现场独立验收与签名有效' : repositoryOnly ? `${item.report_status ?? 'blocked'} · 仅仓库报告` : '未收到现场验收证据'}</small>
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <div className="site-cutover-gates">
+                    {siteCutoverGates.map((gate) => (
+                      <span className={gate.passed ? 'passed' : 'blocked'} key={gate.gate_id}>
+                        <i />
+                        <b>{gate.label_zh}</b>
+                        <small>{gate.passed ? '同一投产包证据通过' : typeof gate.evidence === 'string' ? gate.evidence : '现场证据或演练不足'}</small>
+                      </span>
+                    ))}
+                  </div>
+                  <footer>
+                    <span>16/16 只表示可提交外部变更委员会审查；现场切换仍由外部指令网关、独立联锁、在岗人员和已批准变更单控制。</span>
+                    <b>AUTO CUTOVER = FALSE · DISPATCH = FALSE · AUTHORITY = FALSE · INTERLOCK BYPASS = FALSE</b>
+                  </footer>
+                </div>
+                <div className="enterprise-security-board">
+                  <header>
+                    <span>企业级平台与运行技术安全 <small>联合身份、租户隔离、消息与时序、高可用、灾备、WORM/SIEM、PKI 和运行技术分区</small></span>
+                    <b>{enterpriseSecurity?.schema_version ?? 'enterprise-platform-ot-security.v1'} · {String(enterpriseSecurity?.evidence_sha256 ?? '').slice(0, 10) || '--'}</b>
+                  </header>
+                  <div className="enterprise-security-results">
+                    <span>现场安全核验<b>{String(enterpriseSecurity?.status ?? 'blocked').toUpperCase()}</b><small>{enterpriseSecuritySources.domain_count ?? 0}/{enterpriseSecuritySources.required_domain_count ?? 9} 来源 · {enterpriseSecurityPassedGates}/{enterpriseSecurityGates.length || 20} 闸门</small></span>
+                    <span>联合身份提供方<b>{enterpriseSecurityIdentity.verified_identity_provider ?? '不可用'}</b><small>代码支持 OIDC EdDSA；现场签发方尚未核验</small></span>
+                    <span>核证组织租户<b>{enterpriseSecurityTenant.verified_organization_count == null ? '不可用' : enterpriseSecurityTenant.verified_organization_count}</b><small>行级安全、分区键、独立密钥与跨租户拒绝</small></span>
+                    <span>消息与时序集群<b>{enterpriseSecurityPlatform.verified_broker_nodes == null ? '不可用' : `${enterpriseSecurityPlatform.verified_broker_nodes} / ${enterpriseSecurityPlatform.verified_timeseries_nodes}`}</b><small>消息节点 / 时序节点</small></span>
+                    <span>核证可用性<b>{enterpriseSecurityRecovery.verified_availability_pct == null ? '不可用' : `${formatNumber(enterpriseSecurityRecovery.verified_availability_pct, 3)}%`}</b><small>必须经过真实单故障切换演练</small></span>
+                    <span>核证 RPO / RTO<b>{enterpriseSecurityRecovery.verified_rpo_minutes == null ? '不可用' : `${formatNumber(enterpriseSecurityRecovery.verified_rpo_minutes, 1)} / ${formatNumber(enterpriseSecurityRecovery.verified_rto_minutes, 1)} min`}</b><small>恢复数据哈希必须一致</small></span>
+                    <span>外部 WORM / SIEM<b>{enterpriseSecurityAudit.verified_worm_retention_days == null ? '不可用' : `${enterpriseSecurityAudit.verified_worm_retention_days} 天`}</b><small>本地哈希链不等于外部不可改写留存</small></span>
+                    <span>双向 TLS / 运行技术分区<b>{enterpriseSecurityPki.verified_mtls_boundaries == null ? '不可用' : `${enterpriseSecurityPki.verified_mtls_boundaries} / ${enterpriseSecurityOt.verified_zone_count}`}</b><small>双向 TLS 边界 / 安全分区</small></span>
+                  </div>
+                  <div className="enterprise-security-controls">
+                    <span className={enterpriseSecurityControls.oidc_eddsa_validation_available ? 'available' : 'missing'}><b>OIDC 验签</b><small>{enterpriseSecurityControls.oidc_eddsa_validation_available ? '代码就绪' : '缺失'}</small></span>
+                    <span className={enterpriseSecurityControls.signed_tenant_context_enforcement_available ? 'available' : 'missing'}><b>签名租户上下文</b><small>{enterpriseSecurityControls.signed_tenant_context_enforcement_available ? '代码就绪' : '缺失'}</small></span>
+                    <span className={enterpriseSecurityControls.local_hash_chain_audit_available ? 'partial' : 'missing'}><b>审计留存</b><small>{enterpriseSecurityControls.local_hash_chain_audit_available ? '本地哈希链' : '缺失'}</small></span>
+                    <span className={enterpriseSecurityControls.single_instance_runtime ? 'partial' : 'available'}><b>运行拓扑</b><small>{enterpriseSecurityControls.single_instance_runtime ? '单实例' : '多实例已核验'}</small></span>
+                    <span className={enterpriseSecurityControls.external_ha_dr_verified ? 'available' : 'missing'}><b>外部高可用灾备</b><small>{enterpriseSecurityControls.external_ha_dr_verified ? '已核验' : '未核验'}</small></span>
+                    <span className={enterpriseSecurityControls.external_worm_siem_verified ? 'available' : 'missing'}><b>WORM / SIEM</b><small>{enterpriseSecurityControls.external_worm_siem_verified ? '已核验' : '未核验'}</small></span>
+                    <span className={enterpriseSecurityControls.ot_network_and_interlock_verified ? 'available' : 'missing'}><b>运行技术网络与联锁</b><small>{enterpriseSecurityControls.ot_network_and_interlock_verified ? '已核验' : '未核验'}</small></span>
+                    <span className={enterpriseSecurityControls.container_hardening_configured ? 'partial' : 'missing'}><b>容器加固</b><small>{enterpriseSecurityControls.container_hardening_configured ? '已配置待集群验收' : '缺失'}</small></span>
+                  </div>
+                  <div className="enterprise-security-domains">
+                    {(enterpriseSecuritySources.required_domains ?? Object.keys(enterpriseSecurityDomainLabels)).map((domain: string) => (
+                      <span className={enterpriseSecuritySignedDomains.has(domain) ? 'passed' : enterpriseSecurityReceivedDomains.has(domain) ? 'received' : 'blocked'} key={domain}>
+                        <i />
+                        <b>{enterpriseSecurityDomainLabels[domain] ?? domain}</b>
+                        <small>{enterpriseSecuritySignedDomains.has(domain) ? '签名有效' : enterpriseSecurityReceivedDomains.has(domain) ? '已接收待验签' : '未接入'}</small>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="enterprise-security-gates">
+                    {enterpriseSecurityGates.map((gate) => (
+                      <span className={gate.passed ? 'passed' : 'blocked'} key={gate.gate_id}>
+                        <i />
+                        <b>{gate.label_zh}</b>
+                        <small>{gate.passed ? '现场证据与演练通过' : typeof gate.evidence === 'string' ? gate.evidence : '证据不足或演练失败'}</small>
+                      </span>
+                    ))}
+                  </div>
+                  <footer>
+                    <span>证据包通过也不自动配置身份平台、防火墙、集群、证书或控制设备；企业切换和运行技术命令必须由外部责任系统、三方批准和独立安全联锁控制。</span>
+                    <b>AUTO CONFIG = FALSE · CUTOVER = FALSE · OT COMMAND = FALSE · INTERLOCK BYPASS = FALSE · CERTIFICATION = FALSE</b>
+                  </footer>
+                </div>
                 <div className="api-topology-console">
                   <div className="api-topology-head">
                     <span><Network size={14} />联动拓扑</span>
@@ -2091,7 +2689,9 @@ export function App() {
                       <span>模型注册表 <b>{modelRegistry?.count ?? 0} 个制品</b></span>
                       <span>最新阶段 <b>{latestRegisteredPolicy?.stage ?? '未注册'}</b></span>
                       <span>只读实港快照 <b>{integrationStatus?.read_only_shadow_ready ? '全部就绪' : `${integrationStatus?.ready_adapter_count ?? 0}/${integrationStatus?.required_adapter_count ?? 6}`}</b></span>
-                      <span>快照完整性 <b>{integrationStatus?.missing_adapters?.length ? '失败关闭' : '签名有效'}</b></span>
+                      <span>影子载荷驻留 <b>{integrationStatus?.resident_payload_count ?? 0}/{integrationStatus?.required_adapter_count ?? 6}</b></span>
+                      <span>动态源时间对齐 <b>{integrationStatus?.dynamic_time_alignment?.ready ? `${formatNumber(integrationStatus.dynamic_time_alignment.observed_skew_seconds, 0)} 秒` : '失败关闭'}</b></span>
+                      <span>统一快照完整性 <b>{integrationStatus?.read_only_shadow_ready ? '原子就绪' : '失败关闭'}</b></span>
                       <span>审计链 <b>{auditStatus?.ok ? '完整' : '失败关闭'}</b></span>
                       <span>生产调度 <b>{modelRegistry?.production_dispatch_enabled ? '已启用' : '已禁用'}</b></span>
                     </div>

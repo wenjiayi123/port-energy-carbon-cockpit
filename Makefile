@@ -1,4 +1,4 @@
-.PHONY: bootstrap validate backend frontend demo test build runtime-evidence verify-runtime-evidence security-audit release-check data-deps data-enhanced data-regulatory benchmark benchmark-enhanced landing-benchmark regulatory-benchmark tune-enhanced-short verify-benchmark verify-benchmark-enhanced verify-landing-benchmark verify-regulatory-benchmark docker-up docker-down
+.PHONY: bootstrap validate backend frontend demo test build runtime-evidence verify-runtime-evidence security-audit site-delivery-check release-check data-deps data-enhanced data-regulatory benchmark benchmark-enhanced landing-benchmark regulatory-benchmark tune-enhanced-short verify-benchmark verify-benchmark-enhanced verify-landing-benchmark verify-regulatory-benchmark docker-up docker-down
 
 bootstrap:
 	bash scripts/bootstrap.sh
@@ -30,6 +30,9 @@ verify-runtime-evidence:
 security-audit:
 	backend/.venv/bin/python scripts/audit_python_dependencies.py
 	cd frontend && bash ../scripts/run_frontend_command.sh audit --audit-level high
+
+site-delivery-check:
+	backend/.venv/bin/python scripts/validate_site_delivery_kit.py deployment/site_delivery
 
 release-check:
 	bash scripts/release_check.sh

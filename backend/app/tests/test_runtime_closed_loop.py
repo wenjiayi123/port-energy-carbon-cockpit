@@ -42,10 +42,7 @@ def test_runtime_field_contract_is_complete_and_classified() -> None:
     }
     for field in snapshot["signals"].values():
         assert required <= set(field)
-        assert sum(
-            bool(field[name])
-            for name in ("is_measured", "is_simulated", "is_derived")
-        ) == 1
+        assert sum(bool(field[name]) for name in ("is_measured", "is_simulated", "is_derived")) == 1
     counts = snapshot["quality"]["classification_counts"]
     assert counts["measured"] > 0
     assert counts["simulated"] > 0
@@ -65,9 +62,9 @@ def test_runtime_is_seed_reproducible_conservative_and_physically_bounded() -> N
         "operations.queue_teu",
         "hvac.load_kw",
     )
-    assert {
-        key: first_values["signals"][key]["value"] for key in keys
-    } == {key: second_values["signals"][key]["value"] for key in keys}
+    assert {key: first_values["signals"][key]["value"] for key in keys} == {
+        key: second_values["signals"][key]["value"] for key in keys
+    }
     assert first_values["quality"]["energy_balance_error_kw"] < 1e-5
     assert 10.0 <= first_values["signals"]["battery.soc_pct"]["value"] <= 90.0
     assert (
@@ -126,6 +123,10 @@ def test_decision_requires_distinct_approvers_then_executes_and_rolls_back(tmp_p
         "agv_charging_limit_kw",
     }
     assert record["required_approvals"] == 2
+    assert record["decision_explanation"]["reason_codes"]
+    assert record["decision_explanation"]["local_feature_attribution_verified"] is False
+    assert record["decision_latency"]["clock"] == "monotonic"
+    assert record["decision_latency"]["end_to_end_ms"] >= 0
     with pytest.raises(ValueError, match="requester_cannot_self_approve"):
         service.approve(
             record["decision_id"],
@@ -175,6 +176,13 @@ def test_decision_requires_distinct_approvers_then_executes_and_rolls_back(tmp_p
     )
     assert rolled_back["status"] == "rolled_back_simulation"
     assert rolled_back["rollback"]["status"] == "acknowledged"
+    statistics = service.statistics()
+    assert statistics["review_count"] == 2
+    assert statistics["veto_count"] == 0
+    assert statistics["review_reason_complete_rate"] == 1.0
+    assert statistics["simulation_receipt_count"] == 1
+    assert statistics["latency_sample_count"] == 1
+    assert statistics["production_qualification_evidence"] is False
 
 
 def test_runtime_loss_fails_closed_for_prediction_and_decision(tmp_path) -> None:
@@ -190,9 +198,7 @@ def test_runtime_loss_fails_closed_for_prediction_and_decision(tmp_path) -> None
 
     assert snapshot["decision_allowed"] is False
     assert snapshot["quality"]["status"] == "fail_closed"
-    assert all(
-        signal["quality_status"] == "失联" for signal in snapshot["signals"].values()
-    )
+    assert all(signal["quality_status"] == "失联" for signal in snapshot["signals"].values())
     with pytest.raises(RuntimeError, match="runtime_quality_gate_failed"):
         runtime_forecast_model.predict(snapshot)
     with pytest.raises(RuntimeError, match="runtime_quality_gate_failed"):

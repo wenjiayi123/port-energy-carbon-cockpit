@@ -16,6 +16,11 @@ def integration_status() -> dict:
     return integration_gateway.status()
 
 
+@router.get("/integration/shadow-snapshot")
+def integration_shadow_snapshot() -> dict:
+    return integration_gateway.shadow_snapshot()
+
+
 @router.post("/integration/snapshots")
 def ingest_snapshot(snapshot: SnapshotEnvelope) -> dict:
     result = integration_gateway.ingest(snapshot)

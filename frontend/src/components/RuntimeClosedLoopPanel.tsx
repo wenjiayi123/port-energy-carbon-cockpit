@@ -61,6 +61,7 @@ interface RuntimeClosedLoopPanelProps {
   forecast: Record<string, any> | null;
   decision: Record<string, any> | null;
   history: Record<string, any> | null;
+  integrationStatus: Record<string, any> | null;
   busy: boolean;
   onRefresh: () => Promise<void> | void;
   onCreateDecision: () => Promise<void> | void;
@@ -123,6 +124,7 @@ export function RuntimeClosedLoopPanel({
   forecast,
   decision,
   history,
+  integrationStatus,
   busy,
   onRefresh,
   onCreateDecision,
@@ -143,6 +145,17 @@ export function RuntimeClosedLoopPanel({
   const lineage = Object.values(snapshot?.signals ?? {});
   const recommendedAction = (decision?.recommended_action ?? {}) as Record<string, number>;
   const projectedAction = (decision?.projected_action ?? {}) as Record<string, number>;
+  const integrationAdapters = Array.isArray(integrationStatus?.adapters) ? integrationStatus.adapters : [];
+  const shadowReady = Boolean(integrationStatus?.read_only_shadow_ready);
+  const alignment = integrationStatus?.dynamic_time_alignment ?? {};
+  const firstIntegrationBlocker = String(integrationStatus?.blocker_codes?.[0] ?? '');
+  const integrationBlockerZh: Record<string, string> = {
+    shadow_mode_not_configured: '尚未启用具名港口影子模式。',
+    signed_feed_evidence_incomplete: '六路数据尚未全部通过签名、结构和时效校验。',
+    resident_payload_missing: '服务启动后六个数据源必须重新发送，摘要不能恢复业务值。',
+    dynamic_sources_not_time_aligned: '五个动态数据源的观测时间差超过 300 秒。',
+    identity_or_audit_not_ready: '身份鉴权或防篡改审计链尚未就绪。',
+  };
 
   return (
     <div className="runtime-closed-loop">
@@ -153,7 +166,10 @@ export function RuntimeClosedLoopPanel({
         <span className={forecast?.true_model_inference ? 'ok' : 'blocked'}>
           <i />模型真实推理输出<small>MODEL INFERENCE</small>
         </span>
-        <span className="pending"><i />待切换现场数据源<small>LIVE ADAPTER PENDING</small></span>
+        <span className={shadowReady ? 'ok' : 'blocked'}>
+          <i />六源统一影子快照
+          <small>{shadowReady ? 'ATOMIC SHADOW STATE READY' : `${integrationStatus?.resident_payload_count ?? 0}/${integrationStatus?.required_adapter_count ?? 6} RESIDENT`}</small>
+        </span>
         <span className="blocked"><i />生产控制禁用<small>PRODUCTION AUTHORITY = FALSE</small></span>
       </div>
 
@@ -172,6 +188,43 @@ export function RuntimeClosedLoopPanel({
           <button id="btnRuntimeStop" type="button" disabled={busy} onClick={() => void onControl('stop')}><Square size={12} />停止</button>
           <button id="btnRuntimeReset" type="button" disabled={busy} onClick={() => void onControl('reset')}><RotateCcw size={13} />复位</button>
         </div>
+      </section>
+
+      <section className={`runtime-shadow-section ${shadowReady ? 'ready' : 'blocked'}`}>
+        <div className="runtime-section-title">
+          <strong><Database size={15} />六源实港只读影子状态</strong>
+          <span>{shadowReady ? 'READY · 原子快照可读' : 'FAIL-CLOSED · 不释放混合输入'}</span>
+        </div>
+        <div className="runtime-shadow-summary">
+          <span>签名与时效<b>{integrationStatus?.ready_adapter_count ?? 0}/{integrationStatus?.required_adapter_count ?? 6}</b></span>
+          <span>进程内有效载荷<b>{integrationStatus?.resident_payload_count ?? 0}/{integrationStatus?.required_adapter_count ?? 6}</b></span>
+          <span>模型字段合同<b>{integrationStatus?.required_field_count ?? 21} fields</b></span>
+          <span>动态源时间差<b>{alignment?.observed_skew_seconds == null ? '--' : `${fmt(alignment.observed_skew_seconds, 0)}s / ${alignment.max_allowed_seconds}s`}</b></span>
+        </div>
+        <div className="runtime-shadow-adapters">
+          {(integrationAdapters.length ? integrationAdapters : [
+            { adapter_id: 'terminal_operating_system' },
+            { adapter_id: 'energy_management_system' },
+            { adapter_id: 'berth_and_vessel_feed' },
+            { adapter_id: 'equipment_availability_feed' },
+            { adapter_id: 'weather_and_navigation_feed' },
+            { adapter_id: 'shore_power_compatibility_registry' },
+          ]).map((item: Record<string, any>) => (
+            <span key={item.adapter_id} className={item.resident_payload_ready ? 'ok' : 'blocked'}>
+              <i />
+              <b>{item.adapter_id}</b>
+              <small>{item.resident_payload_ready ? `seq ${item.sequence} · ${shortHash(item.payload_sha256)}` : item.ready ? '摘要有效，等待源重发载荷' : '未接入或已过期'}</small>
+            </span>
+          ))}
+        </div>
+        {!shadowReady && (
+          <p className="runtime-shadow-blocker"><CircleAlert size={13} />
+            {integrationBlockerZh[firstIntegrationBlocker] ?? '必须启用影子模式、身份鉴权与审计，并接收六路新鲜签名报文。'}
+          </p>
+        )}
+        <footer>
+          原始业务值仅驻留当前进程；服务重启后六源必须重发。签名只证明来源与完整性，不代表计量校准、现场验收或生产授权。
+        </footer>
       </section>
 
       <section className="runtime-live-section">

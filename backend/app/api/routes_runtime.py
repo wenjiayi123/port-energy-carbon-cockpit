@@ -160,6 +160,11 @@ def list_runtime_decisions(
     return runtime_decision_service.list(limit)
 
 
+@router.get("/decisions/statistics")
+def runtime_decision_statistics() -> dict[str, Any]:
+    return runtime_decision_service.statistics()
+
+
 @router.get("/decisions/{decision_id}")
 def get_runtime_decision(decision_id: str) -> dict[str, Any]:
     try:

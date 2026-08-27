@@ -2,6 +2,17 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.schemas.algorithm_production import AlgorithmProductionQualificationReport
+from app.schemas.carbon_assets import CarbonAssetComplianceReport
+from app.schemas.commercial_settlement import CommercialSettlementReport
+from app.schemas.energy_carbon_management import EnergyCarbonManagementReport
+from app.schemas.electrical_network import ElectricalNetworkAssessmentReport
+from app.schemas.enterprise_security import EnterpriseSecurityReport
+from app.schemas.measurement_verification import MeasurementVerificationReport
+from app.schemas.operations_energy_planning import OperationsEnergyPlanningReport
+from app.schemas.port_collaboration import PortCollaborationReport
+from app.schemas.site_cutover import SiteCutoverReport
+
 
 class KpiCard(BaseModel):
     key: str
@@ -90,6 +101,53 @@ class CarbonModelSummary(BaseModel):
     calculation_method: str = ""
 
 
+class PortEmissionSourceCategory(BaseModel):
+    source_id: str
+    label_zh: str
+    label_en: str
+    actor: str
+    availability: str
+    activity_data_status: str
+    inventory_boundary: str
+    ghg_scope: str
+    legacy_scope: str | None = None
+    co2e_kg: float | None = None
+    pollutants_kg: dict[str, float | None]
+    factor_ids: list[str]
+    evidence_class: str
+    assurance_status: str
+    missing_evidence: list[str]
+
+
+class EmissionFactorRecord(BaseModel):
+    factor_id: str
+    substance: str
+    value: float | None = None
+    unit: str
+    value_mode: str
+    source_name: str
+    source_url: str | None = None
+    dataset_version: str
+    quality: str
+    status: str
+
+
+class PortEmissionsInventory(BaseModel):
+    schema_version: str
+    inventory_kind: str
+    reporting_boundary: dict[str, Any]
+    methodology: dict[str, Any]
+    dataset_id: str
+    dataset_sha256: str
+    source_categories: list[PortEmissionSourceCategory]
+    factor_register: list[EmissionFactorRecord]
+    totals: dict[str, Any]
+    coverage: dict[str, Any]
+    assurance: dict[str, Any]
+    production_boundary: dict[str, bool]
+    evidence_sha256: str
+
+
 class OperationalAlert(BaseModel):
     code: str
     severity: str
@@ -142,6 +200,17 @@ class DashboardSnapshot(BaseModel):
     strategies: list[StrategyComparison]
     carbon_market: CarbonMarket
     carbon_model: CarbonModelSummary
+    carbon_inventory: PortEmissionsInventory
+    measurement_verification: MeasurementVerificationReport
+    carbon_assets: CarbonAssetComplianceReport
+    commercial_settlement: CommercialSettlementReport
+    port_collaboration: PortCollaborationReport
+    enterprise_security: EnterpriseSecurityReport
+    energy_carbon_management: EnergyCarbonManagementReport
+    operations_energy_plan: OperationsEnergyPlanningReport
+    electrical_network: ElectricalNetworkAssessmentReport
+    algorithm_production: AlgorithmProductionQualificationReport
+    site_cutover_readiness: SiteCutoverReport
     timeseries: list[TimeSeriesPoint]
     rl_environment: RlEnvironmentSummary
     data_quality: dict[str, Any]

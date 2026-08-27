@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import base64
+import binascii
 from collections import defaultdict, deque
+from dataclasses import dataclass
+from datetime import datetime, timezone
 import fcntl
 import hashlib
 import hmac
@@ -13,6 +16,8 @@ import threading
 import time
 from uuid import uuid4
 
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import JSONResponse, Response
@@ -109,6 +114,24 @@ class SlidingWindowRateLimiter:
 rate_limiter = SlidingWindowRateLimiter()
 
 
+@dataclass(frozen=True)
+class IdentityContext:
+    role: str
+    principal: str
+    tenant_id: str
+    tenant_ids: tuple[str, ...]
+    auth_method: str
+
+
+ANONYMOUS_IDENTITY = IdentityContext(
+    role="anonymous",
+    principal="anonymous",
+    tenant_id="",
+    tenant_ids=(),
+    auth_method="none",
+)
+
+
 def _constant_time_match(provided: str, configured: str) -> bool:
     return bool(provided and configured) and hmac.compare_digest(
         provided.encode("utf-8"),
@@ -116,27 +139,149 @@ def _constant_time_match(provided: str, configured: str) -> bool:
     )
 
 
-def resolve_role(request: Request) -> str:
+def _base64url_decode(value: str) -> bytes:
+    padding = "=" * (-len(value) % 4)
+    return base64.urlsafe_b64decode(value + padding)
+
+
+def _oidc_identity(request: Request) -> IdentityContext:
+    authorization = request.headers.get("authorization", "")
+    scheme, separator, token = authorization.partition(" ")
+    if not separator or scheme.lower() != "bearer" or not token:
+        return ANONYMOUS_IDENTITY
+    parts = token.split(".")
+    if len(parts) != 3:
+        return ANONYMOUS_IDENTITY
+    try:
+        header = json.loads(_base64url_decode(parts[0]))
+        claims = json.loads(_base64url_decode(parts[1]))
+        signature = _base64url_decode(parts[2])
+    except (ValueError, UnicodeDecodeError, json.JSONDecodeError, binascii.Error):
+        return ANONYMOUS_IDENTITY
+    if not isinstance(header, dict) or not isinstance(claims, dict):
+        return ANONYMOUS_IDENTITY
+    if header.get("alg") != "EdDSA" or not isinstance(header.get("kid"), str):
+        return ANONYMOUS_IDENTITY
+    public_key_b64 = settings.oidc_public_keys.get(header["kid"])
+    if not public_key_b64:
+        return ANONYMOUS_IDENTITY
+    try:
+        public_key = Ed25519PublicKey.from_public_bytes(
+            base64.b64decode(public_key_b64, validate=True)
+        )
+        public_key.verify(signature, f"{parts[0]}.{parts[1]}".encode("ascii"))
+    except (ValueError, InvalidSignature, binascii.Error):
+        return ANONYMOUS_IDENTITY
+
+    now = time.time()
+    skew = settings.oidc_clock_skew_seconds
+    issuer = claims.get("iss")
+    audience = claims.get("aud")
+    audiences = {audience} if isinstance(audience, str) else set(audience or [])
+    subject = claims.get("sub")
+    issued_at = claims.get("iat")
+    expires_at = claims.get("exp")
+    not_before = claims.get("nbf", issued_at)
+    if not (
+        issuer == settings.oidc_issuer
+        and settings.oidc_audience in audiences
+        and isinstance(subject, str)
+        and subject.strip()
+        and isinstance(issued_at, (int, float))
+        and isinstance(expires_at, (int, float))
+        and isinstance(not_before, (int, float))
+        and issued_at <= now + skew
+        and not_before <= now + skew
+        and expires_at >= now - skew
+        and now - issued_at <= settings.oidc_max_token_age_seconds + skew
+    ):
+        return ANONYMOUS_IDENTITY
+    if settings.oidc_require_mfa:
+        authentication_methods = claims.get("amr", [])
+        if not isinstance(authentication_methods, list) or not {
+            "mfa",
+            "hwk",
+            "otp",
+        }.intersection(authentication_methods):
+            return ANONYMOUS_IDENTITY
+
+    external_roles = claims.get(settings.oidc_role_claim, [])
+    if isinstance(external_roles, str):
+        external_roles = [external_roles]
+    if not isinstance(external_roles, list) or not all(
+        isinstance(role, str) for role in external_roles
+    ):
+        return ANONYMOUS_IDENTITY
+    mapped_roles = {
+        settings.oidc_role_map[role]
+        for role in external_roles
+        if role in settings.oidc_role_map
+    }
+    if not mapped_roles:
+        return ANONYMOUS_IDENTITY
+    role = max(mapped_roles, key=lambda item: ROLE_RANK[item])
+
+    tenant_claim = claims.get(settings.oidc_tenant_claim, [])
+    if isinstance(tenant_claim, str):
+        tenant_claim = [tenant_claim]
+    if not isinstance(tenant_claim, list) or not tenant_claim or not all(
+        isinstance(tenant_id, str) and tenant_id.strip() for tenant_id in tenant_claim
+    ):
+        return ANONYMOUS_IDENTITY
+    tenant_ids = tuple(sorted(set(tenant_claim)))
+    requested_tenant = request.headers.get("x-tenant-id", "").strip()
+    if requested_tenant:
+        if requested_tenant not in tenant_ids:
+            return ANONYMOUS_IDENTITY
+        tenant_id = requested_tenant
+    elif len(tenant_ids) == 1:
+        tenant_id = tenant_ids[0]
+    else:
+        return ANONYMOUS_IDENTITY
+    return IdentityContext(
+        role=role,
+        principal=f"oidc:{issuer}:{subject}",
+        tenant_id=tenant_id,
+        tenant_ids=tenant_ids,
+        auth_method="oidc_eddsa",
+    )
+
+
+def resolve_identity(request: Request) -> IdentityContext:
     if settings.api_auth_mode == "disabled":
-        return "developer"
+        return IdentityContext(
+            role="developer",
+            principal="local-development",
+            tenant_id="local-development",
+            tenant_ids=("local-development",),
+            auth_method="development",
+        )
+    if settings.api_auth_mode == "oidc":
+        return _oidc_identity(request)
     provided = request.headers.get("x-api-key", "")
-    if _constant_time_match(provided, settings.admin_api_key):
-        return "admin"
-    if _constant_time_match(provided, settings.operator_api_key):
-        return "operator"
-    if _constant_time_match(provided, settings.viewer_api_key):
-        return "viewer"
-    return "anonymous"
+    for role, configured in (
+        ("admin", settings.admin_api_key),
+        ("operator", settings.operator_api_key),
+        ("viewer", settings.viewer_api_key),
+    ):
+        if _constant_time_match(provided, configured):
+            return IdentityContext(
+                role=role,
+                principal=f"api-key-role:{role}",
+                tenant_id="legacy-single-tenant",
+                tenant_ids=("legacy-single-tenant",),
+                auth_method="api_key",
+            )
+    return ANONYMOUS_IDENTITY
+
+
+def resolve_role(request: Request) -> str:
+    return resolve_identity(request).role
 
 
 def resolve_principal(request: Request, role: str) -> str:
-    if role == "developer":
-        return "local-development"
-    if role == "anonymous":
-        return "anonymous"
-    # There is exactly one configured key per role.  Record the role as the
-    # principal without deriving a reusable fingerprint from secret material.
-    return f"api-key-role:{role}"
+    identity = resolve_identity(request)
+    return identity.principal if identity.role == role else "anonymous"
 
 
 def required_role(request: Request) -> str:
@@ -226,10 +371,14 @@ class SecurityObservabilityMiddleware(BaseHTTPMiddleware):
         supplied_request_id = request.headers.get("x-request-id", "")
         request_id = supplied_request_id if REQUEST_ID_PATTERN.fullmatch(supplied_request_id) else str(uuid4())
         request.state.request_id = request_id
-        role = resolve_role(request)
+        identity = resolve_identity(request)
+        role = identity.role
         request.state.role = role
-        principal = resolve_principal(request, role)
+        principal = identity.principal
         request.state.principal = principal
+        request.state.tenant_id = identity.tenant_id
+        request.state.tenant_ids = identity.tenant_ids
+        request.state.auth_method = identity.auth_method
         required = required_role(request)
         started = time.perf_counter()
 
@@ -240,7 +389,7 @@ class SecurityObservabilityMiddleware(BaseHTTPMiddleware):
             and int(content_length) > settings.max_request_body_bytes
         )
         client = request.client.host if request.client else "unknown"
-        rate_key = f"{client}:{principal}"
+        rate_key = f"{client}:{principal}:{identity.tenant_id}"
         rate_allowed = rate_limiter.allow(
             rate_key,
             time.monotonic(),
@@ -258,13 +407,13 @@ class SecurityObservabilityMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Rate limit exceeded", "request_id": request_id},
                 headers={"Retry-After": "60"},
             )
-        elif settings.api_auth_mode == "api_key" and ROLE_RANK[role] < ROLE_RANK[required]:
+        elif settings.api_auth_mode != "disabled" and ROLE_RANK[role] < ROLE_RANK[required]:
             request_metrics.observe_auth_denied()
             status_code = 401 if role == "anonymous" else 403
             response = JSONResponse(
                 status_code=status_code,
                 content={
-                    "detail": "Valid operator API key required" if required == "operator" else "Authentication required",
+                    "detail": "Operator role required" if required == "operator" else "Authentication and tenant context required",
                     "request_id": request_id,
                 },
             )
@@ -276,6 +425,7 @@ class SecurityObservabilityMiddleware(BaseHTTPMiddleware):
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
         response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
         response.headers["Cache-Control"] = "no-store" if request.url.path.startswith("/api/") else "no-cache"
@@ -292,6 +442,8 @@ class SecurityObservabilityMiddleware(BaseHTTPMiddleware):
             "duration_ms": round(duration * 1000, 3),
             "role": role,
             "principal": principal,
+            "tenant_id": identity.tenant_id or None,
+            "auth_method": identity.auth_method,
             "client": client,
         }
         log_access({"event": "http_request", **event})

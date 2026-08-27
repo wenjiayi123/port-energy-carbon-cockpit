@@ -1,0 +1,35 @@
+schema_version: site-delivery-profile.v1
+site_id: REPLACE_WITH_SITE_ID
+site_name: REPLACE_WITH_SITE_NAME
+terminal_id: REPLACE_WITH_TERMINAL_ID
+tenant_id: REPLACE_WITH_TENANT_ID
+project_owner_organization: REPLACE_WITH_OWNER_ORGANIZATION
+target_release: REPLACE_WITH_IMMUTABLE_RELEASE
+assessment_window:
+  window_id: REPLACE_WITH_ASSESSMENT_WINDOW_ID
+  start_at: REPLACE_WITH_TIMEZONE_AWARE_ISO8601
+  end_at: REPLACE_WITH_TIMEZONE_AWARE_ISO8601
+data_cutoff_at: REPLACE_WITH_TIMEZONE_AWARE_ISO8601
+change_window:
+  change_ticket_id: REPLACE_WITH_CHANGE_TICKET_ID
+  start_at: REPLACE_WITH_TIMEZONE_AWARE_ISO8601
+  end_at: REPLACE_WITH_TIMEZONE_AWARE_ISO8601
+configuration_sha256: REPLACE_WITH_64_HEX_SHA256
+infrastructure_as_code_sha256: REPLACE_WITH_64_HEX_SHA256
+approved_sop_sha256: REPLACE_WITH_64_HEX_SHA256
+approved_runbook_sha256: REPLACE_WITH_64_HEX_SHA256
+safety_case_sha256: REPLACE_WITH_64_HEX_SHA256
+benefit_attribution_report_sha256: REPLACE_WITH_64_HEX_SHA256
+environment_separation:
+  development: documented
+  test: documented
+  shadow: documented
+  preproduction: documented
+  production: documented
+application_control_boundary:
+  production_authority: false
+  production_dispatch_allowed: false
+  interlock_bypass_allowed: false
+  external_instruction_gateway_required: true
+data_classification: confidential_site_delivery
+template_status: incomplete_requires_site_owner_inputs

@@ -1,0 +1,12 @@
+record_id,record_type,zone_name,security_level,source_zone,destination_zone,protocol,ports,initiator,read_only,default_deny,mutual_tls,firewall_rule_id,jump_host_required,mfa_required,session_recording,owner,status,evidence_sha256,notes
+ZONE-001,zone,IT_ZONE,enterprise,NA,NA,NA,NA,NA,true,true,true,NA,true,true,true,REPLACE_WITH_CISO_OWNER,not_started,REPLACE_WITH_64_HEX_SHA256,企业身份应用与管理平面
+ZONE-002,zone,IT_DMZ,controlled,NA,NA,NA,NA,NA,true,true,true,NA,true,true,true,REPLACE_WITH_CISO_OWNER,not_started,REPLACE_WITH_64_HEX_SHA256,面向信息技术系统的数据交换隔离区
+ZONE-003,zone,OT_DMZ,restricted,NA,NA,NA,NA,NA,true,true,true,NA,true,true,true,REPLACE_WITH_OT_SECURITY_OWNER,not_started,REPLACE_WITH_64_HEX_SHA256,信息技术与运行技术之间的双防火墙隔离区
+ZONE-004,zone,OT_CONTROL,critical,NA,NA,NA,NA,NA,true,true,true,NA,true,true,true,REPLACE_WITH_CONTROL_OWNER,not_started,REPLACE_WITH_64_HEX_SHA256,设备控制网且应用无直连权限
+ZONE-005,zone,SAFETY_INTERLOCK,safety_critical,NA,NA,NA,NA,NA,true,true,true,NA,true,true,true,REPLACE_WITH_SAFETY_OWNER,not_started,REPLACE_WITH_64_HEX_SHA256,独立安全联锁区且禁止软件绕过
+CONDUIT-001,conduit,NA,controlled,OT_CONTROL,OT_DMZ,MQTT_OR_OPC_UA,REPLACE_WITH_PORTS,OT_CONTROL,true,true,true,REPLACE_WITH_FIREWALL_RULE,false,false,true,REPLACE_WITH_OT_SECURITY_OWNER,not_started,REPLACE_WITH_64_HEX_SHA256,运行技术遥测单向发布到隔离区
+CONDUIT-002,conduit,NA,controlled,OT_DMZ,IT_DMZ,MTLS_MESSAGE_BUS,REPLACE_WITH_PORTS,OT_DMZ,true,true,true,REPLACE_WITH_FIREWALL_RULE,false,false,true,REPLACE_WITH_OT_SECURITY_OWNER,not_started,REPLACE_WITH_64_HEX_SHA256,只读遥测转发
+CONDUIT-003,conduit,NA,controlled,IT_ZONE,IT_DMZ,HTTPS_MTLS,443,IT_ZONE,true,true,true,REPLACE_WITH_FIREWALL_RULE,true,true,true,REPLACE_WITH_CISO_OWNER,not_started,REPLACE_WITH_64_HEX_SHA256,身份管理与受控运维
+CONDUIT-004,conduit,NA,critical,OT_DMZ,OT_CONTROL,ADVISORY_HANDOFF,REPLACE_WITH_PORTS,OT_DMZ,true,true,true,REPLACE_WITH_FIREWALL_RULE,false,false,true,REPLACE_WITH_CONTROL_OWNER,not_started,REPLACE_WITH_64_HEX_SHA256,仅建议交接不含设备命令
+CONDUIT-005,conduit,NA,safety_critical,OT_CONTROL,SAFETY_INTERLOCK,HARDWIRED_OR_SAFETY_PROTOCOL,REPLACE_WITH_PORTS,OT_CONTROL,true,true,true,REPLACE_WITH_SAFETY_RULE,false,false,true,REPLACE_WITH_SAFETY_OWNER,not_started,REPLACE_WITH_64_HEX_SHA256,独立联锁保有最终否决权
+CONDUIT-006,conduit,NA,controlled,IT_DMZ,IT_ZONE,SIEM_WORM_EXPORT,REPLACE_WITH_PORTS,IT_DMZ,true,true,true,REPLACE_WITH_FIREWALL_RULE,false,false,true,REPLACE_WITH_CISO_OWNER,not_started,REPLACE_WITH_64_HEX_SHA256,安全日志和不可改写审计副本

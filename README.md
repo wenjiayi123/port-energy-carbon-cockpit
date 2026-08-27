@@ -95,7 +95,15 @@ This project places port energy use, shore power, equipment allocation, delay, c
 | 证据链 / Evidence chain | 配置、随机种子、CSV/元数据/组合包 SHA-256、回调指标、checkpoint、模型哈希、测试与验证结果。 / Config, seed, CSV/metadata/package SHA-256, callback metrics, checkpoints, model hash, evaluation, and verification evidence. |
 | 实港只读接入 / Read-only port integration | 六类 `port-snapshot.v1` 数据源必须通过逐源 HMAC、SHA-256、字段/单位、时效、序列与重放门禁。 / Six source families require per-adapter HMAC, SHA-256, schema/units, freshness, sequence and replay gates. |
 | 风险评测 / Risk evaluation | 因果预测、配对 bootstrap 95% 区间、CVaR95、压力场景、备用裕度与动作稳定性。 / Causal forecasts, paired bootstrap 95% intervals, CVaR95, stress cases, reserve margin and action stability. |
-| 碳核算 / Carbon accounting | 范围一辅助燃油与所在地法范围二分列；没有合同凭证时市场法范围二保持不可用。 / Scope 1 auxiliary fuel and location-based Scope 2 are separated; market-based Scope 2 remains unavailable without contractual instruments. |
+| 碳核算 / Carbon accounting | 在历史范围一辅助燃油与所在地法范围二旁，新增远洋船、港作船、装卸设备、重型车辆、铁路、外购电力和固定燃烧七类港口清单；缺少活动数据、组织边界或合同凭证时保持不可用和核证阻断。 / A seven-source port inventory sits beside the legacy Scope 1 auxiliary-fuel and location-based Scope 2 view; missing activity, boundary, or contractual evidence stays unavailable and assurance-blocked. |
+| 计量与核证 / Measurement and verification | 区分离线情景差值、现场计算值和独立复核值；执行项目计划、边界、基线、区间覆盖、校准、账单对账、调整、不确定性及 Ed25519 签名门禁。 / Separates offline scenario deltas, site calculations and independently reviewed values through plan, boundary, baseline, interval, calibration, reconciliation, adjustment, uncertainty and signature gates. |
+| 碳资产与履约 / Carbon assets and compliance | 将情景碳价与真实账户分离；核验履约规则、登记簿账户、配额批次、交易与资金凭证、双人审批、余额对账、注销和 Ed25519 登记簿证明，并生成 SHA-256 链式账本。 / Separates scenario valuation from real accounts and validates program rules, registry ownership, allowance lots, trade/cash evidence, dual approval, reconciliation, retirement and signed registry attestation with a hash-chained ledger. |
+| 能源与碳管理体系 / Energy and carbon management system | 以版本化证据合同执行 15 项计划—实施—检查—改进—独立保证门禁，覆盖方针、职责、能源评审、基准、能源绩效参数、目标、行动、监测、运行控制、能力、温室气体清单、内审、纠正措施和管理评审；即使全通过也不宣称获得 ISO 认证。 / A versioned 15-gate PDCA and independent-assurance contract covers policy, roles, energy review, baselines, EnPIs, objectives, action plans, monitoring, operational controls, competence, GHG inventory, internal audit, corrective action and management review; passing never claims ISO certification. |
+| 业务—能量联合计划 / Joint operations-energy planning | 以具名船舶、泊位、岸桥、堆场、集卡预约、冷藏箱、岸电和能源管理八源数据执行联合排程与储能优化；逐源 Ed25519 签名、时效对齐、12 项硬门禁和 SHA-256 回执失败关闭，结果只供人工复核和影子运行。 / Named vessel, berth, crane, yard, truck, reefer, shore-power and EMS records feed joint scheduling and storage optimization; per-source Ed25519 signatures, freshness alignment, 12 hard gates and SHA-256 receipts fail closed, and output remains advisory-only. |
+| 港航生态协同 / Ship-port ecosystem collaboration | 以船公司、港口调用、码头泊位、岸电、替代燃料、港口费和走廊治理七源证据，核验准时到港、绿色泊位、岸电预约计费、替代燃料准备度、费率激励及船港减排收益分配；15 项闸门失败关闭且不授予船速、泊位、合闸、加注、开票或资金权限。 / Seven signed vessel-operator, port-call, terminal, shore-power, alternative-fuel, tariff and corridor-ledger domains verify JIT arrival, green berths, shore-power reservation/billing, fuel readiness, fee incentives and shared abatement value through 15 fail-closed gates without operational or financial authority. |
+| 企业平台与运行技术安全 / Enterprise platform and OT security | 新增可执行 OpenID Connect Ed25519 令牌、签发方/受众/时效/多因素校验、具名主体、角色映射和签名租户隔离；九类独立安全证据覆盖消息/时序、高可用、灾备、WORM/SIEM、双向 TLS、密钥轮换、运行技术分区与独立安全联锁，以 20 项门禁失败关闭。 / Executable OIDC EdDSA validation, named subjects, role mapping and signed tenant isolation sit beside a nine-domain, 20-gate evidence contract for messaging/time-series, HA/DR, WORM/SIEM, mTLS/key rotation, OT zoning and independent safety interlocks. |
+| 配电数字孪生 / Electrical network digital twin | 以具名母线、馈线、变压器、开关和电源执行辐射潮流、电压/无功/谐波、热老化、N-1、孤岛、充电排队及储能质保评估；六源 Ed25519 签名、14 项门禁和 SHA-256 回执失败关闭，不具备倒闸或保护整定权限。 / Named buses, feeders, transformers, switches and sources feed radial power flow, voltage/reactive/harmonic, thermal-aging, N-1, island, charging-queue and storage-warranty assessment; six-source Ed25519 signatures, 14 fail-closed gates and SHA-256 receipts never grant switching or protection-setting authority. |
+| 算法生产资格 / Algorithm production qualification | 不新增算法；用六类独立签名证据和 15 项失败关闭门禁，统一校验多种子、跨四季、概率标定、分布外回退、解释保真、动作可达、P95/P99 时延、故障注入、人工否决、冠军/挑战者区间、安全不退化和长周期影子运行；自动晋级和自主下发始终禁用。 / Six independently signed evidence domains and 15 fail-closed gates qualify existing algorithms across seeds, seasons, calibration, OOD, explanations, reachability, latency, faults, vetoes, paired confidence intervals, safety and shadow duration; automatic promotion and autonomous dispatch remain disabled. |
 | 安全边界 / Safety boundary | 生产调度硬编码禁用；外部连接器可选；变更接口需要角色权限和人工确认。 / Production dispatch is hard-disabled; external connectors are optional; mutation routes require role gates and explicit confirmation. |
 
 ## 可见系统 / What you can inspect
@@ -317,8 +325,8 @@ export OPERATOR_API_KEY="$(openssl rand -hex 24)"
 make docker-up
 ```
 
-Compose 将前后端绑定到 loopback，后端生产模式强制 API key；容器使用非 root 用户、只读文件系统、全部 capability drop 和独立 run/audit volume。面向互联网时仍应在前面配置 TLS、企业 SSO、每用户授权和集中式审计。<br>
-Compose binds both services to loopback and enforces an API key in backend production mode. Containers use non-root users, read-only filesystems, dropped capabilities, and dedicated run/audit volumes. Internet-facing deployments still need TLS, enterprise SSO, per-user authorization, and centralized audit retention.
+Compose 将前后端绑定到 loopback，后端生产模式强制 API key 或 OIDC；OIDC 模式执行 EdDSA 令牌、签发方、受众、时间、多因素、具名角色和签名租户校验。容器使用非 root 用户、只读文件系统、全部 capability drop 和独立 run/audit volume。面向互联网和运行技术网络时仍需由部署方提供身份入口、双向 TLS、外部 WORM/SIEM、高可用、灾难恢复和独立安全联锁。<br>
+Compose binds both services to loopback and requires API-key or OIDC authentication in production. OIDC validates EdDSA tokens, issuer, audience, time, MFA, named roles and signed tenant claims. Containers remain non-root, read-only and capability-free; the deployer must still provide the identity ingress, mTLS, external WORM/SIEM, HA/DR and independent OT interlock.
 
 ## 可复现实验 / Reproducible experiments
 
@@ -412,6 +420,25 @@ cd backend
 | Endpoint | 方法 / Method | 语义 / Semantics |
 | --- | --- | --- |
 | `/api/dashboard/snapshot` | GET | 当前公开 benchmark 与测试轨迹快照 / current benchmark and held-out snapshot |
+| `/api/dashboard/measurement-verification` | GET | 当前节能减排计量核证状态；默认现场核证值为空 / current M&V state; field-verified values are empty by default |
+| `/api/dashboard/measurement-verification/evaluate` | POST | 评估现场计划、计量、基线、调整、不确定性与 Ed25519 独立复核证据 / evaluate site plan, metering, baseline, adjustments, uncertainty and signed independent-review evidence |
+| `/api/dashboard/carbon-assets` | GET | 当前碳资产履约状态；情景估值与核证账户头寸严格分离 / current carbon-asset compliance state with scenario valuation separated from verified account positions |
+| `/api/dashboard/carbon-assets/evaluate` | POST | 核验登记簿账户、批次、交易、资金、审批、注销、对账和签名证明 / validate registry account, lots, trades, cash, approvals, retirement, reconciliation and signed attestation |
+| `/api/dashboard/commercial-settlement` | GET | 商业结算失效关闭状态；情景电价和工程收益不进入核证值 / fail-closed commercial state; scenario tariff and engineering value stay outside verified values |
+| `/api/dashboard/commercial-settlement/evaluate` | POST | 核验八源签名并重构电力账单、市场结算、绿证、租户分摊、回收期与边际减排成本 / validate eight signed sources and reconcile bills, market settlements, certificates, tenant allocations, payback and MACC |
+| `/api/dashboard/port-collaboration` | GET | 港航生态协同失效关闭状态；公开船舶活动与岸电情景不进入核证值 / fail-closed ship-port collaboration state; public vessel and shore-power scenarios stay outside verified values |
+| `/api/dashboard/port-collaboration/evaluate` | POST | 核验七源签名并重算准时到港、绿色泊位、岸电、替代燃料、绿色费率与船港收益分配 / validate seven signed domains and reconcile JIT arrival, green berths, shore power, alternative fuel, green fees and shared benefits |
+| `/api/dashboard/enterprise-security` | GET | 仓库控制与现场企业/运行技术安全证据分列；默认 0/9 源域、0/20 门禁 / repository controls separated from site enterprise/OT evidence; 0/9 domains and 0/20 gates by default |
+| `/api/dashboard/enterprise-security/evaluate` | POST | 核验九源签名、身份租户、消息时序、高可用灾备、WORM/SIEM、PKI 和运行技术安全演练 / validate nine signed domains across identity, tenancy, messaging, time-series, HA/DR, WORM/SIEM, PKI and OT exercises |
+| `/api/dashboard/site-cutover-readiness` | GET | 汇总十三个实施域，默认仅显示仓库证据且阻断现场投产 / aggregate thirteen implementation domains while keeping site cutover blocked by default |
+| `/api/dashboard/site-cutover-readiness/evaluate` | POST | 核验十三域、180 天影子运行、演练、回滚和六方绑定签字 / validate thirteen signed domains, 180-day shadow evidence, drills, rollback and six bound approvals |
+| `/api/security/context` | GET | 返回当前具名主体、角色、允许/选定租户和认证方式，不返回令牌 / return the named subject, role, allowed/selected tenant and authentication method without token material |
+| `/api/dashboard/energy-carbon-management` | GET | 当前能源与碳管理体系证据闭环状态；公开离线场景默认 0/15 阻断 / current management-system evidence readiness; the public offline scenario is blocked at 0/15 by default |
+| `/api/dashboard/energy-carbon-management/evaluate` | POST | 核验版本化年度管理周期、职责分离、完整 PDCA 证据和 Ed25519 独立保证签名 / validate a versioned annual cycle, segregation of duties, complete PDCA evidence and signed independent assurance |
+| `/api/dashboard/operations-energy-plan` | GET | 当前业务—能量联合计划准备状态；公开聚合数据默认 0/8 源域、0/12 门禁 / current joint-planning readiness; public aggregate data defaults to 0/8 source domains and 0/12 gates |
+| `/api/dashboard/operations-energy-plan/evaluate` | POST | 验证八源签名现场包并求解具名业务与能量约束，仅输出建议计划 / validate eight signed site domains and solve named business and energy constraints as an advisory plan only |
+| `/api/dashboard/electrical-network` | GET | 当前配电数字孪生准备状态；公开聚合数据默认 0/6 源域、0/14 门禁 / current electrical-network readiness; public aggregate data defaults to 0/6 source domains and 0/14 gates |
+| `/api/dashboard/electrical-network/evaluate` | POST | 验证六源签名现场包并评估潮流、电能质量、热老化、N-1、孤岛、充电队列和储能质保 / validate six signed site domains and assess power flow, power quality, thermal aging, N-1, islanding, charging queues and storage warranty |
 | `/api/evidence/landing-benchmark` | GET | v4 因果业务增量、压力权衡、边界与哈希摘要 / v4 causal increment, stress trade-offs, boundary and hashes |
 | `/api/rl/capabilities` | GET | 算法、数据、运行时与渲染边界 / algorithms, datasets, runtime, rendering boundary |
 | `/api/rl/datasets/validate` | POST | 注册数据集质量、分区与血缘校验 / registered-dataset quality, split, provenance validation |
@@ -426,7 +453,8 @@ cd backend
 | `/api/scenarios` | GET | 国际港口模板、数据与适配器就绪状态 / port templates, dataset and adapter readiness |
 | `/api/scenarios/contract` | GET | v3 观测、动作、目标和硬约束 / v3 observations, actions, objectives and hard constraints |
 | `/api/integration/contract` | GET | 六源签名快照、字段与时效合同 / six-source signed-snapshot, field and freshness contract |
-| `/api/integration/status` | GET | 由已验证证据计算的只读 shadow 就绪状态 / evidence-derived read-only shadow readiness |
+| `/api/integration/status` | GET | 签名、时效、进程内载荷、动态源时间对齐与 shadow 就绪状态 / signature, freshness, resident-payload, time-alignment and shadow readiness |
+| `/api/integration/shadow-snapshot` | GET | 六源原子合成的 21 字段只读影子状态；任一门禁失败则不释放数值 / atomic 21-field read-only shadow state; no values released when any gate fails |
 | `/api/integration/snapshots` | POST | 接收并校验一个签名只读快照 / admit one signed read-only snapshot |
 | `/api/audit/integrity` | GET | 校验 mutation audit SHA-256 链 / verify the mutation-audit SHA-256 chain |
 | `/api/health/{live,ready}` | GET | 进程与依赖就绪检查 / process and dependency readiness |
@@ -444,18 +472,27 @@ cd backend
 | MPC 测试轨迹 | 默认可运行 / runnable by default | 生产调度建议已获批准 / production-approved recommendations |
 | 公开指标报告 | 2025 年 48 个均匀窗口、1,152 个留出仿真步、哈希可复算 / 48 uniformly spaced windows, 1,152 held-out simulation steps, hash verification | 码头实测 KPI、随机全量年度评估或 RL 收敛 / measured terminal KPI, random full-year evaluation, or RL convergence |
 | v4 因果评测 | 决策时不可读取后续测试行；公布置信区间、CVaR 与压力权衡 / later test rows unavailable; confidence, CVaR and stress trade-offs published | 真实港口 forecast 精度或生产风险率 / live-port forecast accuracy or production risk rate |
-| 实港快照网关 | 可执行 HMAC/SHA-256/时效/序列/重放门禁 / executable integrity, freshness, sequence and replay gates | 已取得港方接口或凭证 / possession of terminal endpoints or credentials |
+| 实港快照网关 | 可执行 HMAC/SHA-256/时效/序列/重放门禁，并将六源在 300 秒动态时窗内原子合成为 21 字段只读状态；业务值只驻留内存 / executable integrity, freshness, sequence and replay gates plus an atomic 21-field, 300-second-aligned in-memory state | 已取得港方接口或凭证，或来源报值已完成计量校准 / possession of terminal endpoints or credentials, or metrological calibration of source-reported values |
+| 节能减排计量核证 | 可执行现场计划、边界、基线质量、区间覆盖、校准、账单对账、调整、不确定性及 Ed25519 独立复核门禁；离线差值与现场核证值分离 / executable M&V gates with signed independent review; offline differences stay separate from field-verified values | 软件本身是独立核证方，或结果可直接用于财务结算和监管报送 / the software is an independent verifier or results are settlement/regulatory-ready |
+| 商业结算与边际减排成本 | 可执行八源逐源签名、分时电价和需量费账单重构、需求响应/辅助服务/购电协议/绿证/租户分摊对账、量测核证引用、投资回收期与边际减排成本 16 项门禁；默认 0/8 和 0/16 / executable eight-source signatures, tariff/demand-charge reconstruction, DR/ancillary/PPA/REC/tenant reconciliation, M&V linkage, payback and MACC across 16 gates; 0/8 and 0/16 by default | 软件可划款、投标、交易绿证、签发租户账单或自动记账 / software can move money, bid, trade certificates, issue tenant invoices, or post accounting entries |
+| 港航生态协同 | 可执行七源逐源签名、准时到港协商与燃油核证、绿色泊位公平排序、岸电预约计费、替代燃料安全准备、港口费激励和船港减排收益分配 15 项门禁；默认 0/7 和 0/15 / executable seven-source signatures, JIT consent/fuel verification, fair green-berth ranking, shore-power reservation/billing, alternative-fuel safety readiness, green port fees and shared abatement value across 15 gates; 0/7 and 0/15 by default | 软件可向船舶下发航速、回写泊位、操作岸电、批准加注、签发港口账单或划转收益 / software can command vessel speed, write berth plans, switch shore power, authorize bunkering, issue port invoices, or transfer shared value |
+| 企业平台与运行技术安全 | 可执行 OIDC EdDSA 联合身份、具名角色和签名租户选择，并以九源 20 项门禁核验消息/时序复制、高可用、故障切换、不可变异地备份、恢复目标、外部 WORM/SIEM、四条双向 TLS 边界、密钥轮换、运行技术分区、远程访问和独立安全联锁；默认 0/9 和 0/20 / executable OIDC EdDSA, named roles and signed tenant selection plus a nine-domain, 20-gate contract for messaging/time-series, HA/failover, immutable offsite backup, recovery, WORM/SIEM, four mTLS boundaries, key rotation, OT zoning, remote access and independent interlocks; 0/9 and 0/20 by default | 单实例 Compose、本地哈希链或完整证据包等同于企业切换授权、网络安全认证或运行技术命令权 / single-instance Compose, a local hash chain, or a passing evidence package equals enterprise cutover, security certification, or OT command authority |
+| 碳资产与配额履约 | 可执行十二项证据门禁、单币种资金对账、职责分离审批、签名证明及链式账本；默认核证头寸为空 / executable 12-gate evidence validation, single-currency cash reconciliation, segregated approvals, signed attestation and hash-chained ledger; verified positions are empty by default | 软件可直接下单、划款、转移配额或向监管机构报送 / software can place orders, move funds or allowances, or file with regulators |
+| 能源与碳管理体系 | 可执行十五项版本化证据门禁、完整 PDCA 状态机、职责分离、碳清单与计量核证哈希引用、纠正措施闭环及 Ed25519 独立保证；默认 0/15 / executable 15-gate versioned evidence contract, PDCA state machine, segregated duties, inventory/M&V hash linkage, corrective-action closure and signed independent assurance; 0/15 by default | 软件已取得 ISO 50001 认证、可签发 ISO 14064-1 核证意见或可直接监管报送 / software is ISO 50001 certified, can issue an ISO 14064-1 verification opinion, or can file with regulators |
+| 业务—能量联合计划 | 可执行八源具名数据合同、逐源签名、具名资源排程、堆场库存守恒、集卡与冷藏箱约束、岸电和储能联合优化、12 项门禁与哈希回执；默认 0/8 和 0/12 / executable eight-domain named-data contract, per-source signatures, named-resource scheduling, yard conservation, truck/reefer constraints, shore-power/storage co-optimization, 12 gates and hash receipts; 0/8 and 0/12 by default | 已获得现场八源凭证、TOS 回写或设备调度权限 / possession of live eight-source credentials, TOS writeback, or equipment dispatch authority |
+| 配电数字孪生 | 可执行六源具名数据合同、辐射潮流、电压/无功/谐波、变压器热老化、N-1、孤岛、Erlang-C 充电队列、储能质保、14 项门禁与哈希回执；默认 0/6 和 0/14 / executable six-domain named-data contract, radial power flow, voltage/reactive/harmonics, transformer thermal aging, N-1, islanding, Erlang-C charging queues, storage warranty, 14 gates and hash receipts; 0/6 and 0/14 by default | 已完成短路、保护配合、弧闪、暂态研究，或已取得倒闸、保护整定和孤岛控制权限 / completion of short-circuit, protection-coordination, arc-flash and transient studies, or switching, relay-setting and island-control authority |
 | 策略验证 | 离线、留出集 / offline and held-out | 安全认证、型式认可或法规核证 / safety certification or regulatory assurance |
 | 小懿 AI | 可选 HTTP 本地连接器 / optional local HTTP connector | 仓库自带外部知识库或云服务 / bundled external knowledge or cloud service |
 | Godot 航行模拟器 | 可选桌面进程连接器 / optional desktop process connector | 训练证据或生产控制通道 / training evidence or a production control channel |
 | 调度执行 | `dry_run=true`，生产资格恒为 false / dry-run only, eligibility always false | 自主设备控制 / autonomous equipment control |
 
-接入真实港口需要完成 TOS/EMS 只读适配、参数校准、计量血缘、身份权限、shadow mode、回滚演练、人工验收和独立安全联锁。现场集成说明见 [Site integration](docs/PRODUCTION_READINESS.md)，安全设计见[威胁模型](docs/THREAT_MODEL.md)。<br>
+业务—能量联合计划的八源字段、约束、签名和验收边界见 [联合计划接入说明](docs/OPERATIONS_ENERGY_JOINT_PLANNING.md)；船港七源协同、15 项门禁和绿色航运走廊边界见 [港航生态协同说明](docs/PORT_CALL_COLLABORATION.md)；企业身份、九源安全证据、20 项门禁和运行技术分区边界见 [企业平台与运行技术安全说明](docs/ENTERPRISE_PLATFORM_OT_SECURITY.md)；配电模型的六源字段、计算方法、14 项门禁和实港验收要求见 [配电数字孪生说明](docs/ELECTRICAL_NETWORK_DIGITAL_TWIN.md)；算法六源签名、15 项资格门禁、冠军/挑战者和长周期影子边界见 [算法生产资格说明](docs/ALGORITHM_PRODUCTION_QUALIFICATION.md)。十三域总验收、180 天影子运行、六方签字和现场切换顺序见 [实港投产总门禁](docs/SITE_CUTOVER_ACCEPTANCE.md)；可直接分发给业主填写的系统映射、设备电表点表、网络分区、职责矩阵、影子计划、门禁与未签名投产包位于 [`deployment/site_delivery/`](deployment/site_delivery/)，运行 `make site-delivery-check` 做模板结构审计，现场完成后使用 `--strict` 做失效关闭验收。接入真实港口还需要完成 TOS/EMS/SCADA/BMS 只读适配、参数校准、计量血缘、身份权限、shadow mode、回滚演练、人工验收和独立安全联锁。现场集成说明见 [Site integration](docs/PRODUCTION_READINESS.md)，安全设计见[威胁模型](docs/THREAT_MODEL.md)。<br>
 Real-port integration requires read-only TOS/EMS adapters, parameter calibration, meter lineage, identity controls, shadow mode, rollback drills, operator acceptance, and an independent safety interlock. See [site integration](docs/PRODUCTION_READINESS.md) and the [threat model](docs/THREAT_MODEL.md).
 
 ## 安全与供应链 / Security and supply chain
 
-- 生产模式拒绝无 `API_AUTH_MODE=api_key` 的启动，key 最少 24 字符；viewer/operator/admin 分级。
+- 生产模式拒绝无 `API_AUTH_MODE=api_key|oidc` 的启动；OIDC 配置不完整时失败关闭，API key 兼容模式仍要求最少 24 字符。
+- OIDC 验证 EdDSA 签名、签发方、受众、时间、多因素、外部角色映射和签名租户声明；跨租户访问失败关闭。
 - 变更请求写入 SHA-256 链式 mutation audit；所有请求有 request ID、结构化访问日志、主体指纹和基础安全头。
 - 请求体大小和单进程滑动窗口限流提供应用层后备防护；集群仍需 WAF/网关分布式配额。
 - 实港快照使用逐适配器 HMAC、payload SHA-256、递增序列、唯一 snapshot ID 与源级时效门禁。
@@ -463,7 +500,8 @@ Real-port integration requires read-only TOS/EMS adapters, parameter calibration
 - CI 包含 Ruff、backend/RL 测试、数据校验、前端构建、依赖审计与容器构建。
 - Actions 使用完整 commit SHA；Dependabot 按月分组，控制更新噪声。
 
-- Production refuses to start without `API_AUTH_MODE=api_key`; keys require at least 24 characters and support viewer/operator/admin roles.
+- Production refuses to start without `API_AUTH_MODE=api_key|oidc`; incomplete OIDC fails closed while legacy keys remain at least 24 characters.
+- OIDC validates EdDSA signatures, issuer, audience, time, MFA, external role mappings and signed tenant claims; cross-tenant access fails closed.
 - Mutation requests are SHA-256 hash-chained; every request receives an ID, structured access log, principal fingerprint, and baseline security headers.
 - Body limits and a per-process sliding-window limiter provide an application backstop; clustered deployments still need gateway/WAF quotas.
 - Port snapshots use per-adapter HMAC, payload SHA-256, monotonic sequence, unique snapshot ID and source freshness gates.
@@ -517,6 +555,9 @@ scripts/        安装、运行、校验与数据准备 / bootstrap, run, valida
 - [Data card / 数据卡](docs/DATA_CARD.md)
 - [Model card / 模型卡](docs/MODEL_CARD.md)
 - [Site integration / 现场集成](docs/PRODUCTION_READINESS.md)
+- [Site cutover acceptance / 实港投产总门禁](docs/SITE_CUTOVER_ACCEPTANCE.md)
+- [Electrical network digital twin / 配电数字孪生](docs/ELECTRICAL_NETWORK_DIGITAL_TWIN.md)
+- [Algorithm production qualification / 算法生产资格](docs/ALGORITHM_PRODUCTION_QUALIFICATION.md)
 - [Threat model / 威胁模型](docs/THREAT_MODEL.md)
 - [Asset provenance / 视觉资产来源](docs/ASSET_PROVENANCE.md)
 

@@ -92,6 +92,12 @@ and confidence to zero.
 Site adapters must emit the same `telemetry-field.v1` objects. A field becomes `现场实测` only
 after its source, unit, timestamp, signature, calibration and quality gate are verified.
 
+The aggregate runtime fields do not by themselves prove distribution-network safety. Named
+single-line topology, switchgear, power-quality, transformer, charging and BMS evidence is
+evaluated separately through `port-electrical-network-input.v1`; see
+[Electrical network digital twin](ELECTRICAL_NETWORK_DIGITAL_TWIN.md). Its public default remains
+blocked at 0/6 evidence domains and 0/14 gates.
+
 ## APIs
 
 - `GET /api/runtime/contract`

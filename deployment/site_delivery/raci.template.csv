@@ -1,0 +1,12 @@
+activity_id,activity,port_owner,operations_owner,energy_carbon_owner,ot_safety_owner,chief_information_security_officer,independent_verifier,data_owner,finance_owner,it_platform_owner,evidence_required,status,notes
+RACI-001,冻结现场范围与目标发布,A,C,C,C,C,I,I,I,I,获批范围和发布哈希,not_started,必须唯一最终负责方
+RACI-002,批准源系统映射与数据血缘,I,C,C,C,C,I,A,I,R,系统映射和源系统回执,not_started,数据所有者最终负责
+RACI-003,完成设备电表点表及校准,I,C,A,C,I,C,R,C,I,点表校准证书和三方对账,not_started,能碳负责人最终负责
+RACI-004,批准网络分区与受控通道,I,I,C,R,A,C,I,I,R,防火墙规则渗透测试和会话记录,not_started,首席信息安全官最终负责
+RACI-005,验证外部生产网关及独立联锁,I,R,C,A,C,C,I,I,I,设备能力回执超时降级和联锁测试,not_started,运行技术安全负责人最终负责
+RACI-006,执行连续180天影子运行,C,A,R,C,C,C,R,I,R,日证据包场景覆盖和人工否决记录,not_started,运营负责人最终负责
+RACI-007,完成高可用灾备网络安全与回滚演练,I,C,C,R,A,C,I,I,R,演练记录恢复点恢复时间和缺陷关闭,not_started,首席信息安全官最终负责
+RACI-008,独立量测验证与效益归因,I,C,R,C,I,A,C,C,I,独立量测验证报告和效益归因摘要,not_started,独立核证人最终负责
+RACI-009,冻结十三域报告与十六门禁,A,R,R,R,R,C,R,R,R,十三域签名报告和门禁关闭记录,not_started,港口负责人最终负责
+RACI-010,组织完整验收包六方签字,A,R,R,R,R,R,C,C,C,同一完整包摘要和六方签名,not_started,六方各自的批准责任在批准登记中保留
+RACI-011,外部变更委员会切换,A,R,C,R,C,C,I,I,R,变更单人员在岗联锁状态和回滚负责人,not_started,应用不执行物理切换

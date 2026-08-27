@@ -10,6 +10,7 @@ from app.api.routes_optimization import router as optimization_router
 from app.api.routes_rl import router as rl_router
 from app.api.routes_runtime import router as runtime_router
 from app.api.routes_scenarios import router as scenarios_router
+from app.api.routes_security import router as security_router
 from app.core.config import settings
 from app.core.security import RequestBodyLimitMiddleware, SecurityObservabilityMiddleware
 
@@ -33,10 +34,17 @@ def create_app() -> FastAPI:
         allow_origins=settings.allowed_cors_origins,
         allow_credentials=False,
         allow_methods=["GET", "POST", "OPTIONS"],
-        allow_headers=["Content-Type", "X-API-Key", "X-Request-ID"],
+        allow_headers=[
+            "Authorization",
+            "Content-Type",
+            "X-API-Key",
+            "X-Request-ID",
+            "X-Tenant-ID",
+        ],
         expose_headers=["X-Request-ID"],
     )
     app.include_router(health_router, prefix="/api")
+    app.include_router(security_router, prefix="/api")
     app.include_router(evidence_router, prefix="/api")
     app.include_router(integration_router, prefix="/api")
     app.include_router(dashboard_router, prefix="/api/dashboard")

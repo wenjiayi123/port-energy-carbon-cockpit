@@ -1,0 +1,21 @@
+{
+  "REPLACE_KEY_live_port_data": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "live_port_data"},
+  "REPLACE_KEY_measurement_and_calibration": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "measurement_and_calibration"},
+  "REPLACE_KEY_production_execution": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "production_execution"},
+  "REPLACE_KEY_long_horizon_shadow": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "long_horizon_shadow"},
+  "REPLACE_KEY_port_emissions_inventory": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "port_emissions_inventory"},
+  "REPLACE_KEY_energy_carbon_management": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "energy_carbon_management"},
+  "REPLACE_KEY_operations_energy_coupling": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "operations_energy_coupling"},
+  "REPLACE_KEY_electrical_network": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "electrical_network"},
+  "REPLACE_KEY_algorithm_production": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "algorithm_production"},
+  "REPLACE_KEY_carbon_asset_compliance": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "carbon_asset_compliance"},
+  "REPLACE_KEY_commercial_settlement": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "commercial_settlement"},
+  "REPLACE_KEY_port_collaboration": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "port_collaboration"},
+  "REPLACE_KEY_enterprise_ot_security": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "enterprise_ot_security"},
+  "REPLACE_KEY_port_owner": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "port_owner"},
+  "REPLACE_KEY_operations_owner": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "operations_owner"},
+  "REPLACE_KEY_energy_carbon_owner": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "energy_carbon_owner"},
+  "REPLACE_KEY_ot_safety_owner": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "ot_safety_owner"},
+  "REPLACE_KEY_chief_information_security_officer": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "chief_information_security_officer"},
+  "REPLACE_KEY_independent_verifier": {"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "authority": "independent_verifier"}
+}

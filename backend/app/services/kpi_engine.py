@@ -8,16 +8,29 @@ from app.schemas.dashboard import (
     TimeSeriesPoint,
     TimeSeriesResponse,
 )
+from app.services.algorithm_production import algorithm_production_qualification_service
 from app.services.carbon_market import CarbonMarketService
+from app.services.carbon_assets import carbon_asset_compliance_service
+from app.services.commercial_settlement import commercial_settlement_service
 from app.services.carbon_calculator import CarbonCalculator
 from app.services.dispatch_simulator import DispatchSimulator
+from app.services.energy_carbon_management import energy_carbon_management_service
+from app.services.electrical_network import electrical_network_assessment_service
+from app.services.enterprise_security import enterprise_security_service
+from app.services.port_emissions_inventory import port_emissions_inventory_service
+from app.services.measurement_verification import measurement_verification_service
+from app.services.operations_energy_planning import operations_energy_planning_service
+from app.services.port_collaboration import port_collaboration_service
+from app.services.site_cutover import canonical_sha256, site_cutover_service
 from app.rl.dataset import PortDataset
 from app.rl.landing_readiness import assess_dataset_landing_readiness
 from app.integration.gateway import integration_gateway
 
 
 class KpiEngine:
-    def build_snapshot(self, green_preference: float, carbon_price: float = 85.0) -> DashboardSnapshot:
+    def build_snapshot(
+        self, green_preference: float, carbon_price: float = 85.0
+    ) -> DashboardSnapshot:
         simulation = DispatchSimulator().simulate(green_preference=green_preference)
         rows = simulation["strategies"]
         strategies = [StrategyComparison(**row) for row in rows]
@@ -40,6 +53,24 @@ class KpiEngine:
             optimized_dispatch_cost_cny=marl.total_cost_cny,
             baseline_dispatch_cost_cny=traditional.total_cost_cny,
         )
+        carbon_assets = carbon_asset_compliance_service.build_default(
+            scenario_emission_ton=carbon_market.emission_ton,
+            scenario_quota_reference_ton=carbon_market.quota_ton,
+            scenario_quota_gap_ton=carbon_market.quota_gap_ton,
+            scenario_carbon_cost_cny=carbon_market.carbon_cost_cny,
+            scenario_carbon_price_cny_per_ton=carbon_market.carbon_price_cny_per_ton,
+        )
+        commercial_settlement = commercial_settlement_service.build_default(
+            scenario_cost_difference_cny=(traditional.total_cost_cny - marl.total_cost_cny),
+            scenario_carbon_price_cny_per_ton=carbon_market.carbon_price_cny_per_ton,
+        )
+        port_collaboration = port_collaboration_service.build_default(
+            scenario_shore_power_usage_rate=marl.shore_power_usage_rate,
+            scenario_vessel_activity_source=(
+                "public_daily_vessel_activity_deterministically_expanded_to_hours"
+            ),
+        )
+        enterprise_security = enterprise_security_service.build_default()
         dataset_id = str(simulation["rl_environment"]["dataset_id"])
         dataset_path = str(simulation["rl_environment"]["dataset_path"])
         dataset_sha256 = str(simulation["rl_environment"]["dataset_sha256"])
@@ -68,10 +99,141 @@ class KpiEngine:
             dataset_sha256,
             dataset,
         )
+        carbon_inventory = port_emissions_inventory_service.build(
+            grid_carbon_kg=carbon_model.scope2_location_based_kg,
+            auxiliary_fuel_carbon_kg=carbon_model.scope1_auxiliary_fuel_kg,
+            dataset_id=dataset_id,
+            dataset_sha256=dataset_sha256,
+            dataset_metadata=dataset.metadata if dataset is not None else None,
+            trajectory_steps=len(marl.trajectory),
+        )
+        measurement_verification = measurement_verification_service.build_default(
+            dataset_id=dataset_id,
+            dataset_sha256=dataset_sha256,
+            trajectory_steps=len(marl.trajectory),
+            baseline_energy_kwh=traditional.total_energy_kwh,
+            reporting_energy_kwh=marl.total_energy_kwh,
+            baseline_carbon_kg=traditional.total_carbon_kg,
+            reporting_carbon_kg=marl.total_carbon_kg,
+            baseline_cost_cny=traditional.total_cost_cny,
+            reporting_cost_cny=marl.total_cost_cny,
+        )
+        energy_carbon_management = energy_carbon_management_service.build_default(
+            inventory_evidence_sha256=carbon_inventory.evidence_sha256,
+            inventory_status=str(carbon_inventory.assurance.get("status", "blocked")),
+            measurement_verification_evidence_sha256=(measurement_verification.evidence_sha256),
+            measurement_verification_status=measurement_verification.status,
+        )
+        operations_energy_plan = operations_energy_planning_service.build_default()
+        electrical_network = electrical_network_assessment_service.build_default()
+        algorithm_production = algorithm_production_qualification_service.build_default()
         timeseries = self._timeseries_from_strategies(traditional, marl)
-        alerts = self._build_alerts(marl, carbon_model, data_quality, data_drift)
+        alerts = self._build_alerts(
+            marl,
+            carbon_model,
+            carbon_inventory.coverage,
+            data_quality,
+            data_drift,
+        )
         policy_status = str(simulation["rl_environment"]["status"])
         integration_status = integration_gateway.status()
+        application_boundary = {
+            "simulation_mode": True,
+            "live_data_verified": False,
+            "dispatch_allowed": False,
+            "production_authority": False,
+        }
+        site_cutover_readiness = site_cutover_service.build_default(
+            {
+                "live_port_data": {
+                    "schema_version": "integration-state.v1",
+                    "report_id": "live-port-data:current",
+                    "report_status": (
+                        "ready" if integration_status["read_only_shadow_ready"] else "blocked"
+                    ),
+                    "evidence_sha256": canonical_sha256(integration_status),
+                },
+                "measurement_and_calibration": {
+                    "schema_version": measurement_verification.schema_version,
+                    "report_id": measurement_verification.report_id,
+                    "report_status": measurement_verification.status,
+                    "evidence_sha256": measurement_verification.evidence_sha256,
+                },
+                "production_execution": {
+                    "schema_version": "runtime-execution-boundary.v1",
+                    "report_id": "runtime-execution:application-boundary",
+                    "report_status": "blocked",
+                    "evidence_sha256": canonical_sha256(application_boundary),
+                },
+                "long_horizon_shadow": {
+                    "schema_version": "long-horizon-shadow-acceptance.v1",
+                    "report_id": "long-shadow:site-evidence-missing",
+                    "report_status": "blocked",
+                    "evidence_sha256": canonical_sha256(
+                        {
+                            "read_only_shadow_ready": integration_status[
+                                "read_only_shadow_ready"
+                            ],
+                            "production_authority": False,
+                        }
+                    ),
+                },
+                "port_emissions_inventory": {
+                    "schema_version": carbon_inventory.schema_version,
+                    "report_id": f"port-inventory:{dataset_id}",
+                    "report_status": carbon_inventory.assurance.get("status", "blocked"),
+                    "evidence_sha256": carbon_inventory.evidence_sha256,
+                },
+                "energy_carbon_management": {
+                    "schema_version": energy_carbon_management.schema_version,
+                    "report_id": energy_carbon_management.report_id,
+                    "report_status": energy_carbon_management.status,
+                    "evidence_sha256": energy_carbon_management.evidence_sha256,
+                },
+                "operations_energy_coupling": {
+                    "schema_version": operations_energy_plan.schema_version,
+                    "report_id": operations_energy_plan.report_id,
+                    "report_status": operations_energy_plan.status,
+                    "evidence_sha256": operations_energy_plan.evidence_sha256,
+                },
+                "electrical_network": {
+                    "schema_version": electrical_network.schema_version,
+                    "report_id": electrical_network.report_id,
+                    "report_status": electrical_network.status,
+                    "evidence_sha256": electrical_network.evidence_sha256,
+                },
+                "algorithm_production": {
+                    "schema_version": algorithm_production.schema_version,
+                    "report_id": algorithm_production.report_id,
+                    "report_status": algorithm_production.status,
+                    "evidence_sha256": algorithm_production.evidence_sha256,
+                },
+                "carbon_asset_compliance": {
+                    "schema_version": carbon_assets.schema_version,
+                    "report_id": carbon_assets.report_id,
+                    "report_status": carbon_assets.status,
+                    "evidence_sha256": carbon_assets.evidence_sha256,
+                },
+                "commercial_settlement": {
+                    "schema_version": commercial_settlement.schema_version,
+                    "report_id": commercial_settlement.report_id,
+                    "report_status": commercial_settlement.status,
+                    "evidence_sha256": commercial_settlement.evidence_sha256,
+                },
+                "port_collaboration": {
+                    "schema_version": port_collaboration.schema_version,
+                    "report_id": port_collaboration.report_id,
+                    "report_status": port_collaboration.status,
+                    "evidence_sha256": port_collaboration.evidence_sha256,
+                },
+                "enterprise_ot_security": {
+                    "schema_version": enterprise_security.schema_version,
+                    "report_id": enterprise_security.report_id,
+                    "report_status": enterprise_security.status,
+                    "evidence_sha256": enterprise_security.evidence_sha256,
+                },
+            }
+        )
 
         return DashboardSnapshot(
             scenario_id="port_la_2025_public_benchmark",
@@ -89,7 +251,8 @@ class KpiEngine:
                     label="单箱碳强度",
                     value=marl.carbon_intensity_kg_per_teu,
                     unit="kg/TEU",
-                    delta=marl.carbon_intensity_kg_per_teu - traditional.carbon_intensity_kg_per_teu,
+                    delta=marl.carbon_intensity_kg_per_teu
+                    - traditional.carbon_intensity_kg_per_teu,
                 ),
                 KpiCard(
                     key="shore_power",
@@ -109,6 +272,17 @@ class KpiEngine:
             strategies=strategies,
             carbon_market=CarbonMarket(**carbon_market.__dict__),
             carbon_model=carbon_model,
+            carbon_inventory=carbon_inventory,
+            measurement_verification=measurement_verification,
+            carbon_assets=carbon_assets,
+            commercial_settlement=commercial_settlement,
+            port_collaboration=port_collaboration,
+            enterprise_security=enterprise_security,
+            energy_carbon_management=energy_carbon_management,
+            operations_energy_plan=operations_energy_plan,
+            electrical_network=electrical_network,
+            algorithm_production=algorithm_production,
+            site_cutover_readiness=site_cutover_readiness,
             timeseries=timeseries,
             rl_environment=simulation["rl_environment"],
             data_quality=data_quality,
@@ -118,7 +292,9 @@ class KpiEngine:
                 "deployment_mode": "offline_benchmark",
                 "production_dispatch_enabled": False,
                 "human_approval_required": True,
-                "policy_stage": "validated_offline" if policy_status == "trained_policy_test_evidence" else "control_benchmark",
+                "policy_stage": "validated_offline"
+                if policy_status == "trained_policy_test_evidence"
+                else "control_benchmark",
                 "policy_evidence": policy_status,
                 "dataset_package_sha256": data_quality.get("evidence_hash", dataset_sha256),
                 "read_only_shadow_ready": integration_status["read_only_shadow_ready"],
@@ -130,13 +306,18 @@ class KpiEngine:
         )
 
     def build_timeseries(self, green_preference: float) -> TimeSeriesResponse:
-        rows = [StrategyComparison(**row) for row in DispatchSimulator().simulate(green_preference)["strategies"]]
+        rows = [
+            StrategyComparison(**row)
+            for row in DispatchSimulator().simulate(green_preference)["strategies"]
+        ]
         return TimeSeriesResponse(
             scenario_id="port_la_2025_public_benchmark",
             points=self._timeseries_from_strategies(rows[0], rows[1]),
         )
 
-    def _timeseries_from_strategies(self, baseline: StrategyComparison, optimized: StrategyComparison) -> list[TimeSeriesPoint]:
+    def _timeseries_from_strategies(
+        self, baseline: StrategyComparison, optimized: StrategyComparison
+    ) -> list[TimeSeriesPoint]:
         return [
             TimeSeriesPoint(
                 time=optimized_point.time,
@@ -145,7 +326,9 @@ class KpiEngine:
                 traditional_energy_kwh=baseline_point.energy_kwh,
                 marl_energy_kwh=optimized_point.energy_kwh,
             )
-            for baseline_point, optimized_point in zip(baseline.trajectory, optimized.trajectory, strict=False)
+            for baseline_point, optimized_point in zip(
+                baseline.trajectory, optimized.trajectory, strict=False
+            )
         ]
 
     def _build_carbon_model(
@@ -158,7 +341,9 @@ class KpiEngine:
     ) -> CarbonModelSummary:
         calculator = CarbonCalculator()
         if dataset is not None:
-            data_source = str(dataset.metadata.get("name") or dataset.metadata.get("title") or dataset.dataset_id)
+            data_source = str(
+                dataset.metadata.get("name") or dataset.metadata.get("title") or dataset.dataset_id
+            )
             factor_quality = dataset.metadata.get("carbon_factor_quality") or {}
         else:
             data_source = dataset_id
@@ -212,77 +397,113 @@ class KpiEngine:
     def _build_alerts(
         optimized: StrategyComparison,
         carbon_model: CarbonModelSummary,
+        carbon_inventory_coverage: dict[str, object],
         data_quality: dict[str, object],
         data_drift: dict[str, object],
     ) -> list[OperationalAlert]:
         alerts: list[OperationalAlert] = []
-        peak_violations = [point.peak_violation_kw for point in optimized.trajectory if point.peak_violation_kw > 0]
-        delay_violations = [point.delay_minutes for point in optimized.trajectory if point.delay_minutes > 120]
+        peak_violations = [
+            point.peak_violation_kw for point in optimized.trajectory if point.peak_violation_kw > 0
+        ]
+        delay_violations = [
+            point.delay_minutes for point in optimized.trajectory if point.delay_minutes > 120
+        ]
         if peak_violations:
-            alerts.append(OperationalAlert(
-                code="GRID_CAPACITY_EXCEEDED",
-                severity="critical",
-                title_zh="电网容量约束超限",
-                title_en="Grid capacity constraint exceeded",
-                detail_zh=f"测试轨迹有 {len(peak_violations)} 个时间步超限。",
-                detail_en=f"{len(peak_violations)} held-out steps exceeded the grid limit.",
-                source="held_out_trajectory",
-                value=round(max(peak_violations), 3),
-                threshold=0.0,
-            ))
+            alerts.append(
+                OperationalAlert(
+                    code="GRID_CAPACITY_EXCEEDED",
+                    severity="critical",
+                    title_zh="电网容量约束超限",
+                    title_en="Grid capacity constraint exceeded",
+                    detail_zh=f"测试轨迹有 {len(peak_violations)} 个时间步超限。",
+                    detail_en=f"{len(peak_violations)} held-out steps exceeded the grid limit.",
+                    source="held_out_trajectory",
+                    value=round(max(peak_violations), 3),
+                    threshold=0.0,
+                )
+            )
         if delay_violations:
-            alerts.append(OperationalAlert(
-                code="DELAY_GUARDRAIL_EXCEEDED",
-                severity="warning",
-                title_zh="延误护栏超限",
-                title_en="Delay guardrail exceeded",
-                detail_zh=f"测试轨迹有 {len(delay_violations)} 个时间步超过 120 分钟。",
-                detail_en=f"{len(delay_violations)} held-out steps exceeded 120 minutes.",
-                source="held_out_trajectory",
-                value=round(max(delay_violations), 3),
-                threshold=120.0,
-            ))
+            alerts.append(
+                OperationalAlert(
+                    code="DELAY_GUARDRAIL_EXCEEDED",
+                    severity="warning",
+                    title_zh="延误护栏超限",
+                    title_en="Delay guardrail exceeded",
+                    detail_zh=f"测试轨迹有 {len(delay_violations)} 个时间步超过 120 分钟。",
+                    detail_en=f"{len(delay_violations)} held-out steps exceeded 120 minutes.",
+                    source="held_out_trajectory",
+                    value=round(max(delay_violations), 3),
+                    threshold=120.0,
+                )
+            )
         if str(data_quality.get("status")) != "pass":
-            alerts.append(OperationalAlert(
-                code="DATA_QUALITY_REVIEW",
-                severity="warning",
-                title_zh="数据质量需要复核",
-                title_en="Dataset quality review required",
-                detail_zh=f"当前数据质量评分 {data_quality.get('score', 0)}/100。",
-                detail_en=f"Current dataset quality score is {data_quality.get('score', 0)}/100.",
-                source="dataset_quality_gate",
-                value=float(data_quality.get("score") or 0),
-                threshold=75.0,
-            ))
+            alerts.append(
+                OperationalAlert(
+                    code="DATA_QUALITY_REVIEW",
+                    severity="warning",
+                    title_zh="数据质量需要复核",
+                    title_en="Dataset quality review required",
+                    detail_zh=f"当前数据质量评分 {data_quality.get('score', 0)}/100。",
+                    detail_en=f"Current dataset quality score is {data_quality.get('score', 0)}/100.",
+                    source="dataset_quality_gate",
+                    value=float(data_quality.get("score") or 0),
+                    threshold=75.0,
+                )
+            )
         if str(data_drift.get("status")) in {"review", "high_shift", "unavailable"}:
-            alerts.append(OperationalAlert(
-                code="DATA_SHIFT_REVIEW",
-                severity="warning" if data_drift.get("status") == "high_shift" else "info",
-                title_zh="训练与测试分布偏移",
-                title_en="Train-test distribution shift",
-                detail_zh=f"离线分布检查状态：{data_drift.get('status')}。",
-                detail_en=f"Offline distribution check status: {data_drift.get('status')}.",
-                source="dataset_drift_gate",
-                value=float(data_drift.get("max_shift") or 0),
-                threshold=float(data_drift.get("warning_threshold") or 0.5),
-            ))
+            alerts.append(
+                OperationalAlert(
+                    code="DATA_SHIFT_REVIEW",
+                    severity="warning" if data_drift.get("status") == "high_shift" else "info",
+                    title_zh="训练与测试分布偏移",
+                    title_en="Train-test distribution shift",
+                    detail_zh=f"离线分布检查状态：{data_drift.get('status')}。",
+                    detail_en=f"Offline distribution check status: {data_drift.get('status')}.",
+                    source="dataset_drift_gate",
+                    value=float(data_drift.get("max_shift") or 0),
+                    threshold=float(data_drift.get("warning_threshold") or 0.5),
+                )
+            )
         if carbon_model.scope2_market_based_kg is None:
-            alerts.append(OperationalAlert(
-                code="SCOPE2_MARKET_BASED_UNAVAILABLE",
+            alerts.append(
+                OperationalAlert(
+                    code="SCOPE2_MARKET_BASED_UNAVAILABLE",
+                    severity="info",
+                    title_zh="范围二市场法数据未接入",
+                    title_en="Scope 2 market-based data unavailable",
+                    detail_zh="当前只报告基于 eGRID 的所在地法结果，未接入供应商或合同凭证。",
+                    detail_en="Only the eGRID location-based result is reported; supplier and contractual instruments are not connected.",
+                    source="carbon_accounting_gate",
+                )
+            )
+        if not bool(carbon_inventory_coverage.get("inventory_complete")):
+            calculated = int(carbon_inventory_coverage.get("co2e_calculated_count") or 0)
+            total = int(carbon_inventory_coverage.get("source_category_count") or 0)
+            alerts.append(
+                OperationalAlert(
+                    code="PORT_EMISSIONS_INVENTORY_INCOMPLETE",
+                    severity="warning",
+                    title_zh="港口排放源清单未达到核证覆盖",
+                    title_en="Port emissions inventory coverage is incomplete",
+                    detail_zh=f"七类港口源中当前仅 {calculated}/{total} 类具有情景二氧化碳当量，现场活动数据和污染物因子仍缺失。",
+                    detail_en=(
+                        f"Only {calculated}/{total} port source categories have scenario CO2e; "
+                        "field activity data and pollutant-specific factors remain missing."
+                    ),
+                    source="port_emissions_inventory_gate",
+                    value=float(calculated),
+                    threshold=float(total),
+                )
+            )
+        alerts.append(
+            OperationalAlert(
+                code="PRODUCTION_ADAPTERS_NOT_CONNECTED",
                 severity="info",
-                title_zh="范围二市场法数据未接入",
-                title_en="Scope 2 market-based data unavailable",
-                detail_zh="当前只报告基于 eGRID 的所在地法结果，未接入供应商或合同凭证。",
-                detail_en="Only the eGRID location-based result is reported; supplier and contractual instruments are not connected.",
-                source="carbon_accounting_gate",
-            ))
-        alerts.append(OperationalAlert(
-            code="PRODUCTION_ADAPTERS_NOT_CONNECTED",
-            severity="info",
-            title_zh="生产港口适配器未接入",
-            title_en="Production port adapters not connected",
-            detail_zh="TOS、计量、设备遥测和配额登记簿均处于未接入状态。",
-            detail_en="TOS, metering, equipment telemetry, and allowance registry adapters are not connected.",
-            source="deployment_governance",
-        ))
+                title_zh="生产港口适配器未接入",
+                title_en="Production port adapters not connected",
+                detail_zh="TOS、计量、设备遥测和配额登记簿均处于未接入状态。",
+                detail_en="TOS, metering, equipment telemetry, and allowance registry adapters are not connected.",
+                source="deployment_governance",
+            )
+        )
         return alerts

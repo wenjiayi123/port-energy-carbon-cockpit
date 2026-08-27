@@ -35,6 +35,10 @@ tmp/
 !reports/regulatory_resilience_v3_artifacts/*.zip
 frontend/public/assets/*.tmp
 
+# Local visual-QA derivatives for generated delivery workbooks
+outputs/**/previews/
+outputs/**/*.inspect.ndjson
+
 # Private/submission working material is not part of the open-source tree
 /港口实时能碳与调度优化驾驶舱_软件著作权申请材料_V1.0/
 /软著申请材料_work/

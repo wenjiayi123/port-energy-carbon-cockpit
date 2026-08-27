@@ -1,3 +1,5 @@
+import hashlib
+import json
 from urllib.parse import urlsplit
 
 import pytest
@@ -29,6 +31,24 @@ def test_health_and_rl_capabilities_are_real() -> None:
     assert sum(item["family"] == "control_theory" for item in payload["algorithms"]) == 1
     assert payload["training_render_mode"] is None
     assert payload["evaluation_render_mode"] == "trajectory"
+
+
+def test_shadow_snapshot_api_fails_closed_without_six_resident_live_sources() -> None:
+    contract = client.get("/api/integration/contract")
+    assert contract.status_code == 200
+    assert contract.json()["composite_shadow_state"]["required_adapter_count"] == 6
+    assert contract.json()["composite_shadow_state"]["required_field_count"] == 21
+
+    response = client.get("/api/integration/shadow-snapshot")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["schema_version"] == "port-shadow-state.v1"
+    assert payload["ready"] is False
+    assert payload["quality"]["gate"] == "FAIL_CLOSED"
+    assert payload["observation"] == {}
+    assert payload["signals"] == {}
+    assert payload["production_boundary"]["live_data_verified"] is False
+    assert payload["production_boundary"]["production_authority"] is False
 
 
 def test_public_rl_surfaces_do_not_expose_local_absolute_paths() -> None:
@@ -173,8 +193,60 @@ def test_carbon_model_is_traceable_to_dataset_hash() -> None:
     assert payload["governance"]["production_dispatch_enabled"] is False
     assert {alert["code"] for alert in payload["alerts"]} >= {
         "SCOPE2_MARKET_BASED_UNAVAILABLE",
+        "PORT_EMISSIONS_INVENTORY_INCOMPLETE",
         "PRODUCTION_ADAPTERS_NOT_CONNECTED",
     }
+
+
+def test_port_emissions_inventory_exposes_complete_source_contract_and_assurance_gate() -> None:
+    response = client.get("/api/dashboard/carbon-inventory")
+    inventory = response.json()
+
+    assert response.status_code == 200
+    assert inventory["schema_version"] == "port-emissions-inventory.v1"
+    assert inventory["dataset_sha256"] == client.get("/api/dashboard/snapshot").json()[
+        "rl_environment"
+    ]["dataset_sha256"]
+    sources = {item["source_id"]: item for item in inventory["source_categories"]}
+    assert len(sources) == 7
+    assert sources["purchased_electricity"]["availability"] == "calculated_scenario"
+    assert sources["ocean_going_vessels_at_berth"]["ghg_scope"].startswith(
+        "unassigned_requires"
+    )
+    assert sources["heavy_duty_vehicles"]["co2e_kg"] is None
+    assert sources["rail_locomotives"]["co2e_kg"] is None
+    assert all(
+        value is None
+        for source in sources.values()
+        for value in source["pollutants_kg"].values()
+    )
+    assert inventory["coverage"] == {
+        "source_category_count": 7,
+        "co2e_calculated_count": 2,
+        "live_measured_count": 0,
+        "criteria_pollutant_ready_count": 0,
+        "criteria_pollutant_count": 8,
+        "modeled_source_coverage_pct": 28.6,
+        "inventory_complete": False,
+        "live_inventory_ready": False,
+    }
+    assert inventory["assurance"]["status"] == "blocked"
+    assert inventory["production_boundary"] == {
+        "simulation_mode": True,
+        "live_data_verified": False,
+        "inventory_assured": False,
+        "regulatory_submission_allowed": False,
+    }
+    unsigned = {key: value for key, value in inventory.items() if key != "evidence_sha256"}
+    expected_hash = hashlib.sha256(
+        json.dumps(
+            unsigned,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    assert inventory["evidence_sha256"] == expected_hash
 
 
 def test_recompute_uses_request_parameters_without_changing_test_horizon() -> None:

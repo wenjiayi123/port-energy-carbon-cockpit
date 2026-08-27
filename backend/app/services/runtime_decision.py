@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 import threading
+import time
 from typing import Any, Callable
 
 from app.core.config import settings
@@ -36,9 +37,7 @@ OBJECTIVE_WEIGHTS = {
 
 def _event_hash(event: dict[str, Any]) -> str:
     return hashlib.sha256(
-        json.dumps(event, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode(
-            "utf-8"
-        )
+        json.dumps(event, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
 
 
@@ -159,7 +158,9 @@ class RuntimeDecisionService:
         current_import = self._signal(snapshot, "grid.import_power_kw")
         transformer_capacity = self._signal(snapshot, "transformer.capacity_kw")
         charging_kw = max(0.0, -battery)
-        estimated_import = current_import + charging_kw + (agv - self._signal(snapshot, "charging.agv_load_kw"))
+        estimated_import = (
+            current_import + charging_kw + (agv - self._signal(snapshot, "charging.agv_load_kw"))
+        )
         if estimated_import > transformer_capacity * 0.94:
             available_charge = max(
                 0.0,
@@ -238,7 +239,10 @@ class RuntimeDecisionService:
                 "score": score,
             }
 
-        best: tuple[float, dict[str, float], dict[str, float], list[dict[str, Any]], dict[str, float]] | None = None
+        best: (
+            tuple[float, dict[str, float], dict[str, float], list[dict[str, Any]], dict[str, float]]
+            | None
+        ) = None
         for battery in (-3_200.0, -1_600.0, 0.0, 1_600.0, 3_200.0):
             for hvac in (23.0, 24.5, 26.0):
                 for shore in (4_200.0, 5_500.0, 6_800.0):
@@ -275,12 +279,10 @@ class RuntimeDecisionService:
                 * 100.0
             ),
             "predicted_cost_change_vs_sop_cny": (
-                impact["predicted_step_cost_cny"]
-                - baseline_impact["predicted_step_cost_cny"]
+                impact["predicted_step_cost_cny"] - baseline_impact["predicted_step_cost_cny"]
             ),
             "predicted_carbon_change_vs_sop_kg": (
-                impact["predicted_step_carbon_kg"]
-                - baseline_impact["predicted_step_carbon_kg"]
+                impact["predicted_step_carbon_kg"] - baseline_impact["predicted_step_carbon_kg"]
             ),
         }
         return requested, safe, constraints, impact
@@ -319,6 +321,7 @@ class RuntimeDecisionService:
         return canonical_sha256(value)
 
     def create(self, *, objective: str, idempotency_key: str, requested_by: str) -> dict[str, Any]:
+        decision_started = time.perf_counter()
         with self._lock:
             prior_id = self._state["request_idempotency"].get(idempotency_key)
             if prior_id:
@@ -326,20 +329,31 @@ class RuntimeDecisionService:
             snapshot = self.simulator.snapshot()
             if not snapshot["decision_allowed"]:
                 raise RuntimeError("runtime_quality_gate_failed")
+            forecast_started = time.perf_counter()
             forecast = self.forecast_model.predict(snapshot)
+            forecast_ms = (time.perf_counter() - forecast_started) * 1000.0
+            policy_started = time.perf_counter()
             requested, safe, constraints, predicted_impact = self._recommend(
                 snapshot, forecast, objective
             )
-            risk_level = "high" if (
-                abs(safe["battery_power_kw"]) >= 3_000.0
-                or abs(safe["agv_charging_limit_kw"] - self._signal(snapshot, "charging.agv_load_kw"))
-                > 1_200.0
-                or self._signal(snapshot, "transformer.loading_pct") > 90.0
-            ) else "standard"
+            policy_and_safety_ms = (time.perf_counter() - policy_started) * 1000.0
+            risk_level = (
+                "high"
+                if (
+                    abs(safe["battery_power_kw"]) >= 3_000.0
+                    or abs(
+                        safe["agv_charging_limit_kw"]
+                        - self._signal(snapshot, "charging.agv_load_kw")
+                    )
+                    > 1_200.0
+                    or self._signal(snapshot, "transformer.loading_pct") > 90.0
+                )
+                else "standard"
+            )
             required_approvals = 2 if risk_level == "high" else 1
-            decision_id = "decision-" + hashlib.sha256(
-                idempotency_key.encode("utf-8")
-            ).hexdigest()[:24]
+            decision_id = (
+                "decision-" + hashlib.sha256(idempotency_key.encode("utf-8")).hexdigest()[:24]
+            )
             model_meta = self.forecast_model.metadata()
             record = {
                 "schema_version": "runtime-decision.v1",
@@ -398,6 +412,34 @@ class RuntimeDecisionService:
                 "predicted_impact": {
                     key: round(float(value), 6) for key, value in predicted_impact.items()
                 },
+                "decision_explanation": {
+                    "schema_version": "runtime-objective-decomposition.v1",
+                    "method": "declared_objective_weight_decomposition",
+                    "reason_codes": [
+                        f"OPTIMIZE_{name.upper()}"
+                        for name, _ in sorted(
+                            OBJECTIVE_WEIGHTS[objective].items(),
+                            key=lambda item: item[1],
+                            reverse=True,
+                        )[:2]
+                    ],
+                    "objective_weights": OBJECTIVE_WEIGHTS[objective],
+                    "safety_constraint_ids": [item["constraint_id"] for item in constraints],
+                    "counterfactual": {
+                        "policy_id": "current-state-sop-v1",
+                        "score": round(float(predicted_impact["sop_baseline_score"]), 6),
+                    },
+                    "local_feature_attribution_verified": False,
+                    "production_fidelity_verified": False,
+                },
+                "decision_latency": {
+                    "schema_version": "runtime-decision-latency.v1",
+                    "clock": "monotonic",
+                    "forecast_ms": round(forecast_ms, 6),
+                    "policy_and_safety_projection_ms": round(policy_and_safety_ms, 6),
+                    "end_to_end_ms": round((time.perf_counter() - decision_started) * 1000.0, 6),
+                    "production_sla_verified": False,
+                },
                 "production_authority": False,
                 "dispatch_allowed": False,
                 "execution_receipt": None,
@@ -454,9 +496,7 @@ class RuntimeDecisionService:
             if decision == "reject":
                 record["status"] = "rejected"
             else:
-                approved_count = sum(
-                    item["decision"] == "approve" for item in record["approvals"]
-                )
+                approved_count = sum(item["decision"] == "approve" for item in record["approvals"])
                 record["status"] = (
                     "approved"
                     if approved_count >= record["required_approvals"]
@@ -529,9 +569,10 @@ class RuntimeDecisionService:
             record["execution_receipt"] = {
                 "schema_version": "simulation-execution-receipt.v1",
                 "status": "acknowledged",
-                "ack_id": "ack-" + hashlib.sha256(
-                    f"{decision_id}:{idempotency_key}".encode("utf-8")
-                ).hexdigest()[:24],
+                "ack_id": "ack-"
+                + hashlib.sha256(f"{decision_id}:{idempotency_key}".encode("utf-8")).hexdigest()[
+                    :24
+                ],
                 "idempotency_key": idempotency_key,
                 "executor_id": executor_id,
                 "executed_at": iso_z(utc_now()),
@@ -628,6 +669,54 @@ class RuntimeDecisionService:
                 "schema_version": "runtime-decision-list.v1",
                 "count": len(records),
                 "items": json.loads(json.dumps(records)),
+                "production_authority": False,
+            }
+
+    def statistics(self) -> dict[str, Any]:
+        """Aggregate local review, receipt and latency evidence without upgrading it."""
+        with self._lock:
+            records = list(self._state["decisions"].values())
+            approvals = [approval for record in records for approval in record.get("approvals", [])]
+            vetoes = [item for item in approvals if item.get("decision") == "reject"]
+            latencies = sorted(
+                float(record["decision_latency"]["end_to_end_ms"])
+                for record in records
+                if record.get("decision_latency", {}).get("end_to_end_ms") is not None
+            )
+
+            def percentile(probability: float) -> float | None:
+                if not latencies:
+                    return None
+                index = max(
+                    0,
+                    min(
+                        len(latencies) - 1,
+                        int((probability * len(latencies) + 0.999999)) - 1,
+                    ),
+                )
+                return round(latencies[index], 6)
+
+            return {
+                "schema_version": "runtime-decision-statistics.v1",
+                "decision_count": len(records),
+                "review_count": len(approvals),
+                "veto_count": len(vetoes),
+                "veto_rate": round(len(vetoes) / max(1, len(approvals)), 6),
+                "review_reason_complete_rate": round(
+                    sum(bool(item.get("comment", "").strip()) for item in approvals)
+                    / max(1, len(approvals)),
+                    6,
+                ),
+                "distinct_reviewer_count": len({item.get("approver_id") for item in approvals}),
+                "simulation_receipt_count": sum(
+                    bool(record.get("execution_receipt")) for record in records
+                ),
+                "latency_sample_count": len(latencies),
+                "latency_p50_ms": percentile(0.50),
+                "latency_p95_ms": percentile(0.95),
+                "latency_p99_ms": percentile(0.99),
+                "evidence_class": "local_simulation_observation",
+                "production_qualification_evidence": False,
                 "production_authority": False,
             }
 

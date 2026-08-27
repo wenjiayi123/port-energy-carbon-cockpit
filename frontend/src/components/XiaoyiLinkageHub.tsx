@@ -627,6 +627,7 @@ export function XiaoyiLinkageHub({
     y: Math.max(80, window.innerHeight - 108),
   }));
   const [showOrbGreeting, setShowOrbGreeting] = useState(true);
+  const orbRef = useRef<HTMLButtonElement | null>(null);
   const dragRef = useRef<{ dx: number; dy: number; moved: boolean } | null>(null);
   const suppressOrbClickRef = useRef(false);
   const xiaoyiTrainingRunRef = useRef(false);
@@ -654,6 +655,21 @@ export function XiaoyiLinkageHub({
   useEffect(() => {
     const timer = window.setTimeout(() => setShowOrbGreeting(false), 5200);
     return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const clampOrbToViewport = () => {
+      const orbWidth = orbRef.current?.offsetWidth ?? 110;
+      const orbHeight = orbRef.current?.offsetHeight ?? 150;
+      setPosition((current) => ({
+        x: Math.max(10, Math.min(window.innerWidth - orbWidth - 10, current.x)),
+        y: Math.max(10, Math.min(window.innerHeight - orbHeight - 10, current.y)),
+      }));
+    };
+
+    clampOrbToViewport();
+    window.addEventListener('resize', clampOrbToViewport);
+    return () => window.removeEventListener('resize', clampOrbToViewport);
   }, []);
 
   const objective = useMemo(
@@ -1723,6 +1739,7 @@ export function XiaoyiLinkageHub({
   return (
     <>
       <button
+        ref={orbRef}
         className={`xiaoyi-orb${open ? ' has-drawer' : ''}${showOrbGreeting ? ' has-greeting' : ''}`}
         style={{ left: position.x, top: position.y }}
         type="button"

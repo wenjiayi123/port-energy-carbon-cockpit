@@ -11,6 +11,29 @@ per-adapter HMAC-SHA256 signature, canonical payload SHA-256, required fields
 and units, an increasing sequence number, a unique snapshot ID and source-specific
 freshness. Only digests and lineage metadata are persisted locally.
 
+The composite layer emits `port-shadow-state.v1` through
+`GET /api/integration/shadow-snapshot`. It does not join whatever values happen
+to be available. All six current-process payloads must match their latest
+persisted evidence, all five dynamic feeds must fall within a 300-second
+observation window, API authentication and the audit chain must be ready, and
+the service must be configured in named-port `shadow` mode. Only then are the
+21 canonical fields released as one atomic, model-readable observation with
+per-field source lineage and a deterministic SHA-256.
+
+Operational values are never written to the integration state file. A process
+restart deliberately clears them, so every source must resend—even if valid
+digests remain on disk. Until the resend is complete, the endpoint returns a
+`FAIL_CLOSED` quality gate and empty `observation` and `signals` objects. The
+shore-power compatibility registry is treated as slow-changing reference data;
+it still has to be fresh and resident, but it is excluded from the five-source
+dynamic time-skew calculation.
+
+These checks establish schema, origin-key possession, integrity, freshness and
+cross-source temporal coherence. They do not establish sensor calibration,
+business correctness, terminal acceptance or production authority. Therefore
+`live_data_verified`, `dispatch_allowed` and `production_authority` remain
+`false` in the composite response.
+
 ## What stays unchanged
 
 All ports use the same five executable methods:
