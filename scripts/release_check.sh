@@ -9,6 +9,8 @@ if [ ! -x "$PYTHON_BIN" ]; then
   exit 1
 fi
 
+"$PYTHON_BIN" "$ROOT/scripts/public_privacy_scan.py"
+
 bash "$ROOT/scripts/validate_structure.sh"
 cd "$ROOT/backend"
 "$PYTHON_BIN" -m compileall -q app
