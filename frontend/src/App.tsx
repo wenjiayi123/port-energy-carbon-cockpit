@@ -190,6 +190,7 @@ export function App() {
   const [auditStatus, setAuditStatus] = useState<Record<string, any> | null>(null);
   const [landingEvidence, setLandingEvidence] = useState<Record<string, any> | null>(null);
   const [regulatoryEvidence, setRegulatoryEvidence] = useState<Record<string, any> | null>(null);
+  const [hybridEvidence, setHybridEvidence] = useState<Record<string, any> | null>(null);
   const [evidenceHistory, setEvidenceHistory] = useState<Record<string, any> | null>(null);
   const [policyTest, setPolicyTest] = useState<Record<string, any> | null>(null);
   const [sailingStatus, setSailingStatus] = useState<Record<string, any> | null>(null);
@@ -275,9 +276,26 @@ export function App() {
       { id: 'ppo', name: 'PPO', family: 'reinforcement_learning', action_space: 'continuous' },
       { id: 'sac', name: 'SAC', family: 'reinforcement_learning', action_space: 'continuous' },
       { id: 'td3', name: 'TD3', family: 'reinforcement_learning', action_space: 'continuous' },
-      { id: 'dqn', name: 'DQN', family: 'reinforcement_learning', action_space: '81 discrete' },
+      { id: 'dqn', name: 'DQN', family: 'reinforcement_learning', action_space: 'v1–v3 81 · v4 729 · v5 243 curated' },
       { id: 'mpc', name: 'MPC', family: 'control_theory', action_space: '27-action beam search' },
     ];
+  const rlBusinessScope = rlCapabilities?.hybrid_business_scope ?? {};
+  const rlBusinessDomains = Array.isArray(rlBusinessScope?.domains)
+    ? rlBusinessScope.domains as Array<Record<string, any>>
+    : [];
+  const rlDecisionCounts = rlBusinessScope?.decision_counts ?? {};
+  const hybridChampion = hybridEvidence?.champion as Record<string, any> | undefined;
+  const hybridChampionMetrics = hybridChampion?.versus_mpc_or as Record<string, any> | undefined;
+  const hybridEvidenceSummary = (hybridEvidence?.evidence_summary ?? {}) as Record<string, any>;
+  const hybridChallengerDomains = Array.isArray(hybridEvidenceSummary?.offline_domain_challengers)
+    ? hybridEvidenceSummary.offline_domain_challengers as string[]
+    : [];
+  const hybridChallengerLabels = hybridChallengerDomains.map((domain) => (
+    rlBusinessDomains.find((item) => item.domain === domain)?.label_zh ?? domain
+  ));
+  const hybridGlobalFailedChecks = Array.isArray(hybridEvidenceSummary?.global_failed_checks)
+    ? hybridEvidenceSummary.global_failed_checks as string[]
+    : [];
   const shorePowerGain = (marl?.shore_power_usage_rate ?? 0) - (traditional?.shore_power_usage_rate ?? 0);
   const carbonReductionTon = ((traditional?.total_carbon_kg ?? 0) - (marl?.total_carbon_kg ?? 0)) / 1000;
   const shoreWindowCards = marlTrajectory.map((point, index) => {
@@ -806,26 +824,30 @@ export function App() {
     let active = true;
 
     async function refreshEngineeringSignals() {
-      const [health, linkage, rl, sailing, registry, integration, audit, evidence, historyEvidence] = await Promise.all([
+      const [health, linkage, rl, capabilities, sailing, registry, integration, audit, evidence, historyEvidence, hybrid] = await Promise.all([
         fetchJson('/api/health').catch(() => null),
         fetchJson('/api/linkage/health').catch(() => null),
         fetchJson('/api/rl/train/status').catch(() => null),
+        fetchJson('/api/rl/capabilities').catch(() => null),
         fetchJson('/api/sailing/status').catch(() => null),
         fetchJson('/api/rl/registry').catch(() => null),
         fetchJson('/api/integration/status').catch(() => null),
         fetchJson('/api/audit/integrity').catch(() => null),
         fetchJson('/api/evidence/landing-benchmark').catch(() => null),
         fetchJson('/api/evidence/history').catch(() => null),
+        fetchJson('/api/rl/hybrid-evidence').catch(() => null),
       ]);
       if (!active) return;
       setApiHealth({ health, linkage, rl, sailing, registry });
       if (rl) setRlStatus(rl);
+      if (capabilities) setRlCapabilities(capabilities);
       if (sailing) setSailingStatus(sailing);
       if (registry) setModelRegistry(registry);
       if (integration) setIntegrationStatus(integration);
       if (audit) setAuditStatus(audit);
       if (evidence) setLandingEvidence(evidence);
       if (historyEvidence) setEvidenceHistory(historyEvidence);
+      if (hybrid) setHybridEvidence(hybrid);
     }
 
     void refreshEngineeringSignals();
@@ -1337,18 +1359,21 @@ export function App() {
 
   async function refreshLandingEvidence() {
     try {
-      const [evidence, historyEvidence, regulatory] = await Promise.all([
+      const [evidence, historyEvidence, regulatory, hybrid] = await Promise.all([
         fetchJson('/api/evidence/landing-benchmark'),
         fetchJson('/api/evidence/history'),
         fetchJson('/api/evidence/regulatory-resilience'),
+        fetchJson('/api/rl/hybrid-evidence'),
       ]);
       setLandingEvidence(evidence);
       setEvidenceHistory(historyEvidence);
       setRegulatoryEvidence(regulatory);
+      setHybridEvidence(hybrid);
     } catch {
       setLandingEvidence(null);
       setEvidenceHistory(null);
       setRegulatoryEvidence(null);
+      setHybridEvidence(null);
     }
   }
 
@@ -2053,8 +2078,8 @@ export function App() {
                 <section className="algorithm-matrix-board" aria-label="五算法训练矩阵">
                   <header>
                     <div>
-                      <span>训练中心 · 五算法矩阵</span>
-                      <small>4 RL ALGORITHMS + 1 CONTROL BASELINE</small>
+                      <span>训练中心 · 版本化五算法矩阵</span>
+                      <small>3 v6 RL + 1 HISTORICAL RL + 1 CONTROL BASELINE</small>
                     </div>
                     <b>{rlCapabilities?.runtime?.available ? `SB3 ${rlCapabilities.runtime.stable_baselines3 ?? 'ready'}` : '运行时核验中'}</b>
                   </header>
@@ -2069,11 +2094,44 @@ export function App() {
                     ))}
                   </div>
                   <footer>
-                    <span>训练数据 <b>{rlStatus?.config?.dataset_id ?? 'port_la_2020_2024_vessel_activity_hourly'}</b></span>
-                    <span>观测 <b>{rlStatus?.config?.observation_count ?? 25} 维</b></span>
-                    <span>动作 <b>v1–v3: 4/81 · v4: 6/729</b></span>
+                    <span>当前 v6 数据 <b>{rlBusinessScope?.dataset_id ?? 'port_la_2020_2024_hybrid_rl_hourly'}</b></span>
+                    <span>v6 观测 <b>106 维</b></span>
+                    <span>动作 <b>v6: 10残差 + 6运筹优先级 · v1–v5保留</b></span>
                     <span>训练渲染 <b>OFF</b></span>
                     <span>测试回放 <b>HELD-OUT ONLY</b></span>
+                  </footer>
+                </section>
+                <section className="algorithm-production-board" aria-label="强化学习与非强化学习业务责任边界">
+                  <header>
+                    <div>
+                      <span>v6 分层混合智能责任边界 · 可替换现场数据合同</span>
+                      <small>106 OBSERVATIONS · 16 CONTINUOUS OUTPUTS · HARD FEASIBILITY PROJECTION</small>
+                    </div>
+                    <b>{hybridEvidence?.available ? String(hybridEvidence?.champion_status ?? 'EVALUATED').toUpperCase() : 'TRAINING / EVALUATION PENDING'}</b>
+                  </header>
+                  <div className="algorithm-production-summary">
+                    <span>业务域<b>{rlBusinessScope?.domain_count ?? 27}</b><small>学习、控制、规则、现场权限逐域归属</small></span>
+                    <span>RL/混合输出<b>{rlBusinessScope?.policy_output_count ?? 16}</b><small>10 个有界控制残差 + {rlBusinessScope?.strategic_priority_count ?? 6} 个运筹优先级</small></span>
+                    <span>观测维度<b>106</b><small>只使用当前及历史可见量，禁用未来行泄漏</small></span>
+                    <span>RL/混合业务域<b>{rlDecisionCounts.rl_or_hybrid_strategy ?? 16}</b><small>算法决策域占比 {rlBusinessScope?.algorithmic_decision_share?.rl_or_hybrid_pct ?? 94.118}%</small></span>
+                    <span>纯控制/物理域<b>{rlDecisionCounts.pure_control_or_physics ?? 1}</b><small>电压、无功、谐波、保护与毫秒级联锁</small></span>
+                    <span>生产权限<b>FALSE</b><small>现场替换数据后仍须标定、影子运行与验收</small></span>
+                    <span>v6 冠军<b>{hybridChampion ? `${String(hybridChampion.algorithm).toUpperCase()} · seed ${hybridChampion.seed}` : '尚未准入'}</b><small>{hybridChampionMetrics ? `相对强 MPC+OR：奖励 ${formatNumber(hybridChampionMetrics.reward_change, 3)} · 碳 ${formatNumber(hybridChampionMetrics.carbon_reduction_pct, 3)}%` : '必须三个最终随机种子同时通过严格业务价值门禁'}</small></span>
+                    <span>域级 RL 挑战者<b>{hybridChallengerLabels.length ? hybridChallengerLabels.join(' · ') : '无'}</b><small>仅保留三个最终种子均严格改善且零安全越界的直接业务指标</small></span>
+                    <span>全局失败门禁<b>{hybridGlobalFailedChecks.length}</b><small>{hybridGlobalFailedChecks.slice(0, 3).join(' · ') || '等待冻结评测'}{hybridGlobalFailedChecks.length > 3 ? '…' : ''}</small></span>
+                  </div>
+                  <div className="algorithm-production-domains">
+                    {rlBusinessDomains.map((domain) => (
+                      <span className={domain.status === 'implemented_offline' ? 'received' : domain.status.startsWith('implemented_') ? 'passed' : 'blocked'} key={domain.domain} title={`${domain.decision_owner} · ${domain.production_input}`}>
+                        <i />
+                        <b>{domain.label_zh}</b>
+                        <small>{domain.decision_owner} · {domain.status}</small>
+                      </span>
+                    ))}
+                  </div>
+                  <footer>
+                    <span>数据集 <b>{rlBusinessScope?.dataset_id ?? 'port_la_2020_2024_hybrid_rl_hourly'}</b></span>
+                    <b>AUTHORITY / LEDGER / SETTLEMENT / PROTECTION / PLC INTERLOCK REMAIN OUTSIDE RL</b>
                   </footer>
                 </section>
                 <div className="training-monitor-grid">

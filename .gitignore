@@ -33,6 +33,9 @@ tmp/
 !reports/regulatory_resilience_v1_artifacts/*.zip
 !reports/regulatory_resilience_v2_artifacts/*.zip
 !reports/regulatory_resilience_v3_artifacts/*.zip
+!reports/rl_tuning_operational_flex_v5_10k_artifacts/*.zip
+!reports/rl_refinement_operational_flex_v5_100k_artifacts/*.zip
+!reports/rl_tuning_hybrid_v6_50k_artifacts/*.zip
 frontend/public/assets/*.tmp
 
 # Local visual-QA derivatives for generated delivery workbooks

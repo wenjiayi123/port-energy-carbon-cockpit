@@ -1,0 +1,1193 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-08-30T07:12:18.537660Z",
+  "evidence_label": "OFFLINE_RL_EXPERIMENT_NOT_FIELD_KPI",
+  "dataset_id": "port_la_2020_2024_operational_flex_hourly",
+  "dataset_package_sha256": "2664c6158eaf1b250ca5885fd141e5322307d64350254eee34633ec97fbfbafd",
+  "environment_id": "PortEnergyDispatchEnv-v5",
+  "search_space_path": "configs/rl_search_space.json",
+  "search_space_sha256": "e9718c1de61eae8c4346a8cbc361f3341626a87c8d6bb72dacfe2ec0243ce6a6",
+  "code_sha256": {
+    "backend/app/rl/environment.py": "73c171aba8182c3aba526beeeac38133bdcd76bd7c53264454e0a97a54af4809",
+    "backend/app/rl/training.py": "2a7582b6549f6b9ef31cf93fff13a25f51de8178091387558952af13c8f2a019",
+    "backend/app/rl/tuning.py": "69ef15854503642b3828e43a50bbad496b0651be879d091f8eeff30903cf3b79"
+  },
+  "runtime": {
+    "available": true,
+    "python": "3.12.13",
+    "python_implementation": "CPython",
+    "platform": "darwin",
+    "machine": "x86_64",
+    "numpy": "1.26.4",
+    "torch": "2.2.2",
+    "gymnasium": "1.0.0",
+    "stable_baselines3": "2.4.1",
+    "device": "cpu"
+  },
+  "total_steps_per_fit": 10000,
+  "selection_protocol": {
+    "fit_split": "train",
+    "selection_split": "validation",
+    "final_report_split": "test",
+    "primary_score": "validation_return",
+    "hard_gate": "validation_safety_violations == 0",
+    "seed_policy": "select on 20260724; final evaluation uses 11, 29, 47",
+    "render_during_fit_or_selection": false
+  },
+  "test_accessed": true,
+  "algorithms": [
+    {
+      "algorithm": "dqn",
+      "selection_seed": 20260724,
+      "selected_candidate_index": 1,
+      "selected_hyperparameters": {
+        "learning_rate": 0.0003,
+        "batch_size": 128,
+        "gamma": 0.995,
+        "exploration_fraction": 0.4
+      },
+      "selection_reason": "highest validation return among zero-violation candidates; test split remained inaccessible during selection",
+      "trials": [
+        {
+          "candidate_index": 0,
+          "hyperparameters": {
+            "learning_rate": 0.0001,
+            "batch_size": 64,
+            "gamma": 0.99,
+            "exploration_fraction": 0.25
+          },
+          "duration_sec": 204.21,
+          "actual_timesteps": 10000,
+          "resolved_hyperparameters": {
+            "policy": "MlpPolicy",
+            "learning_rate": 0.0001,
+            "batch_size": 64,
+            "gamma": 0.99,
+            "tau": 0.005,
+            "entropy_coef": 0.0,
+            "exploration_fraction": 0.25,
+            "episode_hours": 24
+          },
+          "fit_split": "train",
+          "selection_split": "validation",
+          "test_accessed": false,
+          "render_during_fit_or_selection": false,
+          "validation": {
+            "split": "validation",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 11.084347,
+              "energy_kwh": 364707.563311,
+              "carbon_kg": 113320.235271,
+              "cost": 619901.274543,
+              "delay_minutes": 140.099046,
+              "processed_teu": 23511.574007,
+              "safety_violations": 0.0625,
+              "peak_violation_steps": 0.0625,
+              "delay_violation_steps": 0.0,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 16248.196548
+            },
+            "selection_score": -1000000.0625
+          }
+        },
+        {
+          "candidate_index": 1,
+          "hyperparameters": {
+            "learning_rate": 0.0003,
+            "batch_size": 128,
+            "gamma": 0.995,
+            "exploration_fraction": 0.4
+          },
+          "duration_sec": 200.716,
+          "actual_timesteps": 10000,
+          "resolved_hyperparameters": {
+            "policy": "MlpPolicy",
+            "learning_rate": 0.0003,
+            "batch_size": 128,
+            "gamma": 0.995,
+            "tau": 0.005,
+            "entropy_coef": 0.0,
+            "exploration_fraction": 0.4,
+            "episode_hours": 24
+          },
+          "fit_split": "train",
+          "selection_split": "validation",
+          "test_accessed": false,
+          "render_during_fit_or_selection": false,
+          "validation": {
+            "split": "validation",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 11.249966,
+              "energy_kwh": 332167.27418,
+              "carbon_kg": 101628.222225,
+              "cost": 569825.038185,
+              "delay_minutes": 154.294488,
+              "processed_teu": 23521.508426,
+              "safety_violations": 0.0,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.0,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 15679.20818
+            },
+            "selection_score": 11.249966
+          }
+        }
+      ],
+      "final_seed_results": [
+        {
+          "seed": 17,
+          "training": {
+            "duration_sec": 202.608,
+            "actual_timesteps": 10000,
+            "resolved_hyperparameters": {
+              "policy": "MlpPolicy",
+              "learning_rate": 0.0003,
+              "batch_size": 128,
+              "gamma": 0.995,
+              "tau": 0.005,
+              "entropy_coef": 0.0,
+              "exploration_fraction": 0.4,
+              "episode_hours": 24
+            },
+            "fit_split": "train",
+            "selection_split": "validation",
+            "test_accessed": false,
+            "render_during_fit_or_selection": false,
+            "validation": {
+              "split": "validation",
+              "episodes": 48,
+              "steps": 1152,
+              "mean": {
+                "reward": 11.886325,
+                "energy_kwh": 359769.379825,
+                "carbon_kg": 111256.273455,
+                "cost": 606006.824967,
+                "delay_minutes": 137.649712,
+                "processed_teu": 23519.439401,
+                "safety_violations": 0.0,
+                "peak_violation_steps": 0.0,
+                "delay_violation_steps": 0.0,
+                "soc_violation_steps": 0.0,
+                "peak_kw": 16255.00977
+              },
+              "selection_score": 11.886325
+            }
+          },
+          "test": {
+            "split": "test",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 9.91925,
+              "energy_kwh": 377480.316871,
+              "carbon_kg": 119001.185958,
+              "cost": 686660.265734,
+              "delay_minutes": 216.228494,
+              "processed_teu": 27856.400652,
+              "safety_violations": 0.041667,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.041667,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 16541.368827
+            },
+            "selection_score": -1000000.041667
+          },
+          "artifact_path": "reports/rl_tuning_operational_flex_v5_10k_artifacts/dqn-seed-17.zip",
+          "artifact_sha256": "14c9e907cca628c43fe14d82cca53dd4c0629a14639519631b2f9fdf7ecc1ec3"
+        },
+        {
+          "seed": 37,
+          "training": {
+            "duration_sec": 205.866,
+            "actual_timesteps": 10000,
+            "resolved_hyperparameters": {
+              "policy": "MlpPolicy",
+              "learning_rate": 0.0003,
+              "batch_size": 128,
+              "gamma": 0.995,
+              "tau": 0.005,
+              "entropy_coef": 0.0,
+              "exploration_fraction": 0.4,
+              "episode_hours": 24
+            },
+            "fit_split": "train",
+            "selection_split": "validation",
+            "test_accessed": false,
+            "render_during_fit_or_selection": false,
+            "validation": {
+              "split": "validation",
+              "episodes": 48,
+              "steps": 1152,
+              "mean": {
+                "reward": 11.221616,
+                "energy_kwh": 358100.149933,
+                "carbon_kg": 110099.064593,
+                "cost": 610421.065267,
+                "delay_minutes": 136.370629,
+                "processed_teu": 23511.677708,
+                "safety_violations": 0.0625,
+                "peak_violation_steps": 0.0625,
+                "delay_violation_steps": 0.0,
+                "soc_violation_steps": 0.0,
+                "peak_kw": 16126.384724
+              },
+              "selection_score": -1000000.0625
+            }
+          },
+          "test": {
+            "split": "test",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 9.49432,
+              "energy_kwh": 376395.090834,
+              "carbon_kg": 115898.342493,
+              "cost": 690011.176411,
+              "delay_minutes": 203.273992,
+              "processed_teu": 27869.819605,
+              "safety_violations": 0.104167,
+              "peak_violation_steps": 0.0625,
+              "delay_violation_steps": 0.041667,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 16484.480474
+            },
+            "selection_score": -1000000.104167
+          },
+          "artifact_path": "reports/rl_tuning_operational_flex_v5_10k_artifacts/dqn-seed-37.zip",
+          "artifact_sha256": "46c525a768440c03be3d6849c47b6cb58937bca9df206c19aa094f8b8ce1f271"
+        },
+        {
+          "seed": 59,
+          "training": {
+            "duration_sec": 206.833,
+            "actual_timesteps": 10000,
+            "resolved_hyperparameters": {
+              "policy": "MlpPolicy",
+              "learning_rate": 0.0003,
+              "batch_size": 128,
+              "gamma": 0.995,
+              "tau": 0.005,
+              "entropy_coef": 0.0,
+              "exploration_fraction": 0.4,
+              "episode_hours": 24
+            },
+            "fit_split": "train",
+            "selection_split": "validation",
+            "test_accessed": false,
+            "render_during_fit_or_selection": false,
+            "validation": {
+              "split": "validation",
+              "episodes": 48,
+              "steps": 1152,
+              "mean": {
+                "reward": 11.294062,
+                "energy_kwh": 336532.630543,
+                "carbon_kg": 103014.722641,
+                "cost": 575543.876878,
+                "delay_minutes": 147.640806,
+                "processed_teu": 23522.48644,
+                "safety_violations": 0.0,
+                "peak_violation_steps": 0.0,
+                "delay_violation_steps": 0.0,
+                "soc_violation_steps": 0.0,
+                "peak_kw": 15976.878627
+              },
+              "selection_score": 11.294062
+            }
+          },
+          "test": {
+            "split": "test",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 9.539782,
+              "energy_kwh": 359165.255838,
+              "carbon_kg": 111587.511341,
+              "cost": 662308.784262,
+              "delay_minutes": 212.929126,
+              "processed_teu": 27872.961032,
+              "safety_violations": 0.041667,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.041667,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 16446.865388
+            },
+            "selection_score": -1000000.041667
+          },
+          "artifact_path": "reports/rl_tuning_operational_flex_v5_10k_artifacts/dqn-seed-59.zip",
+          "artifact_sha256": "bba7b4accc15d4ca773af3d5103c3bac0e47073be180e7db375cc85dc64d3b96"
+        }
+      ]
+    },
+    {
+      "algorithm": "ppo",
+      "selection_seed": 20260724,
+      "selected_candidate_index": 0,
+      "selected_hyperparameters": {
+        "learning_rate": 0.0003,
+        "batch_size": 64,
+        "gamma": 0.99,
+        "entropy_coef": 0.0
+      },
+      "selection_reason": "highest validation return among zero-violation candidates; test split remained inaccessible during selection",
+      "trials": [
+        {
+          "candidate_index": 0,
+          "hyperparameters": {
+            "learning_rate": 0.0003,
+            "batch_size": 64,
+            "gamma": 0.99,
+            "entropy_coef": 0.0
+          },
+          "duration_sec": 202.207,
+          "actual_timesteps": 10240,
+          "resolved_hyperparameters": {
+            "policy": "MlpPolicy",
+            "learning_rate": 0.0003,
+            "batch_size": 64,
+            "gamma": 0.99,
+            "tau": 0.005,
+            "entropy_coef": 0.0,
+            "exploration_fraction": 0.25,
+            "episode_hours": 24
+          },
+          "fit_split": "train",
+          "selection_split": "validation",
+          "test_accessed": false,
+          "render_during_fit_or_selection": false,
+          "validation": {
+            "split": "validation",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 10.895966,
+              "energy_kwh": 349641.820791,
+              "carbon_kg": 111060.649847,
+              "cost": 596506.369767,
+              "delay_minutes": 138.371882,
+              "processed_teu": 23514.080671,
+              "safety_violations": 0.0,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.0,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 15223.924672
+            },
+            "selection_score": 10.895966
+          }
+        },
+        {
+          "candidate_index": 1,
+          "hyperparameters": {
+            "learning_rate": 0.0001,
+            "batch_size": 128,
+            "gamma": 0.995,
+            "entropy_coef": 0.01
+          },
+          "duration_sec": 204.911,
+          "actual_timesteps": 10240,
+          "resolved_hyperparameters": {
+            "policy": "MlpPolicy",
+            "learning_rate": 0.0001,
+            "batch_size": 128,
+            "gamma": 0.995,
+            "tau": 0.005,
+            "entropy_coef": 0.01,
+            "exploration_fraction": 0.25,
+            "episode_hours": 24
+          },
+          "fit_split": "train",
+          "selection_split": "validation",
+          "test_accessed": false,
+          "render_during_fit_or_selection": false,
+          "validation": {
+            "split": "validation",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 10.501181,
+              "energy_kwh": 348239.529455,
+              "carbon_kg": 118029.209252,
+              "cost": 599503.65504,
+              "delay_minutes": 134.941255,
+              "processed_teu": 23519.378432,
+              "safety_violations": 0.0,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.0,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 14416.178795
+            },
+            "selection_score": 10.501181
+          }
+        }
+      ],
+      "final_seed_results": [
+        {
+          "seed": 17,
+          "training": {
+            "duration_sec": 216.463,
+            "actual_timesteps": 10240,
+            "resolved_hyperparameters": {
+              "policy": "MlpPolicy",
+              "learning_rate": 0.0003,
+              "batch_size": 64,
+              "gamma": 0.99,
+              "tau": 0.005,
+              "entropy_coef": 0.0,
+              "exploration_fraction": 0.25,
+              "episode_hours": 24
+            },
+            "fit_split": "train",
+            "selection_split": "validation",
+            "test_accessed": false,
+            "render_during_fit_or_selection": false,
+            "validation": {
+              "split": "validation",
+              "episodes": 48,
+              "steps": 1152,
+              "mean": {
+                "reward": 10.929025,
+                "energy_kwh": 359146.635338,
+                "carbon_kg": 128107.780408,
+                "cost": 620970.384442,
+                "delay_minutes": 133.887675,
+                "processed_teu": 23522.137702,
+                "safety_violations": 0.0,
+                "peak_violation_steps": 0.0,
+                "delay_violation_steps": 0.0,
+                "soc_violation_steps": 0.0,
+                "peak_kw": 13787.457426
+              },
+              "selection_score": 10.929025
+            }
+          },
+          "test": {
+            "split": "test",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 9.391086,
+              "energy_kwh": 377996.857824,
+              "carbon_kg": 136668.773673,
+              "cost": 699406.489881,
+              "delay_minutes": 197.040274,
+              "processed_teu": 27880.543778,
+              "safety_violations": 0.041667,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.041667,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 14438.979327
+            },
+            "selection_score": -1000000.041667
+          },
+          "artifact_path": "reports/rl_tuning_operational_flex_v5_10k_artifacts/ppo-seed-17.zip",
+          "artifact_sha256": "cf7716a93ee34f1df1c66eb84c31bfc32e8ce5f15eab7ac0bbae0f61bfae6a88"
+        },
+        {
+          "seed": 37,
+          "training": {
+            "duration_sec": 212.846,
+            "actual_timesteps": 10240,
+            "resolved_hyperparameters": {
+              "policy": "MlpPolicy",
+              "learning_rate": 0.0003,
+              "batch_size": 64,
+              "gamma": 0.99,
+              "tau": 0.005,
+              "entropy_coef": 0.0,
+              "exploration_fraction": 0.25,
+              "episode_hours": 24
+            },
+            "fit_split": "train",
+            "selection_split": "validation",
+            "test_accessed": false,
+            "render_during_fit_or_selection": false,
+            "validation": {
+              "split": "validation",
+              "episodes": 48,
+              "steps": 1152,
+              "mean": {
+                "reward": 10.581161,
+                "energy_kwh": 353531.327149,
+                "carbon_kg": 117552.654896,
+                "cost": 608792.294072,
+                "delay_minutes": 134.900648,
+                "processed_teu": 23520.128767,
+                "safety_violations": 0.0,
+                "peak_violation_steps": 0.0,
+                "delay_violation_steps": 0.0,
+                "soc_violation_steps": 0.0,
+                "peak_kw": 14992.932486
+              },
+              "selection_score": 10.581161
+            }
+          },
+          "test": {
+            "split": "test",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 9.055203,
+              "energy_kwh": 372251.849989,
+              "carbon_kg": 124160.744988,
+              "cost": 687686.574608,
+              "delay_minutes": 199.220771,
+              "processed_teu": 27877.641628,
+              "safety_violations": 0.041667,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.041667,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 15795.748444
+            },
+            "selection_score": -1000000.041667
+          },
+          "artifact_path": "reports/rl_tuning_operational_flex_v5_10k_artifacts/ppo-seed-37.zip",
+          "artifact_sha256": "c5e28c43f851bf71bdfa2fe7a95edd66aa20028f103c9c06532dcc8a333251fa"
+        },
+        {
+          "seed": 59,
+          "training": {
+            "duration_sec": 212.197,
+            "actual_timesteps": 10240,
+            "resolved_hyperparameters": {
+              "policy": "MlpPolicy",
+              "learning_rate": 0.0003,
+              "batch_size": 64,
+              "gamma": 0.99,
+              "tau": 0.005,
+              "entropy_coef": 0.0,
+              "exploration_fraction": 0.25,
+              "episode_hours": 24
+            },
+            "fit_split": "train",
+            "selection_split": "validation",
+            "test_accessed": false,
+            "render_during_fit_or_selection": false,
+            "validation": {
+              "split": "validation",
+              "episodes": 48,
+              "steps": 1152,
+              "mean": {
+                "reward": 10.146052,
+                "energy_kwh": 351097.170692,
+                "carbon_kg": 125250.982403,
+                "cost": 610667.951598,
+                "delay_minutes": 136.713941,
+                "processed_teu": 23519.159584,
+                "safety_violations": 0.0,
+                "peak_violation_steps": 0.0,
+                "delay_violation_steps": 0.0,
+                "soc_violation_steps": 0.0,
+                "peak_kw": 13848.018002
+              },
+              "selection_score": 10.146052
+            }
+          },
+          "test": {
+            "split": "test",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 8.661249,
+              "energy_kwh": 369214.278865,
+              "carbon_kg": 133426.588852,
+              "cost": 686542.084648,
+              "delay_minutes": 202.781693,
+              "processed_teu": 27874.467749,
+              "safety_violations": 0.041667,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.041667,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 14555.067384
+            },
+            "selection_score": -1000000.041667
+          },
+          "artifact_path": "reports/rl_tuning_operational_flex_v5_10k_artifacts/ppo-seed-59.zip",
+          "artifact_sha256": "30f44f4086af8dec1330497887b73a3b77a998144b69d9776ab12f1d2f1138fe"
+        }
+      ]
+    },
+    {
+      "algorithm": "sac",
+      "selection_seed": 20260724,
+      "selected_candidate_index": 0,
+      "selected_hyperparameters": {
+        "learning_rate": 0.0003,
+        "batch_size": 128,
+        "gamma": 0.99,
+        "tau": 0.005
+      },
+      "selection_reason": "highest validation return among zero-violation candidates; test split remained inaccessible during selection",
+      "trials": [
+        {
+          "candidate_index": 0,
+          "hyperparameters": {
+            "learning_rate": 0.0003,
+            "batch_size": 128,
+            "gamma": 0.99,
+            "tau": 0.005
+          },
+          "duration_sec": 371.5,
+          "actual_timesteps": 10000,
+          "resolved_hyperparameters": {
+            "policy": "MlpPolicy",
+            "learning_rate": 0.0003,
+            "batch_size": 128,
+            "gamma": 0.99,
+            "tau": 0.005,
+            "entropy_coef": 0.0,
+            "exploration_fraction": 0.25,
+            "episode_hours": 24
+          },
+          "fit_split": "train",
+          "selection_split": "validation",
+          "test_accessed": false,
+          "render_during_fit_or_selection": false,
+          "validation": {
+            "split": "validation",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 11.202809,
+              "energy_kwh": 338509.990324,
+              "carbon_kg": 105899.502863,
+              "cost": 575775.914061,
+              "delay_minutes": 135.148189,
+              "processed_teu": 23518.982907,
+              "safety_violations": 0.0,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.0,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 15388.975264
+            },
+            "selection_score": 11.202809
+          }
+        },
+        {
+          "candidate_index": 1,
+          "hyperparameters": {
+            "learning_rate": 0.0001,
+            "batch_size": 256,
+            "gamma": 0.995,
+            "tau": 0.01
+          },
+          "duration_sec": 461.978,
+          "actual_timesteps": 10000,
+          "resolved_hyperparameters": {
+            "policy": "MlpPolicy",
+            "learning_rate": 0.0001,
+            "batch_size": 256,
+            "gamma": 0.995,
+            "tau": 0.01,
+            "entropy_coef": 0.0,
+            "exploration_fraction": 0.25,
+            "episode_hours": 24
+          },
+          "fit_split": "train",
+          "selection_split": "validation",
+          "test_accessed": false,
+          "render_during_fit_or_selection": false,
+          "validation": {
+            "split": "validation",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 9.991325,
+              "energy_kwh": 339277.541864,
+              "carbon_kg": 112766.329392,
+              "cost": 586040.536666,
+              "delay_minutes": 145.740491,
+              "processed_teu": 23469.940321,
+              "safety_violations": 0.0,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.0,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 14289.282727
+            },
+            "selection_score": 9.991325
+          }
+        }
+      ],
+      "final_seed_results": [
+        {
+          "seed": 17,
+          "training": {
+            "duration_sec": 462.38,
+            "actual_timesteps": 10000,
+            "resolved_hyperparameters": {
+              "policy": "MlpPolicy",
+              "learning_rate": 0.0003,
+              "batch_size": 128,
+              "gamma": 0.99,
+              "tau": 0.005,
+              "entropy_coef": 0.0,
+              "exploration_fraction": 0.25,
+              "episode_hours": 24
+            },
+            "fit_split": "train",
+            "selection_split": "validation",
+            "test_accessed": false,
+            "render_during_fit_or_selection": false,
+            "validation": {
+              "split": "validation",
+              "episodes": 48,
+              "steps": 1152,
+              "mean": {
+                "reward": 10.576319,
+                "energy_kwh": 337542.946144,
+                "carbon_kg": 106918.954888,
+                "cost": 572323.374683,
+                "delay_minutes": 138.672813,
+                "processed_teu": 23513.060946,
+                "safety_violations": 0.020833,
+                "peak_violation_steps": 0.020833,
+                "delay_violation_steps": 0.0,
+                "soc_violation_steps": 0.0,
+                "peak_kw": 15545.989698
+              },
+              "selection_score": -1000000.020833
+            }
+          },
+          "test": {
+            "split": "test",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 8.912431,
+              "energy_kwh": 358662.386549,
+              "carbon_kg": 115291.00394,
+              "cost": 656423.509607,
+              "delay_minutes": 219.027923,
+              "processed_teu": 27748.653079,
+              "safety_violations": 0.0625,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.0625,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 16247.241908
+            },
+            "selection_score": -1000000.0625
+          },
+          "artifact_path": "reports/rl_tuning_operational_flex_v5_10k_artifacts/sac-seed-17.zip",
+          "artifact_sha256": "892985183f873b0ef72bc0a810b980b26c7d73c4a19fcb23819687892599d228"
+        },
+        {
+          "seed": 37,
+          "training": {
+            "duration_sec": 611.61,
+            "actual_timesteps": 10000,
+            "resolved_hyperparameters": {
+              "policy": "MlpPolicy",
+              "learning_rate": 0.0003,
+              "batch_size": 128,
+              "gamma": 0.99,
+              "tau": 0.005,
+              "entropy_coef": 0.0,
+              "exploration_fraction": 0.25,
+              "episode_hours": 24
+            },
+            "fit_split": "train",
+            "selection_split": "validation",
+            "test_accessed": false,
+            "render_during_fit_or_selection": false,
+            "validation": {
+              "split": "validation",
+              "episodes": 48,
+              "steps": 1152,
+              "mean": {
+                "reward": 10.859975,
+                "energy_kwh": 340729.323277,
+                "carbon_kg": 107425.894791,
+                "cost": 583621.682079,
+                "delay_minutes": 135.802316,
+                "processed_teu": 23516.317924,
+                "safety_violations": 0.0,
+                "peak_violation_steps": 0.0,
+                "delay_violation_steps": 0.0,
+                "soc_violation_steps": 0.0,
+                "peak_kw": 16275.63793
+              },
+              "selection_score": 10.859975
+            }
+          },
+          "test": {
+            "split": "test",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 8.942405,
+              "energy_kwh": 361504.438776,
+              "carbon_kg": 115219.251087,
+              "cost": 667569.531445,
+              "delay_minutes": 235.592788,
+              "processed_teu": 27716.840421,
+              "safety_violations": 0.041667,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.041667,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 16573.894348
+            },
+            "selection_score": -1000000.041667
+          },
+          "artifact_path": "reports/rl_tuning_operational_flex_v5_10k_artifacts/sac-seed-37.zip",
+          "artifact_sha256": "d41558ca3f592793da873a69a69e2b1fbbe866e4967a25305781fa8d059d7277"
+        },
+        {
+          "seed": 59,
+          "training": {
+            "duration_sec": 738.701,
+            "actual_timesteps": 10000,
+            "resolved_hyperparameters": {
+              "policy": "MlpPolicy",
+              "learning_rate": 0.0003,
+              "batch_size": 128,
+              "gamma": 0.99,
+              "tau": 0.005,
+              "entropy_coef": 0.0,
+              "exploration_fraction": 0.25,
+              "episode_hours": 24
+            },
+            "fit_split": "train",
+            "selection_split": "validation",
+            "test_accessed": false,
+            "render_during_fit_or_selection": false,
+            "validation": {
+              "split": "validation",
+              "episodes": 48,
+              "steps": 1152,
+              "mean": {
+                "reward": 11.277679,
+                "energy_kwh": 332947.609164,
+                "carbon_kg": 106990.763303,
+                "cost": 565869.682662,
+                "delay_minutes": 143.756451,
+                "processed_teu": 23436.289431,
+                "safety_violations": 0.0,
+                "peak_violation_steps": 0.0,
+                "delay_violation_steps": 0.0,
+                "soc_violation_steps": 0.0,
+                "peak_kw": 14999.159971
+              },
+              "selection_score": 11.277679
+            }
+          },
+          "test": {
+            "split": "test",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 9.209082,
+              "energy_kwh": 354481.040136,
+              "carbon_kg": 114435.935262,
+              "cost": 649501.133132,
+              "delay_minutes": 264.922942,
+              "processed_teu": 27483.217959,
+              "safety_violations": 0.125,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.125,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 15897.68476
+            },
+            "selection_score": -1000000.125
+          },
+          "artifact_path": "reports/rl_tuning_operational_flex_v5_10k_artifacts/sac-seed-59.zip",
+          "artifact_sha256": "ea5a6267d18e81a1ca1999373f1ad6edf7b99d2b37ceaca96e6b201b1053a89a"
+        }
+      ]
+    },
+    {
+      "algorithm": "td3",
+      "selection_seed": 20260724,
+      "selected_candidate_index": 0,
+      "selected_hyperparameters": {
+        "learning_rate": 0.001,
+        "batch_size": 128,
+        "gamma": 0.99,
+        "tau": 0.005
+      },
+      "selection_reason": "highest validation return among zero-violation candidates; test split remained inaccessible during selection",
+      "trials": [
+        {
+          "candidate_index": 0,
+          "hyperparameters": {
+            "learning_rate": 0.001,
+            "batch_size": 128,
+            "gamma": 0.99,
+            "tau": 0.005
+          },
+          "duration_sec": 674.034,
+          "actual_timesteps": 10000,
+          "resolved_hyperparameters": {
+            "policy": "MlpPolicy",
+            "learning_rate": 0.001,
+            "batch_size": 128,
+            "gamma": 0.99,
+            "tau": 0.005,
+            "entropy_coef": 0.0,
+            "exploration_fraction": 0.25,
+            "episode_hours": 24
+          },
+          "fit_split": "train",
+          "selection_split": "validation",
+          "test_accessed": false,
+          "render_during_fit_or_selection": false,
+          "validation": {
+            "split": "validation",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 11.974739,
+              "energy_kwh": 367328.514462,
+              "carbon_kg": 111550.253912,
+              "cost": 618790.671638,
+              "delay_minutes": 133.945602,
+              "processed_teu": 23522.48644,
+              "safety_violations": 0.0,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.0,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 16088.701267
+            },
+            "selection_score": 11.974739
+          }
+        },
+        {
+          "candidate_index": 1,
+          "hyperparameters": {
+            "learning_rate": 0.0003,
+            "batch_size": 256,
+            "gamma": 0.995,
+            "tau": 0.01
+          },
+          "duration_sec": 719.718,
+          "actual_timesteps": 10000,
+          "resolved_hyperparameters": {
+            "policy": "MlpPolicy",
+            "learning_rate": 0.0003,
+            "batch_size": 256,
+            "gamma": 0.995,
+            "tau": 0.01,
+            "entropy_coef": 0.0,
+            "exploration_fraction": 0.25,
+            "episode_hours": 24
+          },
+          "fit_split": "train",
+          "selection_split": "validation",
+          "test_accessed": false,
+          "render_during_fit_or_selection": false,
+          "validation": {
+            "split": "validation",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 11.475525,
+              "energy_kwh": 352441.306955,
+              "carbon_kg": 114259.961337,
+              "cost": 594389.065269,
+              "delay_minutes": 138.891519,
+              "processed_teu": 23521.591138,
+              "safety_violations": 0.0,
+              "peak_violation_steps": 0.0,
+              "delay_violation_steps": 0.0,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 16073.56041
+            },
+            "selection_score": 11.475525
+          }
+        }
+      ],
+      "final_seed_results": [
+        {
+          "seed": 17,
+          "training": {
+            "duration_sec": 640.85,
+            "actual_timesteps": 10000,
+            "resolved_hyperparameters": {
+              "policy": "MlpPolicy",
+              "learning_rate": 0.001,
+              "batch_size": 128,
+              "gamma": 0.99,
+              "tau": 0.005,
+              "entropy_coef": 0.0,
+              "exploration_fraction": 0.25,
+              "episode_hours": 24
+            },
+            "fit_split": "train",
+            "selection_split": "validation",
+            "test_accessed": false,
+            "render_during_fit_or_selection": false,
+            "validation": {
+              "split": "validation",
+              "episodes": 48,
+              "steps": 1152,
+              "mean": {
+                "reward": 10.045516,
+                "energy_kwh": 372030.762386,
+                "carbon_kg": 115527.618334,
+                "cost": 636524.247284,
+                "delay_minutes": 134.051522,
+                "processed_teu": 23522.466011,
+                "safety_violations": 0.145833,
+                "peak_violation_steps": 0.145833,
+                "delay_violation_steps": 0.0,
+                "soc_violation_steps": 0.0,
+                "peak_kw": 16556.132328
+              },
+              "selection_score": -1000000.145833
+            }
+          },
+          "test": {
+            "split": "test",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 8.676847,
+              "energy_kwh": 386931.374843,
+              "carbon_kg": 121188.349195,
+              "cost": 712752.950274,
+              "delay_minutes": 196.465418,
+              "processed_teu": 27877.16132,
+              "safety_violations": 0.3125,
+              "peak_violation_steps": 0.270833,
+              "delay_violation_steps": 0.041667,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 16660.0
+            },
+            "selection_score": -1000000.3125
+          },
+          "artifact_path": "reports/rl_tuning_operational_flex_v5_10k_artifacts/td3-seed-17.zip",
+          "artifact_sha256": "35555eeab34475808a810ae7572cbef1ed04db3bae4179b1f9d208973a19c64e"
+        },
+        {
+          "seed": 37,
+          "training": {
+            "duration_sec": 635.018,
+            "actual_timesteps": 10000,
+            "resolved_hyperparameters": {
+              "policy": "MlpPolicy",
+              "learning_rate": 0.001,
+              "batch_size": 128,
+              "gamma": 0.99,
+              "tau": 0.005,
+              "entropy_coef": 0.0,
+              "exploration_fraction": 0.25,
+              "episode_hours": 24
+            },
+            "fit_split": "train",
+            "selection_split": "validation",
+            "test_accessed": false,
+            "render_during_fit_or_selection": false,
+            "validation": {
+              "split": "validation",
+              "episodes": 48,
+              "steps": 1152,
+              "mean": {
+                "reward": 11.911289,
+                "energy_kwh": 355087.931015,
+                "carbon_kg": 108830.649461,
+                "cost": 598076.166049,
+                "delay_minutes": 140.065156,
+                "processed_teu": 23506.885758,
+                "safety_violations": 0.083333,
+                "peak_violation_steps": 0.083333,
+                "delay_violation_steps": 0.0,
+                "soc_violation_steps": 0.0,
+                "peak_kw": 16281.512161
+              },
+              "selection_score": -1000000.083333
+            }
+          },
+          "test": {
+            "split": "test",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 9.946666,
+              "energy_kwh": 374516.307319,
+              "carbon_kg": 115737.578622,
+              "cost": 681956.309314,
+              "delay_minutes": 226.766977,
+              "processed_teu": 27832.69283,
+              "safety_violations": 0.333333,
+              "peak_violation_steps": 0.270833,
+              "delay_violation_steps": 0.0625,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 16535.767776
+            },
+            "selection_score": -1000000.333333
+          },
+          "artifact_path": "reports/rl_tuning_operational_flex_v5_10k_artifacts/td3-seed-37.zip",
+          "artifact_sha256": "8eda684ec4457bd2b2040efe82fd0fabf93e43dbbc06ab3d69a5b06909532008"
+        },
+        {
+          "seed": 59,
+          "training": {
+            "duration_sec": 469.893,
+            "actual_timesteps": 10000,
+            "resolved_hyperparameters": {
+              "policy": "MlpPolicy",
+              "learning_rate": 0.001,
+              "batch_size": 128,
+              "gamma": 0.99,
+              "tau": 0.005,
+              "entropy_coef": 0.0,
+              "exploration_fraction": 0.25,
+              "episode_hours": 24
+            },
+            "fit_split": "train",
+            "selection_split": "validation",
+            "test_accessed": false,
+            "render_during_fit_or_selection": false,
+            "validation": {
+              "split": "validation",
+              "episodes": 48,
+              "steps": 1152,
+              "mean": {
+                "reward": 11.14122,
+                "energy_kwh": 344662.779654,
+                "carbon_kg": 106189.97293,
+                "cost": 583511.886343,
+                "delay_minutes": 220.511136,
+                "processed_teu": 23247.449315,
+                "safety_violations": 0.020833,
+                "peak_violation_steps": 0.020833,
+                "delay_violation_steps": 0.0,
+                "soc_violation_steps": 0.0,
+                "peak_kw": 16142.844971
+              },
+              "selection_score": -1000000.020833
+            }
+          },
+          "test": {
+            "split": "test",
+            "episodes": 48,
+            "steps": 1152,
+            "mean": {
+              "reward": 8.245219,
+              "energy_kwh": 366099.777114,
+              "carbon_kg": 114277.810906,
+              "cost": 671534.030595,
+              "delay_minutes": 394.773745,
+              "processed_teu": 27558.054255,
+              "safety_violations": 0.354167,
+              "peak_violation_steps": 0.3125,
+              "delay_violation_steps": 0.041667,
+              "soc_violation_steps": 0.0,
+              "peak_kw": 16632.066068
+            },
+            "selection_score": -1000000.354167
+          },
+          "artifact_path": "reports/rl_tuning_operational_flex_v5_10k_artifacts/td3-seed-59.zip",
+          "artifact_sha256": "5eb55c354ed591acb84882621acceffe6f56b561e85a044e23d34f563c1c50a2"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "A smoke-labelled run validates wiring only and must not be cited as convergence.",
+    "Offline test results are scenario outputs, not field or production KPIs.",
+    "At least three final seeds and a sufficient training budget are required for resume metrics."
+  ]
+}

@@ -16,6 +16,8 @@ import uuid
 import numpy as np
 
 from app.rl.catalog import ALGORITHM_CATALOG, algorithm_items
+from app.rl.business_scope import business_scope_contract
+from app.rl.hybrid_business_scope import hybrid_business_scope_contract
 from app.rl.dataset import (
     DEFAULT_DATASET_ID,
     PortDataset,
@@ -83,6 +85,8 @@ class TrainingService:
             "runtime": runtime,
             "training_render_mode": None,
             "evaluation_render_mode": "trajectory",
+            "business_scope": business_scope_contract(),
+            "hybrid_business_scope": hybrid_business_scope_contract(),
         }
 
     def validate_config(self, raw: dict[str, Any]) -> dict[str, Any]:
@@ -95,6 +99,13 @@ class TrainingService:
             )
         dataset_value = raw.get("data_file") or raw.get("dataset_id") or DEFAULT_DATASET_ID
         dataset = PortDataset.load(dataset_value)
+        if (
+            dataset.environment_id == "PortEnergyHybridResidualEnv-v6"
+            and algorithm == "dqn"
+        ):
+            raise ValueError(
+                "PortEnergyHybridResidualEnv-v6 is continuous-only; use PPO, SAC or TD3"
+            )
         defaults = ALGORITHM_CATALOG[algorithm]["defaults"]
         total_steps = int(raw.get("total_steps") or defaults["total_steps"])
         if algorithm != "mpc" and not 32 <= total_steps <= 5_000_000:
@@ -141,12 +152,32 @@ class TrainingService:
             "environment_id": dataset.environment_id,
             "observation_count": len(observation_keys_for_environment(dataset.environment_id)),
             "action_contract": {
-                "continuous": 6
+                "continuous": 16
+                if dataset.environment_id == "PortEnergyHybridResidualEnv-v6"
+                else 10
+                if dataset.environment_id == "PortEnergyDispatchEnv-v5"
+                else 6
                 if dataset.environment_id == "PortEnergyDispatchEnv-v4"
                 else 4,
-                "dqn_discrete_combinations": 729
+                "dqn_discrete_combinations": None
+                if dataset.environment_id == "PortEnergyHybridResidualEnv-v6"
+                else 243
+                if dataset.environment_id == "PortEnergyDispatchEnv-v5"
+                else 729
                 if dataset.environment_id == "PortEnergyDispatchEnv-v4"
                 else 81,
+                "v5_dqn_note": (
+                    "243 curated coupled templates cover all ten action dimensions; "
+                    "continuous PPO/SAC/TD3 retain independent dimensions"
+                    if dataset.environment_id == "PortEnergyDispatchEnv-v5"
+                    else None
+                ),
+                "v6_hybrid_note": (
+                    "ten bounded controller residuals plus six RL-guided solver priorities; "
+                    "continuous PPO/SAC/TD3 only"
+                    if dataset.environment_id == "PortEnergyHybridResidualEnv-v6"
+                    else None
+                ),
             },
         }
         return config
@@ -963,9 +994,19 @@ class TrainingService:
         fixed_controller = FixedDispatchPolicy()
         while not (terminated or truncated):
             if algorithm == "mpc":
-                action = encode_continuous_controls(controller.predict(env))
+                controls = controller.predict(env)
+                action = (
+                    controls
+                    if env.environment_id == "PortEnergyHybridResidualEnv-v6"
+                    else encode_continuous_controls(controls)
+                )
             elif algorithm == "fixed":
-                action = encode_continuous_controls(fixed_controller.predict(env))
+                controls = fixed_controller.predict(env)
+                action = (
+                    controls
+                    if env.environment_id == "PortEnergyHybridResidualEnv-v6"
+                    else encode_continuous_controls(controls)
+                )
             else:
                 action, _ = model.predict(observation, deterministic=True)
             observation, _, terminated, truncated, _ = env.step(action)
@@ -1060,6 +1101,16 @@ class TrainingService:
             "peak_violation_steps",
             "delay_violation_steps",
             "peak_kw",
+            "hybrid_solver_projection_l1",
+            "hybrid_solver_constraint_violations",
+            "jit_deviation_hours",
+            "anchorage_auxiliary_fuel_liters",
+            "berth_conflict_hours",
+            "crane_task_late_teu",
+            "yard_rehandles_teu",
+            "truck_queue_teu_hours",
+            "maintenance_overdue_hours",
+            "maintenance_performed_ratio",
         )
         return {key: round(float(np.mean([float(item[key]) for item in items])), 6) for key in keys}
 

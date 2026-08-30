@@ -29,6 +29,14 @@ def deployment_contract() -> dict[str, Any]:
     return deepcopy(load_scenario_registry()["deployment_contract"])
 
 
+def operational_flex_contract() -> dict[str, Any]:
+    return deepcopy(load_scenario_registry()["operational_flex_contract"])
+
+
+def hybrid_rl_contract() -> dict[str, Any]:
+    return deepcopy(load_scenario_registry()["hybrid_rl_contract"])
+
+
 def resolve_training_scenario(
     scenario_id: str | None,
     dataset_id: str,

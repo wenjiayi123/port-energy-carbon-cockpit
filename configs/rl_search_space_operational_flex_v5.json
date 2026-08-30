@@ -1,0 +1,30 @@
+{
+  "schema_version": "operational-flex-v5.1",
+  "selection_protocol": {
+    "fit_split": "train",
+    "selection_split": "validation",
+    "final_report_split": "test",
+    "primary_score": "validation_return",
+    "hard_gate": "validation_safety_violations == 0",
+    "seed_policy": "select on 20260724; final evaluation uses predeclared seeds 17, 37, 59",
+    "render_during_fit_or_selection": false
+  },
+  "algorithms": {
+    "ppo": [
+      {"learning_rate": 0.0003, "batch_size": 64, "gamma": 0.99, "entropy_coef": 0.0},
+      {"learning_rate": 0.0001, "batch_size": 128, "gamma": 0.995, "entropy_coef": 0.01}
+    ],
+    "sac": [
+      {"learning_rate": 0.0003, "batch_size": 128, "gamma": 0.99, "tau": 0.005},
+      {"learning_rate": 0.0001, "batch_size": 256, "gamma": 0.995, "tau": 0.01}
+    ],
+    "td3": [
+      {"learning_rate": 0.001, "batch_size": 128, "gamma": 0.99, "tau": 0.005},
+      {"learning_rate": 0.0003, "batch_size": 256, "gamma": 0.995, "tau": 0.01}
+    ],
+    "dqn": [
+      {"learning_rate": 0.0001, "batch_size": 64, "gamma": 0.99, "exploration_fraction": 0.25},
+      {"learning_rate": 0.0003, "batch_size": 128, "gamma": 0.995, "exploration_fraction": 0.4}
+    ]
+  }
+}

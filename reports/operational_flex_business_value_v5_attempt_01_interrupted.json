@@ -1,0 +1,12 @@
+{
+  "schema_version": "operational-flex-business-value-attempt.v1",
+  "started_at_local": "2026-08-30T15:15:11+08:00",
+  "stopped_at": "2026-08-30T08:59:24Z",
+  "elapsed": "01:44:13",
+  "command": "PYTHONPATH=backend backend/.venv/bin/python -m app.rl.operational_flex_benchmark",
+  "status": "interrupted_before_report_write",
+  "output_report_written": false,
+  "reason": "Pre-admission audit found that rl_action_contribution_pct measured accepted blend share rather than actual ten-dimensional action deviation from the MPC baseline. The serial projected-seed evaluation also prevented timely auditable completion.",
+  "remediation": "Measure mean absolute executed-action deviation from the MPC baseline, parallelize independent final-seed evaluation, preserve all admission gates, and rerun from the beginning.",
+  "production_eligible": false
+}

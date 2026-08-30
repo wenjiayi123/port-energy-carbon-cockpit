@@ -108,8 +108,50 @@ presented as hourly measurements.
 
 ## Real-port v3 contract
 
-`PortEnergyDispatchEnv-v3` is the production connector contract. It adds ten
+`PortEnergyDispatchEnv-v3` is the historical deployment-input contract, not a
+production authorization. It adds ten
 required weather, berth/equipment/grid availability, shore-compatibility and
 onsite-renewable fields for a total of 35 observations. Missing fields or
 adapters block production readiness. See
 [`PORT_INTEGRATION_BLUEPRINT.md`](PORT_INTEGRATION_BLUEPRINT.md).
+
+## Regulatory v4 and operational-flex v5
+
+v4 adds eight exogenous regulatory-event inputs and stateful hold/recovery
+queues, reaching 48 observations and six continuous actions. Inspection,
+detention and formal release remain outside policy authority.
+
+`port_la_2020_2024_operational_flex_hourly` is the additive v5 package. It has
+the same 43,848-hour chronological split as the vessel-activity set and adds
+engineering scenarios for AGV charging, reefers, building loads, shore-power
+reservations, equipment condition, maintenance, demand response and a causal
+renewable forecast. The v5 environment has 73 observations and 10 continuous
+actions.
+
+The row count is not a measurement count. Public vessel/throughput/electricity
+anchors are retained, while all added operational-flex fields are explicitly
+listed as modeled supplements in metadata. There are zero independently
+measured device-level columns in this public package. It is suitable for
+reproducible offline training, hard-constraint testing and future field-schema
+replacement; it is not evidence of terminal performance.
+
+Site replacement requires all v5 columns to be independently measured or
+derived from approved live sources with record identity, event/ingest time,
+unit, quality, revision, asset and site lineage. Signed feeds, parameter
+calibration, 180-day/four-season shadow evidence, abnormal scenarios, meter and
+bill reconciliation, operator acceptance and independent review are separate
+fail-closed gates. Passing those data gates permits retraining and shadow
+evaluation only; production control remains disabled.
+
+## Hybrid residual v6
+
+The additive v6 package has 79 columns, of which 16 new ship–berth–crane–yard–
+truck–maintenance signals are deterministic engineering supplements. It drives
+106 causal observations and 16 continuous outputs: ten bounded residuals around
+a fast feasible controller and six priorities projected by a named constraint
+solver. The package remains a public-anchor scenario with zero independent
+device-level measurement columns.
+
+At site replacement, 66 required measurement or approved-derived columns and
+13 evidence gates must pass. Model compatibility is therefore demonstrable,
+but live twin completeness is not claimed until port evidence is supplied.

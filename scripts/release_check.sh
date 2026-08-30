@@ -26,6 +26,7 @@ PYTHONPATH=backend "$PYTHON_BIN" -m app.rl.legacy_extension_verify verify report
 PYTHONPATH=backend "$PYTHON_BIN" -m app.rl.regulatory_benchmark verify reports/regulatory_resilience_v1.json
 PYTHONPATH=backend "$PYTHON_BIN" -m app.rl.regulatory_shielded_benchmark verify reports/regulatory_resilience_v2.json
 PYTHONPATH=backend "$PYTHON_BIN" -m app.rl.regulatory_projected_benchmark verify reports/regulatory_resilience_v3.json
+PYTHONPATH=backend "$PYTHON_BIN" -m app.rl.hybrid_benchmark --verify-report reports/hybrid_rl_business_value_v6.json
 "$PYTHON_BIN" scripts/export_runtime_evidence.py verify
 "$PYTHON_BIN" scripts/validate_site_delivery_kit.py deployment/site_delivery
 

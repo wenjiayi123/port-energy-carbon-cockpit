@@ -4,12 +4,12 @@
 
 <div align="center">
 
-# 港口能碳实时模拟与智能调度驾驶舱
+# 港口能碳混合智能调度驾驶舱
 
-## Port Energy-Carbon Realtime Simulation & Intelligent Dispatch Cockpit
+## Port Energy-Carbon Hybrid Intelligence Dispatch Cockpit
 
-<strong>公开数据校准的实时数字孪生、预测、优化、审批、执行回执与审计系统</strong><br>
-<strong>Public-data-calibrated realtime digital twin, forecast, optimization, approval, execution receipt and audit</strong>
+<strong>RL 策略中枢 + MPC/运筹可行执行 + 独立安全与人工授权底座</strong><br>
+<strong>RL policy core + MPC/OR feasibility execution + independent safety and human authority</strong>
 
 <strong>独立研发者：</strong>温家懿 · <strong>Independent Developer:</strong> Wen Jiayi
 
@@ -30,17 +30,31 @@
 | 项目要点 / Project fact | 已实现 / Implemented |
 | --- | --- |
 | 业务问题 | 在岸电、储能、光伏、暖通、充电、冷藏箱、作业服务与电网约束之间协同优化能耗、峰值、成本、碳排、延误和设备寿命。 |
-| 系统架构 | `公开数据/历史数据 → 实时模拟器 → 质量门禁 → 数字孪生 → Ridge 预测 → MPC/SOP 对照 → 安全投影 → 双人审批 → 模拟执行 → 回执/KPI/审计链`。 |
+| 系统架构 | `公开/历史数据 → 质量门禁 → 数字孪生 → 预测 → RL 残差与业务优先级 → MPC/运筹可行投影 → 独立安全门禁 → 双人审批 → 模拟执行 → 回执/KPI/审计链`。 |
 | 实时模拟器 | 以洛杉矶港逐日船舶活动、EIA 电网/电价、eGRID 碳因子为校准底座，用守恒关系、设备状态机和工程约束生成稳定 `runtime-telemetry.v1`。 |
 | 实港替换面 | 保留 TOS、AIS/VTS、PLC/SCADA、EMS、BMS、BA、电表和气象适配位；现场只替换适配器、字段映射和标定参数，不重写状态/动作/业务合同。 |
-| 算法覆盖 | PPO、SAC、TD3、DQN、约束 MPC、风险感知 MPC 与当前状态 SOP 强基线；训练/验证/盲测按时间隔离，训练不渲染，测试才回放。 |
-| 当前基准结果 | v4 公开数据因果留出评测相对固定满资源基线：碳排 `-8.792%` 、情景成本 `-8.094%`、峰值 `-2.983%`、约束满足 `100%`；不是现场 KPI。实时 Ridge 模型的 1h 终端负荷 held-out MAE 为 `416.493 kW`。 |
+| 算法覆盖 | v6 使用 PPO、SAC、TD3 学习 10 个控制残差与 6 个业务优先级，MPC/运筹投影负责可行性；DQN 仅保留给离散的 v1–v5。训练/验证/盲测按时间隔离，训练不渲染，测试才回放。 |
+| 当前正式结论 | v6 三随机种子均未通过全局冠军准入，`champion_status=no_rl_policy_admitted`；岸桥任务调度、集卡预约/闸口是跨种子稳定的领域级离线 RL 挑战者。历史 v4 碳排 `-8.792%` 等指标继续冻结保留，但不能替代 v6 准入，也不是现场 KPI。 |
 | 信任边界 | `simulation_mode=true`、`live_data_verified=false`、`dispatch_allowed=false`、`production_authority=false`；需求响应收益仅是未结算的工程估算。 |
 | 本地运行 | 首次执行 `make bootstrap`，之后 `make demo`；驾驶舱 `http://127.0.0.1:5173/`，OpenAPI `http://127.0.0.1:8808/docs`，点击顶栏“实时闭环”体验完整流程。 |
 
-> 系统已在公开数据校准的实时模拟环境中完成端到端闭环；数据合同、模型推理、安全投影、执行回执和审计链均可运行。接入真实港口时，主要工作是替换数据与设备适配器、完成现场标定、影子运行及生产验收。
+> 系统已在公开数据校准的实时模拟环境中完成端到端闭环；数据合同、真实 learner、可行投影、执行回执和审计链均可运行。代码已提供现场替换合同，但“可替换”不等于“已接入”：还必须由港方完成源系统映射、设备级计量与标定、独立联锁、180 天影子运行、回滚演练及六方验收，生产权限才能另行评估。
 
 接口字段与运行流程见 [Runtime data contract](docs/RUNTIME_DATA_CONTRACT.md) 和 [Closed-loop workflow](docs/CLOSED_LOOP_ACCEPTANCE.md)；版本变化记录在 [CHANGELOG](CHANGELOG.md)。
+
+### v6 正式 RL 结果 / Formal v6 RL result
+
+| 项目 | 冻结结果 |
+| --- | --- |
+| 数据与合同 | `43,848 × 79` 公共锚点增强数据；`106` 维因果观测；`16` 个连续输出；`17` 项奖励；`27` 个业务域，其中 `16` 个 RL/混合域、`1` 个纯控制域、`10` 个治理/权限/安全域。 |
+| 真实训练 | PPO/SAC/TD3 共 `6 × 20,000` 步搜索；选定 PPO 后以种子 `17/37/59` 分别训练 `50,000` 步；9 个模型制品及源码、数据、报告 SHA-256 均已核验。 |
+| 全局冠军 | **0 个**。三种子候选虽然安全越界和求解器越界均为 0，但碳、吞吐、延误、岸电和泊位冲突等全局门禁没有同时通过，因此没有把 RL 包装成冠军。 |
+| 领域级挑战者 | **岸桥任务调度**：晚作业 TEU 跨种子均降低 `54.9905%`；**集卡预约/闸口**：排队 TEU·h 降低 `5.6178%–19.3259%`。它们是离线挑战者，不是已晋级生产策略。 |
+| 系统级收益与代价 | 相对 MPC+运筹基线，三种子成本降低 `0.5504%–0.8433%`、峰值降低 `1.3707%–3.5420%`；同时碳增加 `1.1814%–1.9078%`、吞吐下降 `1.8471%–2.0645%`、延误增加 `20.0748%–28.8310%`，所以拒绝全局晋级。 |
+| RL 实际参与度 | 控制残差贡献 `12.8352%–13.3802%`，约束投影后的业务策略贡献 `25.9123%–27.1954%`；不是“只挂 RL 名字”，也没有绕过可行投影和安全授权。 |
+| 生产边界 | `simulation_mode=true`、`live_data_verified=false`、`dispatch_allowed=false`、`production_authority=false`。 |
+
+完整机器可读证据见 [v6 业务价值报告](reports/hybrid_rl_business_value_v6.json)、[v6 训练与选型报告](reports/rl_tuning_hybrid_v6_50k.json) 和 [v6 设计说明](docs/HYBRID_RL_V6_DESIGN.md)。现场替换项与真实系统差距见 [顶级港口就绪审计](docs/TOP_PORT_REAL_SYSTEM_READINESS_AUDIT_2026-08-30.md)。
 
 <table>
   <tr>
@@ -89,8 +103,8 @@ This project places port energy use, shore power, equipment allocation, delay, c
 
 | 维度 / Dimension | 实际实现 / What is implemented |
 | --- | --- |
-| 实验内核 / Experiment core | Gymnasium v1/v2/v3/v4 分层合同：19 维能碳基准、25 维逐日船舶活动、35 维实港接入、48 维监管韧性；v1–v3 保持 4 维连续/81 离散，v4 增量为 6 维连续/729 离散。 / Layered 19/25/35/48-observation contracts; v1–v3 retain 4/81 actions while v4 adds two terminal-controlled inspection-recovery actions for 6/729. |
-| 算法矩阵 / Algorithm matrix | PPO、SAC、TD3、DQN 四种 RL 算法，加四步有限时域约束 MPC。 / Four RL algorithms—PPO, SAC, TD3, DQN—plus a constrained four-step finite-horizon MPC baseline. |
+| 实验内核 / Experiment core | Gymnasium v1–v6 分层合同；v6 为 106 维因果观测与 16 维连续输出（10 个控制残差 + 6 个运筹优先级），并保留全部 v1–v5 合同。 / Layered v1–v6 contracts; v6 uses 106 causal observations and 16 continuous outputs while preserving v1–v5. |
+| 算法矩阵 / Algorithm matrix | PPO、SAC、TD3 用于 v6 连续策略；DQN 只保留给 v1–v5；强基线为四步因果 MPC + 确定性运筹投影。 / PPO, SAC and TD3 train v6; DQN remains a historical v1–v5 comparator; the strong baseline is causal four-step MPC plus deterministic feasibility projection. |
 | 训练边界 / Training boundary | `train` 无渲染拟合、`validation` 选型、完成后才在 `test` 生成轨迹。 / Non-rendering fit on `train`, selection on `validation`, and trajectory generation only during final `test` evaluation. |
 | 证据链 / Evidence chain | 配置、随机种子、CSV/元数据/组合包 SHA-256、回调指标、checkpoint、模型哈希、测试与验证结果。 / Config, seed, CSV/metadata/package SHA-256, callback metrics, checkpoints, model hash, evaluation, and verification evidence. |
 | 实港只读接入 / Read-only port integration | 六类 `port-snapshot.v1` 数据源必须通过逐源 HMAC、SHA-256、字段/单位、时效、序列与重放门禁。 / Six source families require per-adapter HMAC, SHA-256, schema/units, freshness, sequence and replay gates. |
@@ -141,9 +155,9 @@ flowchart LR
 
   subgraph Experiment["Experiment plane / 实验平面"]
     TRAIN["Train split\nrender_mode=None"]
-    ENV["PortEnergyDispatchEnv\nv1 · v2 · v3"]
-    RL["PPO · SAC · TD3 · DQN"]
-    MPC["Constrained MPC"]
+    ENV["Versioned environments\nv1–v5 · hybrid residual v6"]
+    RL["v6: PPO · SAC · TD3\nv1–v5: + DQN"]
+    MPC["Causal MPC + deterministic OR projection"]
     TEST["Held-out test\ntrajectory rendering"]
     HASH --> TRAIN --> ENV
     ENV --> RL --> TEST
@@ -185,7 +199,7 @@ flowchart LR
 | `ppo` | RL | continuous | 裁剪策略梯度，用于连续资源配置。 / Clipped policy-gradient baseline for continuous allocation. |
 | `sac` | RL | continuous | 熵正则离策略 actor-critic，适合岸电和设备比例。 / Entropy-regularized off-policy actor-critic for shore-power and equipment ratios. |
 | `td3` | RL | continuous | 双评论家与延迟策略更新，强调平滑连续控制。 / Twin critics and delayed updates for smooth continuous control. |
-| `dqn` | RL | 81 discrete presets | 在 3×3×3×3 可审计岸电、岸桥、场内车辆与储能组合上做值学习。 / Value learning over an auditable 3×3×3×3 shore-power, crane, yard and storage grid. |
+| `dqn` | RL | versioned discrete presets | v1–v3 为 81 个组合、v4 为 729 个组合、v5 为 243 个策划模板；v6 为 16 维连续策略，明确拒绝 DQN。 / v1–v3 use 81 combinations, v4 uses 729 and v5 uses 243 curated templates; continuous-only v6 rejects DQN. |
 | `mpc` | control theory | constrained beam search | 四步有限时域、宽度 4 的约束束搜索；默认驾驶舱的可复现对照。 / Four-step constrained beam search with width 4; the reproducible default cockpit comparator. |
 
 四种 RL 算法均通过 Stable-Baselines3 的实际 `learn()` 路径运行；仓库测试对每个 learner 执行最小 smoke run。smoke run 只证明管线可执行，不代表策略已收敛或优于基线。<br>
@@ -196,9 +210,9 @@ v0.3.0 adds a deployment safety layer that is not counted as a sixth baseline: a
 
 ### 环境状态与目标 / Environment state and objective
 
-v1 的 19 维观测覆盖需求/预测、碳因子、电价、积压、电网余量、储能、时间、货类及累计指标；v2 再加入 6 项港口活动信号；实港 v3 加入天气、泊位/设备/电网可用率、岸电兼容和可再生能源 10 项输入。新增 v4 在 v3 上再加入海事检查、海关检查、外生放行、资料/资源准备度、预计扣留时长以及三类状态队列，共 48 维；新增动作仅为码头可控的检查准备度和放行恢复优先级。检查选择、扣留和正式放行始终是外生信号，策略无监管决定权。
+v1–v5 依次形成 19/25/35/48/73 维增量观测合同。v6 达到 106 维：加入快速可行控制器参考、准时到港/绿色泊位、岸桥任务、堆场箱位、集卡闸口、预测性检修和上一时刻策略状态。16 个连续输出中，前 10 个是在控制器参考周围的有界残差，后 6 个是交给约束求解器的优先级；具名计划、主管机关权力、电力保护、核算结算、联锁和生产批准都不由强化学习直接输出。
 
-v1 exposes 19 energy-dispatch observations; v2 adds six vessel-activity signals; v3 adds ten deployment inputs. v4 reaches 48 observations by adding maritime/customs inspection, exogenous release, readiness, expected-hold and stateful queue signals. Its two new actions control terminal readiness and post-release recovery only; inspection, detention and official release remain outside policy authority.
+v1–v5 preserve additive 19/25/35/48/73-observation contracts. v6 reaches 106 causal observations and 16 continuous outputs: ten bounded residuals around a feasible controller and six priorities consumed by a constraint solver. Named plans, authority decisions, protection, ledgers, settlement, interlocks and production approval remain outside RL authority.
 
 ### 海事/海关检查延误的能碳传导 / Regulatory-delay energy-carbon resilience
 
@@ -253,7 +267,13 @@ The default benchmark combines four public-source families:
 
 新训练默认使用 `port_la_2020_2024_vessel_activity_hourly`：在同一版本化能碳底座上加入洛杉矶港 Wharfinger Division 2020–2024 年 1,238 条官方工作日锚泊、靠泊、离港与在港时间记录。它包含 43,848 个连续小时；2020–2022 训练、2023 验证、2024 留出测试。非报告日明确标记为线性插值，不冒充逐小时港口遥测。旧数据包和原指标完整保留，作为更长的能碳证据基线。完整比较见 [dataset credibility report](reports/dataset_credibility_comparison.md)。
 
-New training defaults to `port_la_2020_2024_vessel_activity_hourly`, which adds 1,238 official Port of Los Angeles Wharfinger Division business-day anchor, berth, departure, and dwell observations to the versioned energy-carbon base. Its 43,848 contiguous hours use 2020–2022 for training, 2023 for validation, and 2024 for held-out testing. Non-reporting days are explicitly marked interpolations, not hourly terminal telemetry. The original package and metrics remain intact as the longer energy-carbon baseline.
+New interactive training defaults to `port_la_2020_2024_hybrid_rl_hourly`; v1–v5 data and evidence remain available for versioned comparison. The underlying 43,848 contiguous hours use 2020–2022 for training, 2023 for validation, and 2024 for held-out testing. Public anchors include 1,238 official Port of Los Angeles Wharfinger Division business-day observations plus monthly throughput and public grid signals. Non-reporting days and added operational fields are labelled interpolation or engineering scenarios, not hourly terminal telemetry.
+
+新增 `port_la_2020_2024_operational_flex_hourly` 复用相同 43,848 小时和时间切分，增加监管、天气/可用率、自动导引车、冷藏箱、楼宇、岸电预约、设备健康/维护、需求响应和可再生能源预测字段。公开船舶/吞吐/电网数据是锚点，新增字段全部明确标记为可复现工程情景，独立设备级实测列为 **0**；因此可以真实运行学习器、测试硬约束和验证现场替换接口，但不能冒充孪生遥测或实港绩效。观测、动作、奖励、责任边界和替换门禁见 [v5 全业务柔性调度合同](docs/OPERATIONAL_FLEX_RL_V5.md)。
+
+The additive operational-flex package preserves the same chronology and adds regulatory, deployment, AGV, reefer, building, reservation, health/maintenance, demand-response and renewable-forecast fields. All new fields are declared deterministic engineering scenarios and the independent device-measurement count is zero. It supports genuine learner execution and field-schema substitution, not claims of live telemetry or terminal KPI.
+
+v6 `port_la_2020_2024_hybrid_rl_hourly` adds 16 replaceable modeled fields for arrival uncertainty, pilot/tug readiness, berth conflict, crane precedence/backlog, yard capacity/rehandles, truck appointments/capacity, and maintenance risk/resources. It is deterministic and hash-reproducible. The live replacement gate requires 66 measured or approved-derived fields and 13 independent site-evidence conditions before site retraining; it still does not grant production dispatch.
 
 月度 TEU 通过公开的确定性曲线分配到小时；LADWP 商业分时电价时段只用于形成日内形状，并归一回 EIA 月均电价。该价格仍是情景代理而非港口账单，设备容量、负荷、储能与延误成本是元数据中声明的模型参数。完整来源、单位、插补、转换与哈希见 [数据卡](docs/DATA_CARD.md) 和 [dataset metadata](backend/app/data/datasets/port_la_2020_2025_hourly.metadata.json)。<br>
 Monthly TEU is allocated to hours through a disclosed deterministic profile. LADWP commercial time-of-use periods provide only the intraday shape, rescaled to each EIA monthly mean. Prices remain scenario proxies rather than terminal bills; equipment, storage and delay parameters are declared model assumptions. See the [data card](docs/DATA_CARD.md) and [dataset metadata](backend/app/data/datasets/port_la_2020_2025_hourly.metadata.json).
@@ -371,6 +391,18 @@ make verify-benchmark-enhanced
 # 复算不偷看未来测试行的 v4 指标 / recompute causal v4 evidence
 make landing-benchmark
 make verify-landing-benchmark
+
+# 重建 v5、真实训练四种 RL、评测三随机种子业务价值并验证全部哈希
+make data-operational-flex
+make tune-operational-flex
+make operational-flex-business-value
+make verify-operational-flex-business-value
+
+# 重建 v6、搜索 PPO/SAC/TD3、三随机种子训练并对比强 MPC+OR
+make data-hybrid
+make tune-hybrid
+make hybrid-business-value
+make verify-hybrid-business-value
 ```
 
 API 启动训练需要 `confirm=true`。训练进度来自 `model.num_timesteps`、callback 指标和实际耗时；ETA 使用已测 step rate 推导，不使用固定时长计时器。<br>
@@ -411,6 +443,8 @@ cd backend
 ```
 
 - v3 的字段映射选项见 `python scripts/prepare_port_dataset.py --help`；缺少天气、泊位/设备/电网可用率、岸电兼容或可再生能源字段会 fail closed。完整流程见 [实港接入蓝图](docs/PORT_INTEGRATION_BLUEPRINT.md)。 / See the mapper help and the [real-port blueprint](docs/PORT_INTEGRATION_BLUEPRINT.md); missing v3 deployment fields fail closed.
+- v5 现场包用 `--column-map` 显式映射 44 个运营字段、用 `--environment-config` 声明 38 个现场标定参数，并用 `--site-training-evidence` 提交八类签名来源、事件血缘、标定、影子运行、计量对账和验收证据；缺任一 v5 字段会在写出前失败关闭。 / v5 uses an explicit column map, 38 calibrated parameters and separate site-training evidence; any missing observation fails before output.
+- v6 在同一替换流程上要求 66 个现场测量或批准派生字段，并保留 13 项独立证据门禁；相同列名允许港口快照直接替换公开锚点包。 / v6 requires 66 measured or approved-derived fields plus 13 independent evidence gates; identical canonical columns support direct replacement.
 - `profiled_period`：适合公开月度/聚合 benchmark，按声明曲线构造 episode。 / for aggregate public benchmarks with a declared profile.
 - `sequential_rows`：适合只读 TOS/EMS 小时快照，环境按不可变行推进。 / for immutable hourly TOS/EMS snapshots advanced row by row.
 - CLI 可读取操作者明确提供的外部 CSV；HTTP API 只允许仓库已注册的数据集 ID，阻断任意文件路径访问。 / The CLI may read operator-supplied external CSV files; HTTP endpoints accept only registered dataset IDs and reject arbitrary filesystem paths.
@@ -443,6 +477,11 @@ cd backend
 | `/api/rl/capabilities` | GET | 算法、数据、运行时与渲染边界 / algorithms, datasets, runtime, rendering boundary |
 | `/api/rl/datasets/validate` | POST | 注册数据集质量、分区与血缘校验 / registered-dataset quality, split, provenance validation |
 | `/api/rl/datasets/{id}/landing-readiness` | GET | 独立锚点、展开率、v3 字段、事件血缘与校准缺口 / source anchors, expansion, v3 fields, event lineage, calibration gaps |
+| `/api/rl/business-coverage` | GET | v5 的 26 个业务域、73 个观测、10 个动作以及强化学习/运筹/规则/现场权限边界 |
+| `/api/rl/datasets/{id}/replacement-readiness` | GET | v5 现场替换字段、八类签名源、血缘、标定、180 天影子和验收门禁 |
+| `/api/rl/operational-flex-evidence` | GET | v5 多算法三随机种子业务价值、所有失败门禁、冠军与生产禁用边界 |
+| `/api/rl/hybrid-business-coverage` | GET | v6 的 27 个业务域，以及 16 个 RL/混合、1 个纯控制、10 个确定性业务归属 |
+| `/api/rl/hybrid-evidence` | GET | v6 三随机种子相对强 MPC+OR 的冻结测试门禁、冠军或无冠军证据 |
 | `/api/rl/train/start` | POST | 预览或确认启动真实 learner / preview or confirm a real learner run |
 | `/api/rl/train/status` | GET | 实测 step、指标、速率、ETA 与状态 / measured steps, metrics, rate, ETA, state |
 | `/api/rl/train/{pause,resume,stop}` | POST | callback 边界的训练控制 / callback-bound training control |

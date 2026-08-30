@@ -1,10 +1,10 @@
 {
   "report_version": "1.0",
-  "generated_at": "2026-08-21T17:00:00+08:00",
-  "purpose": "Pin the v4 source extension while keeping every prior report immutable and requiring its non-source evidence to reproduce.",
+  "generated_at": "2026-08-30T23:22:00+08:00",
+  "purpose": "Pin the additive v4-v6 source extensions while keeping every prior report immutable and requiring its non-source evidence to reproduce.",
   "extended_code_sha256": {
-    "backend/app/rl/environment.py": "dc405fecf30ef06a58342e7e49928fafcfeb1b7e9214a3c7c1dd38a6dae65ab2",
-    "backend/app/rl/robust.py": "52635783a9c93e901690431ce33ee30afe1fd48960e2a84261de5a836afdf029"
+    "backend/app/rl/environment.py": "9b55f51f5f2b7d6b6d2c835013708f0666b7e41b22c4684d6c785d1a5ad7b565",
+    "backend/app/rl/robust.py": "10b30c950904855eccfd233f8212da6b838876f47bc8a44a4ecd0c2cf02cb290"
   },
   "legacy_executable_contracts": {
     "v1_observations": 19,

@@ -136,6 +136,64 @@ backend/.venv/bin/python scripts/prepare_port_dataset.py \
 Map every v3 weather, activity, availability, compatibility and renewable
 column with the corresponding `--*-col` option. v3 rejects incomplete datasets.
 
+## Operational-flex v5 dataset
+
+`port_la_2020_2024_operational_flex_hourly.csv` is an additive 43,848-hour
+package for `PortEnergyDispatchEnv-v5`. It keeps the official Port of Los Angeles
+daily-vessel and monthly-throughput anchors and the EIA/EPA electricity anchors,
+then adds reproducible engineering scenarios for AGV charging, reefer loads,
+building flexibility, shore-power reservation, equipment condition, maintenance,
+demand response, regulatory events and renewable forecasts.
+
+Those added fields are not field measurements. The adjacent metadata separates
+`public_anchor_columns`, `modeled_supplement_columns` and the intentionally empty
+`independent_field_measurement_columns`. Therefore this package is valid for
+offline training and schema testing but fails the site-training evidence gate.
+
+To replace it with a terminal export, supply a canonical-to-source JSON map and
+site evidence object:
+
+```bash
+backend/.venv/bin/python scripts/prepare_port_dataset.py \
+  --input /reviewed/staging/terminal_export.csv \
+  --output backend/app/data/datasets/my_port_v5.csv \
+  --column-map /reviewed/staging/v5_column_map.json \
+  --site-training-evidence /reviewed/staging/site_training_evidence.json \
+  --environment-config /reviewed/staging/calibrated_environment_parameters.json \
+  --environment-id PortEnergyDispatchEnv-v5 \
+  --source-id terminal-approved-snapshot \
+  --source-url https://terminal.example/evidence/manifest \
+  --license terminal-controlled \
+  --timezone Asia/Kuala_Lumpur \
+  --currency MYR
+```
+
+The mapping is identity-only; unit conversions must be performed and evidenced
+before this command. The output stays training-only until
+`GET /api/rl/datasets/my_port_v5/replacement-readiness` passes. Even a passing
+training package does not authorize physical dispatch.
+
+## Hybrid RL v6 dataset
+
+`port_la_2020_2024_hybrid_rl_hourly.csv` extends v5 without overwriting it. The
+43,848-hour chronology and train/validation/test split are unchanged. Sixteen
+additional columns model just-in-time arrival, pilot/tug readiness, berth
+conflicts, crane precedence and backlog, yard slot capacity and rehandles,
+truck appointments and gate capacity, plus maintenance due/risk/resources.
+
+The metadata classifies every added column as `modeled_supplement`; none is an
+independent field measurement. Re-running `make data-hybrid` must reproduce the
+same package hash. `PortEnergyHybridResidualEnv-v6` consumes 106 causal
+observations and exposes 16 continuous policy outputs. DQN is rejected because
+the v6 contract is continuous-only.
+
+For a port deployment, map the same canonical columns through
+`scripts/prepare_port_dataset.py --environment-id PortEnergyHybridResidualEnv-v6`.
+The replacement-readiness API requires all 66 measurement columns plus signed
+source receipts, row lineage, calibration, 180-day and abnormal-scenario shadow
+coverage, meter/bill reconciliation, operator acceptance and independent review.
+Passing permits site retraining and shadow evaluation only.
+
 For live integration, build a read-only extractor from TOS/EMS/AIS into this
 contract, version snapshots in object storage, and train from immutable snapshots.
 With `sequential_rows` plus verified physical columns or metadata, the same

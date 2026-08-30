@@ -1,4 +1,4 @@
-.PHONY: bootstrap validate backend frontend demo test build runtime-evidence verify-runtime-evidence security-audit site-delivery-check release-check data-deps data-enhanced data-regulatory benchmark benchmark-enhanced landing-benchmark regulatory-benchmark tune-enhanced-short verify-benchmark verify-benchmark-enhanced verify-landing-benchmark verify-regulatory-benchmark docker-up docker-down
+.PHONY: bootstrap validate backend frontend demo test build runtime-evidence verify-runtime-evidence security-audit site-delivery-check release-check data-deps data-enhanced data-regulatory data-operational-flex data-hybrid benchmark benchmark-enhanced landing-benchmark regulatory-benchmark tune-enhanced-short tune-operational-flex refine-operational-flex operational-flex-business-value verify-operational-flex-business-value tune-hybrid hybrid-business-value verify-hybrid-business-value verify-benchmark verify-benchmark-enhanced verify-landing-benchmark verify-regulatory-benchmark docker-up docker-down
 
 bootstrap:
 	bash scripts/bootstrap.sh
@@ -51,6 +51,12 @@ data-regulatory:
 	backend/.venv/bin/python scripts/build_regulatory_forward_challenge_dataset.py
 	backend/.venv/bin/python scripts/build_regulatory_final_challenge_dataset.py
 
+data-operational-flex:
+	backend/.venv/bin/python scripts/build_operational_flex_dataset.py
+
+data-hybrid:
+	backend/.venv/bin/python scripts/build_hybrid_rl_dataset.py
+
 benchmark-enhanced:
 	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.benchmark run --dataset port_la_2020_2024_vessel_activity_hourly --output reports/offline_benchmark_vessel_activity_v1
 
@@ -64,6 +70,27 @@ regulatory-benchmark:
 
 tune-enhanced-short:
 	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.tuning --algorithm all --dataset port_la_2020_2024_vessel_activity_hourly --steps 10000 --final-seeds 11,29,47 --output reports/rl_tuning_vessel_activity_10k.json
+
+tune-operational-flex:
+	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.tuning --algorithm all --dataset port_la_2020_2024_operational_flex_hourly --steps 10000 --final-seeds 17,37,59 --search-space configs/rl_search_space_operational_flex_v5.json --output reports/rl_tuning_operational_flex_v5_10k.json
+
+refine-operational-flex:
+	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.operational_flex_refinement
+
+operational-flex-business-value:
+	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.operational_flex_benchmark
+
+verify-operational-flex-business-value:
+	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.operational_flex_benchmark --verify-report reports/operational_flex_business_value_v5.json
+
+tune-hybrid:
+	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.hybrid_tuning
+
+hybrid-business-value:
+	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.hybrid_benchmark
+
+verify-hybrid-business-value:
+	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.hybrid_benchmark --verify-report reports/hybrid_rl_business_value_v6.json
 
 verify-benchmark:
 	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.legacy_extension_verify verify reports/offline_benchmark_v3.json

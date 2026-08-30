@@ -29,6 +29,15 @@ class CausalForecastPortEnv(PortEnergyDispatchEnv):
         self.demand_multiplier = float(demand_multiplier)
         self.parameter_multipliers = dict(parameter_multipliers or {})
         super().__init__(*args, **kwargs)
+        # Terminal SOC remains a hard reachability constraint. The causal
+        # wrapper removes the soft terminal-storage preference so a training
+        # window cannot be rewarded for an arbitrary reset boundary.
+        if kwargs.get("reward_weights") is None and "storage" in self.reward_weights:
+            self.reward_weights["storage"] = 0.0
+            total = sum(self.reward_weights.values())
+            self.reward_weights = {
+                key: value / total for key, value in self.reward_weights.items()
+            }
 
     def _row_at(self, hour_offset: int):
         if self.temporal_mode != "sequential_rows":

@@ -53,6 +53,40 @@ DEFAULT_REWARD_WEIGHTS = {
     "storage": 0.08,
 }
 
+DEFAULT_FLEX_REWARD_WEIGHTS = {
+    "carbon": 0.15,
+    "shore_power": 0.06,
+    "cost": 0.15,
+    "delay": 0.12,
+    "safety": 0.18,
+    "peak": 0.08,
+    "storage": 0.05,
+    "agv_service": 0.06,
+    "reefer_safety": 0.07,
+    "demand_response": 0.05,
+    "equipment_health": 0.03,
+}
+
+DEFAULT_HYBRID_REWARD_WEIGHTS = {
+    "carbon": 0.12,
+    "shore_power": 0.04,
+    "cost": 0.12,
+    "delay": 0.10,
+    "safety": 0.18,
+    "peak": 0.06,
+    "storage": 0.04,
+    "agv_service": 0.05,
+    "reefer_safety": 0.06,
+    "demand_response": 0.04,
+    "equipment_health": 0.03,
+    "jit_service": 0.035,
+    "green_berth": 0.025,
+    "crane_schedule": 0.025,
+    "yard_slotting": 0.025,
+    "truck_flow": 0.025,
+    "maintenance_risk": 0.025,
+}
+
 DEFAULT_ENVIRONMENT_PARAMETERS = {
     "crane_capacity_teu_per_hour": 1_850.0,
     "yard_capacity_teu_per_hour": 2_050.0,
@@ -83,6 +117,25 @@ DEFAULT_ENVIRONMENT_PARAMETERS = {
     "inspection_auxiliary_kwh_per_teu_hour": 0.08,
     "released_staging_capacity_teu_per_hour": 900.0,
     "recovery_capacity_ratio": 0.35,
+    "agv_charger_capacity_kw": 4_000.0,
+    "agv_charge_efficiency": 0.94,
+    "reefer_minimum_service_ratio": 0.75,
+    "reefer_thermal_debt_limit": 1.0,
+    "reefer_thermal_recovery_rate": 0.45,
+    "building_minimum_flexible_load_ratio": 0.35,
+    "demand_response_non_delivery_cny_per_kwh": 5.0,
+    "agv_missed_energy_cny_per_kwh": 3.0,
+    "reefer_safety_cny_per_degree_hour": 1_200.0,
+}
+
+HYBRID_ENVIRONMENT_PARAMETERS = {
+    "hybrid_residual_trust_ratio": 0.20,
+    "jit_deviation_cost_cny_per_hour": 2_400.0,
+    "berth_conflict_cost_cny_per_hour": 4_000.0,
+    "crane_task_lateness_cny_per_teu": 9.0,
+    "yard_rehandle_cost_cny_per_teu": 7.0,
+    "truck_queue_cost_cny_per_teu_hour": 11.0,
+    "maintenance_overdue_cost_cny_per_hour": 8_000.0,
 }
 
 OBSERVATION_KEYS = (
@@ -142,6 +195,101 @@ REGULATORY_OBSERVATION_KEYS = (
     "previous_recovery_priority_action",
 )
 REGULATORY_DATA_KEYS = REGULATORY_OBSERVATION_KEYS[:8]
+FLEXIBLE_OPERATIONS_OBSERVATION_KEYS = (
+    "agv_fleet_available_ratio",
+    "agv_mean_soc",
+    "agv_charge_demand_kwh",
+    "agv_departure_requirement_kwh",
+    "charger_available_ratio",
+    "reefer_connected_count",
+    "reefer_baseline_load_kw",
+    "reefer_thermal_margin_c",
+    "building_critical_load_kw",
+    "building_flexible_load_kw",
+    "shore_power_reserved_kw",
+    "shore_power_window_remaining_hours",
+    "equipment_health_ratio",
+    "crane_fault_risk",
+    "yard_fault_risk",
+    "demand_response_active",
+    "demand_response_target_kw",
+    "demand_response_remaining_hours",
+    "renewable_power_forecast_kw",
+    "maintenance_window_active",
+    "reefer_thermal_debt",
+    "previous_agv_charging_action",
+    "previous_reefer_service_action",
+    "previous_building_flexible_load_action",
+    "previous_demand_response_action",
+)
+FLEXIBLE_OPERATIONS_DATA_KEYS = FLEXIBLE_OPERATIONS_OBSERVATION_KEYS[:20]
+HYBRID_OPERATIONS_DATA_KEYS = (
+    "jit_window_feasible_ratio",
+    "pilot_tug_readiness_ratio",
+    "arrival_uncertainty_hours",
+    "anchorage_auxiliary_fuel_l_per_hour",
+    "green_berth_candidate_ratio",
+    "berth_conflict_ratio",
+    "crane_task_backlog_teu",
+    "crane_precedence_pressure_ratio",
+    "yard_rehandle_ratio",
+    "yard_slot_capacity_ratio",
+    "truck_gate_queue_teu",
+    "truck_appointment_pressure_ratio",
+    "truck_gate_capacity_teu_per_hour",
+    "maintenance_due_ratio",
+    "maintenance_resource_available_ratio",
+    "failure_risk_forecast",
+)
+HYBRID_STATE_OBSERVATION_KEYS = (
+    "maintenance_debt",
+    "previous_jit_arrival_priority",
+    "previous_green_berth_priority",
+    "previous_crane_task_priority",
+    "previous_yard_slotting_priority",
+    "previous_truck_gate_priority",
+    "previous_maintenance_priority",
+)
+HYBRID_CONTROL_REFERENCE_OBSERVATION_KEYS = (
+    "controller_shore_power_ratio",
+    "controller_crane_ratio",
+    "controller_yard_ratio",
+    "controller_battery_power_ratio",
+    "controller_inspection_readiness_ratio",
+    "controller_recovery_priority_ratio",
+    "controller_agv_charging_ratio",
+    "controller_reefer_service_ratio",
+    "controller_building_flexible_load_ratio",
+    "controller_demand_response_ratio",
+)
+HYBRID_OBSERVATION_KEYS = (
+    HYBRID_OPERATIONS_DATA_KEYS
+    + HYBRID_STATE_OBSERVATION_KEYS
+    + HYBRID_CONTROL_REFERENCE_OBSERVATION_KEYS
+)
+
+OPERATIONAL_ENVIRONMENTS = {
+    "PortEnergyDispatchEnv-v2",
+    "PortEnergyDispatchEnv-v3",
+    "PortEnergyDispatchEnv-v4",
+    "PortEnergyDispatchEnv-v5",
+    "PortEnergyHybridResidualEnv-v6",
+}
+DEPLOYMENT_ENVIRONMENTS = {
+    "PortEnergyDispatchEnv-v3",
+    "PortEnergyDispatchEnv-v4",
+    "PortEnergyDispatchEnv-v5",
+    "PortEnergyHybridResidualEnv-v6",
+}
+REGULATORY_ENVIRONMENTS = {
+    "PortEnergyDispatchEnv-v4",
+    "PortEnergyDispatchEnv-v5",
+    "PortEnergyHybridResidualEnv-v6",
+}
+FLEXIBLE_ENVIRONMENTS = {
+    "PortEnergyDispatchEnv-v5",
+    "PortEnergyHybridResidualEnv-v6",
+}
 
 
 def observation_keys_for_environment(environment_id: str) -> tuple[str, ...]:
@@ -157,6 +305,23 @@ def observation_keys_for_environment(environment_id: str) -> tuple[str, ...]:
             + OPERATIONAL_OBSERVATION_KEYS
             + DEPLOYMENT_OBSERVATION_KEYS
             + REGULATORY_OBSERVATION_KEYS
+        )
+    if environment_id == "PortEnergyDispatchEnv-v5":
+        return (
+            OBSERVATION_KEYS
+            + OPERATIONAL_OBSERVATION_KEYS
+            + DEPLOYMENT_OBSERVATION_KEYS
+            + REGULATORY_OBSERVATION_KEYS
+            + FLEXIBLE_OPERATIONS_OBSERVATION_KEYS
+        )
+    if environment_id == "PortEnergyHybridResidualEnv-v6":
+        return (
+            OBSERVATION_KEYS
+            + OPERATIONAL_OBSERVATION_KEYS
+            + DEPLOYMENT_OBSERVATION_KEYS
+            + REGULATORY_OBSERVATION_KEYS
+            + FLEXIBLE_OPERATIONS_OBSERVATION_KEYS
+            + HYBRID_OBSERVATION_KEYS
         )
     raise ValueError(f"Unsupported environment_id: {environment_id}")
 
@@ -195,11 +360,15 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             set(OPERATIONAL_OBSERVATION_KEYS)
             if self.environment_id == "PortEnergyDispatchEnv-v2"
             else set(OPERATIONAL_OBSERVATION_KEYS + DEPLOYMENT_OBSERVATION_KEYS)
-            if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}
+            if self.environment_id in DEPLOYMENT_ENVIRONMENTS
             else set()
         )
-        if self.environment_id == "PortEnergyDispatchEnv-v4":
+        if self.environment_id in REGULATORY_ENVIRONMENTS:
             required_observations |= set(REGULATORY_DATA_KEYS)
+        if self.environment_id in FLEXIBLE_ENVIRONMENTS:
+            required_observations |= set(FLEXIBLE_OPERATIONS_DATA_KEYS)
+        if self.environment_id == "PortEnergyHybridResidualEnv-v6":
+            required_observations |= set(HYBRID_OPERATIONS_DATA_KEYS)
         if required_observations:
             missing_operational = required_observations - set(self.frame.columns)
             if missing_operational:
@@ -214,29 +383,50 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
                 OPERATIONAL_OBSERVATION_KEYS
                 + DEPLOYMENT_OBSERVATION_KEYS
                 + REGULATORY_DATA_KEYS
+                + FLEXIBLE_OPERATIONS_DATA_KEYS
+                + HYBRID_OPERATIONS_DATA_KEYS
             )
             if name in train_frame.columns
         }
         configured_parameters = self.dataset.metadata.get("environment_parameters") or {}
+        parameter_defaults = {
+            **DEFAULT_ENVIRONMENT_PARAMETERS,
+            **(
+                HYBRID_ENVIRONMENT_PARAMETERS
+                if self.environment_id == "PortEnergyHybridResidualEnv-v6"
+                else {}
+            ),
+        }
         self._resolved_parameters = {
             name: float(configured_parameters.get(name, default))
-            for name, default in DEFAULT_ENVIRONMENT_PARAMETERS.items()
+            for name, default in parameter_defaults.items()
         }
-        self._parameter_columns = set(DEFAULT_ENVIRONMENT_PARAMETERS) & set(self.frame.columns)
+        self._parameter_columns = set(parameter_defaults) & set(self.frame.columns)
         self.temporal_mode = self.dataset.temporal_mode
         self.split_name = split
         self.action_mode = action_mode
         self.render_mode = render_mode
         self.episode_hours = max(1, min(744, int(episode_hours)))
-        self.reward_weights = self._normalize_weights(reward_weights or DEFAULT_REWARD_WEIGHTS)
-        regulatory = self.environment_id == "PortEnergyDispatchEnv-v4"
+        default_weights = (
+            DEFAULT_HYBRID_REWARD_WEIGHTS
+            if self.environment_id == "PortEnergyHybridResidualEnv-v6"
+            else DEFAULT_FLEX_REWARD_WEIGHTS
+            if self.environment_id == "PortEnergyDispatchEnv-v5"
+            else DEFAULT_REWARD_WEIGHTS
+        )
+        self.reward_weights = self._normalize_weights(reward_weights or default_weights)
+        regulatory = self.environment_id in REGULATORY_ENVIRONMENTS
+        flexible = self.environment_id in FLEXIBLE_ENVIRONMENTS
+        hybrid = self.environment_id == "PortEnergyHybridResidualEnv-v6"
+        if hybrid and action_mode == "discrete":
+            raise ValueError("PortEnergyHybridResidualEnv-v6 supports continuous actions only")
         self.action_space = (
-            spaces.Discrete(729 if regulatory else 81)
+            spaces.Discrete(243 if flexible else 729 if regulatory else 81)
             if action_mode == "discrete"
             else spaces.Box(
                 low=-1.0,
                 high=1.0,
-                shape=(6 if regulatory else 4,),
+                shape=(16 if hybrid else 10 if flexible else 6 if regulatory else 4,),
                 dtype=np.float32,
             )
         )
@@ -256,6 +446,20 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         self._released_recovery_teu = 0.0
         self._last_inspection_readiness_ratio = 0.0
         self._last_recovery_priority_ratio = 0.0
+        self._reefer_thermal_debt = 0.0
+        self._last_agv_charging_ratio = 1.0
+        self._last_reefer_service_ratio = 1.0
+        self._last_building_flexible_load_ratio = 1.0
+        self._last_demand_response_ratio = 0.0
+        self._maintenance_debt = 0.0
+        self._last_hybrid_priorities = {
+            "jit_arrival_priority": 0.5,
+            "green_berth_priority": 0.5,
+            "crane_task_priority": 0.5,
+            "yard_slotting_priority": 0.5,
+            "truck_gate_priority": 0.5,
+            "maintenance_priority": 0.5,
+        }
         self._episode_start_period = ""
         self._trajectory: list[dict[str, Any]] = []
         self._totals: dict[str, float] = {}
@@ -291,6 +495,20 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         self._released_recovery_teu = 0.0
         self._last_inspection_readiness_ratio = 0.0
         self._last_recovery_priority_ratio = 0.0
+        self._reefer_thermal_debt = float(options.get("reefer_thermal_debt", 0.0))
+        self._last_agv_charging_ratio = 1.0
+        self._last_reefer_service_ratio = 1.0
+        self._last_building_flexible_load_ratio = 1.0
+        self._last_demand_response_ratio = 0.0
+        self._maintenance_debt = float(options.get("maintenance_debt", 0.0))
+        self._last_hybrid_priorities = {
+            "jit_arrival_priority": 0.5,
+            "green_berth_priority": 0.5,
+            "crane_task_priority": 0.5,
+            "yard_slotting_priority": 0.5,
+            "truck_gate_priority": 0.5,
+            "maintenance_priority": 0.5,
+        }
         self._episode_start_period = str(self._row()["period"])
         self._trajectory = []
         self._totals = {
@@ -329,6 +547,27 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "recovery_energy_kwh": 0.0,
             "inspection_readiness_ratio_sum": 0.0,
             "recovery_priority_ratio_sum": 0.0,
+            "agv_charge_demand_kwh": 0.0,
+            "agv_charged_kwh": 0.0,
+            "agv_missed_required_kwh": 0.0,
+            "reefer_energy_kwh": 0.0,
+            "reefer_thermal_violation_steps": 0.0,
+            "building_energy_kwh": 0.0,
+            "demand_response_target_kwh": 0.0,
+            "demand_response_delivered_kwh": 0.0,
+            "demand_response_non_delivery_kwh": 0.0,
+            "flexible_load_projection_kwh": 0.0,
+            "equipment_health_projection_steps": 0.0,
+            "hybrid_solver_projection_l1": 0.0,
+            "hybrid_solver_constraint_violations": 0.0,
+            "jit_deviation_hours": 0.0,
+            "anchorage_auxiliary_fuel_liters": 0.0,
+            "berth_conflict_hours": 0.0,
+            "crane_task_late_teu": 0.0,
+            "yard_rehandles_teu": 0.0,
+            "truck_queue_teu_hours": 0.0,
+            "maintenance_overdue_hours": 0.0,
+            "maintenance_performed_ratio": 0.0,
         }
         return self._observation(), {
             "dataset_id": self.dataset.dataset_id,
@@ -345,7 +584,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         }
 
     def step(
-        self, action: np.ndarray | int
+        self, action: np.ndarray | int | dict[str, float]
     ) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
         controls = self.decode_action(action)
         transition = self._calculate_transition(controls)
@@ -360,6 +599,16 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "inspection_readiness_ratio", 0.0
         )
         self._last_recovery_priority_ratio = controls.get("recovery_priority_ratio", 0.0)
+        self._reefer_thermal_debt = float(transition["reefer_thermal_debt"])
+        self._last_agv_charging_ratio = controls.get("agv_charging_ratio", 1.0)
+        self._last_reefer_service_ratio = controls.get("reefer_service_ratio", 1.0)
+        self._last_building_flexible_load_ratio = controls.get(
+            "building_flexible_load_ratio", 1.0
+        )
+        self._last_demand_response_ratio = controls.get("demand_response_ratio", 0.0)
+        self._maintenance_debt = float(transition["maintenance_debt"])
+        for key in self._last_hybrid_priorities:
+            self._last_hybrid_priorities[key] = controls.get(key, 0.5)
         for key in (
             "energy_kwh",
             "carbon_kg",
@@ -394,6 +643,27 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "recovery_energy_kwh",
             "inspection_readiness_ratio_sum",
             "recovery_priority_ratio_sum",
+            "agv_charge_demand_kwh",
+            "agv_charged_kwh",
+            "agv_missed_required_kwh",
+            "reefer_energy_kwh",
+            "reefer_thermal_violation_steps",
+            "building_energy_kwh",
+            "demand_response_target_kwh",
+            "demand_response_delivered_kwh",
+            "demand_response_non_delivery_kwh",
+            "flexible_load_projection_kwh",
+            "equipment_health_projection_steps",
+            "hybrid_solver_projection_l1",
+            "hybrid_solver_constraint_violations",
+            "jit_deviation_hours",
+            "anchorage_auxiliary_fuel_liters",
+            "berth_conflict_hours",
+            "crane_task_late_teu",
+            "yard_rehandles_teu",
+            "truck_queue_teu_hours",
+            "maintenance_overdue_hours",
+            "maintenance_performed_ratio",
         ):
             self._totals[key] += float(transition[key])
         self._totals["reward"] += float(transition["reward"])
@@ -417,27 +687,72 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             return None
         return deepcopy(self._trajectory)
 
-    def decode_action(self, action: np.ndarray | int) -> dict[str, float]:
+    def decode_action(
+        self, action: np.ndarray | int | dict[str, float]
+    ) -> dict[str, float]:
+        if isinstance(action, dict):
+            return {str(key): float(value) for key, value in action.items()}
+        if self.environment_id == "PortEnergyHybridResidualEnv-v6":
+            from app.rl.hybrid_control import decode_hybrid_action
+
+            controls, solver_result = decode_hybrid_action(self, np.asarray(action))
+            return {
+                **controls,
+                "hybrid_solver_projection_l1": solver_result.projection_l1,
+                "hybrid_solver_constraint_violations": float(
+                    solver_result.hard_constraint_violations
+                ),
+            }
         if self.action_mode == "discrete":
             value = int(action)
             if not self.action_space.contains(value):
                 raise ValueError(f"Discrete action out of range: {value}")
-            shape = (3, 3, 3, 3, 3, 3) if self.environment_id == "PortEnergyDispatchEnv-v4" else (3, 3, 3, 3)
+            flexible = self.environment_id == "PortEnergyDispatchEnv-v5"
+            shape = (
+                (3, 3, 3, 3, 3)
+                if flexible
+                else (3, 3, 3, 3, 3, 3)
+                if self.environment_id == "PortEnergyDispatchEnv-v4"
+                else (3, 3, 3, 3)
+            )
             levels = np.unravel_index(value, shape)
-            shore_level, crane_level, yard_level, battery_level = levels[:4]
+            if flexible:
+                shore_level, equipment_level, battery_level, regulatory_level, flex_level = levels
+                crane_level = yard_level = equipment_level
+            else:
+                shore_level, crane_level, yard_level, battery_level = levels[:4]
             controls = {
                 "shore_power_ratio": (0.0, 0.5, 1.0)[shore_level],
                 "crane_ratio": (0.60, 0.80, 1.00)[crane_level],
                 "yard_ratio": (0.60, 0.80, 1.00)[yard_level],
                 "battery_power_ratio": (-1.0, 0.0, 1.0)[battery_level],
             }
-            if self.environment_id == "PortEnergyDispatchEnv-v4":
+            if flexible:
+                readiness = (0.25, 0.60, 1.00)[regulatory_level]
+                flex = (0.35, 0.70, 1.00)[flex_level]
+                controls.update(
+                    inspection_readiness_ratio=readiness,
+                    recovery_priority_ratio=readiness,
+                    agv_charging_ratio=flex,
+                    reefer_service_ratio=(0.75, 0.90, 1.00)[flex_level],
+                    building_flexible_load_ratio=flex,
+                    demand_response_ratio=(1.0, 0.5, 0.0)[flex_level],
+                )
+            elif self.environment_id == "PortEnergyDispatchEnv-v4":
                 controls.update(
                     inspection_readiness_ratio=(0.0, 0.5, 1.0)[levels[4]],
                     recovery_priority_ratio=(0.0, 0.5, 1.0)[levels[5]],
                 )
             return controls
-        action_count = 6 if self.environment_id == "PortEnergyDispatchEnv-v4" else 4
+        action_count = (
+            16
+            if self.environment_id == "PortEnergyHybridResidualEnv-v6"
+            else 10
+            if self.environment_id == "PortEnergyDispatchEnv-v5"
+            else 6
+            if self.environment_id == "PortEnergyDispatchEnv-v4"
+            else 4
+        )
         vector = np.asarray(action, dtype=np.float32).reshape(action_count)
         vector = np.clip(vector, -1.0, 1.0)
         controls = {
@@ -449,10 +764,27 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "yard_ratio": float(0.60 + (vector[2] + 1.0) * 0.20),
             "battery_power_ratio": float(vector[3]),
         }
-        if self.environment_id == "PortEnergyDispatchEnv-v4":
+        if self.environment_id in REGULATORY_ENVIRONMENTS:
             controls.update(
                 inspection_readiness_ratio=float((vector[4] + 1.0) / 2.0),
                 recovery_priority_ratio=float((vector[5] + 1.0) / 2.0),
+            )
+        if self.environment_id == "PortEnergyDispatchEnv-v5":
+            controls.update(
+                agv_charging_ratio=float((vector[6] + 1.0) / 2.0),
+                reefer_service_ratio=float(
+                    self._parameter("reefer_minimum_service_ratio")
+                    + (vector[7] + 1.0)
+                    / 2.0
+                    * (1.0 - self._parameter("reefer_minimum_service_ratio"))
+                ),
+                building_flexible_load_ratio=float(
+                    self._parameter("building_minimum_flexible_load_ratio")
+                    + (vector[8] + 1.0)
+                    / 2.0
+                    * (1.0 - self._parameter("building_minimum_flexible_load_ratio"))
+                ),
+                demand_response_ratio=float((vector[9] + 1.0) / 2.0),
             )
         return controls
 
@@ -498,6 +830,8 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "ending_maritime_hold_teu": self._maritime_hold_teu,
             "ending_customs_hold_teu": self._customs_hold_teu,
             "ending_released_recovery_teu": self._released_recovery_teu,
+            "ending_reefer_thermal_debt": self._reefer_thermal_debt,
+            "ending_maintenance_debt": self._maintenance_debt,
         }
 
     def _row(self):
@@ -541,6 +875,8 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             return float(configured[name])
         if name in DEFAULT_ENVIRONMENT_PARAMETERS:
             return float(DEFAULT_ENVIRONMENT_PARAMETERS[name])
+        if name in HYBRID_ENVIRONMENT_PARAMETERS:
+            return float(HYBRID_ENVIRONMENT_PARAMETERS[name])
         raise KeyError(name)
 
     def _row_value(self, name: str, default: float = 0.0) -> float:
@@ -565,7 +901,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
                 1.0,
             )
         )
-        if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}:
+        if self.environment_id in DEPLOYMENT_ENVIRONMENTS:
             availability *= float(
                 np.clip(
                     self._row_value("shore_power_compatible_ratio"),
@@ -574,6 +910,9 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
                 )
             )
         demand = self._row_value("vessels_at_berth") * per_vessel
+        if self.environment_id in FLEXIBLE_ENVIRONMENTS:
+            reservation = self._row_value("shore_power_reserved_kw", capacity)
+            demand = min(demand, reservation)
         return min(capacity * availability, demand)
 
     def _observation(self) -> np.ndarray:
@@ -629,21 +968,17 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             self._totals.get("carbon_kg", 0.0) / 100_000.0,
             self._totals.get("delay_minutes", 0.0) / 2_000.0,
         ]
-        if self.environment_id in {
-            "PortEnergyDispatchEnv-v2",
-            "PortEnergyDispatchEnv-v3",
-            "PortEnergyDispatchEnv-v4",
-        }:
+        if self.environment_id in OPERATIONAL_ENVIRONMENTS:
             values.extend(
                 self._row_value(name) / self._operational_normalizers.get(name, 1.0)
                 for name in OPERATIONAL_OBSERVATION_KEYS
             )
-        if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}:
+        if self.environment_id in DEPLOYMENT_ENVIRONMENTS:
             values.extend(
                 self._row_value(name) / self._operational_normalizers.get(name, 1.0)
                 for name in DEPLOYMENT_OBSERVATION_KEYS
             )
-        if self.environment_id == "PortEnergyDispatchEnv-v4":
+        if self.environment_id in REGULATORY_ENVIRONMENTS:
             values.extend(
                 self._row_value(name) / self._operational_normalizers.get(name, 1.0)
                 for name in REGULATORY_DATA_KEYS
@@ -657,13 +992,107 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
                     self._last_recovery_priority_ratio,
                 )
             )
+        if self.environment_id in FLEXIBLE_ENVIRONMENTS:
+            values.extend(
+                self._row_value(name) / self._operational_normalizers.get(name, 1.0)
+                for name in FLEXIBLE_OPERATIONS_DATA_KEYS
+            )
+            values.extend(
+                (
+                    self._reefer_thermal_debt
+                    / max(0.01, self._parameter("reefer_thermal_debt_limit")),
+                    self._last_agv_charging_ratio,
+                    self._last_reefer_service_ratio,
+                    self._last_building_flexible_load_ratio,
+                    self._last_demand_response_ratio,
+                )
+            )
+        if self.environment_id == "PortEnergyHybridResidualEnv-v6":
+            from app.rl.hybrid_control import FastFeasibleControlPolicy
+
+            values.extend(
+                self._row_value(name) / self._operational_normalizers.get(name, 1.0)
+                for name in HYBRID_OPERATIONS_DATA_KEYS
+            )
+            values.extend(
+                (
+                    self._maintenance_debt,
+                    *(
+                        self._last_hybrid_priorities[key]
+                        for key in (
+                            "jit_arrival_priority",
+                            "green_berth_priority",
+                            "crane_task_priority",
+                            "yard_slotting_priority",
+                            "truck_gate_priority",
+                            "maintenance_priority",
+                        )
+                    ),
+                )
+            )
+            reference = FastFeasibleControlPolicy().predict(self)
+            values.extend(
+                (
+                    reference["shore_power_ratio"],
+                    (reference["crane_ratio"] - 0.60) / 0.40,
+                    (reference["yard_ratio"] - 0.60) / 0.40,
+                    (reference["battery_power_ratio"] + 1.0) / 2.0,
+                    reference["inspection_readiness_ratio"],
+                    reference["recovery_priority_ratio"],
+                    reference["agv_charging_ratio"],
+                    (reference["reefer_service_ratio"] - 0.75) / 0.25,
+                    (reference["building_flexible_load_ratio"] - 0.35) / 0.65,
+                    reference["demand_response_ratio"],
+                )
+            )
         observation = np.array(values, dtype=np.float32)
         return np.clip(observation, 0.0, 1.5)
 
     def _calculate_transition(self, controls: dict[str, float]) -> dict[str, Any]:
         row = self._row()
         base_demand_teu = self._demand_teu()
-        regulatory = self.environment_id == "PortEnergyDispatchEnv-v4"
+        regulatory = self.environment_id in REGULATORY_ENVIRONMENTS
+        flexible = self.environment_id in FLEXIBLE_ENVIRONMENTS
+        hybrid = self.environment_id == "PortEnergyHybridResidualEnv-v6"
+        hybrid_priorities = {
+            key: float(np.clip(controls.get(key, 0.5), 0.0, 1.0))
+            for key in (
+                "jit_arrival_priority",
+                "green_berth_priority",
+                "crane_task_priority",
+                "yard_slotting_priority",
+                "truck_gate_priority",
+                "maintenance_priority",
+            )
+        }
+        maintenance_due = self._row_value("maintenance_due_ratio") if hybrid else 0.0
+        maintenance_resource = (
+            self._row_value("maintenance_resource_available_ratio") if hybrid else 0.0
+        )
+        maintenance_performed_ratio = (
+            hybrid_priorities["maintenance_priority"] * maintenance_resource
+            if hybrid
+            else 0.0
+        )
+        maintenance_debt = (
+            float(
+                np.clip(
+                    self._maintenance_debt
+                    + 0.12 * maintenance_due
+                    - 0.18 * maintenance_performed_ratio,
+                    0.0,
+                    1.5,
+                )
+            )
+            if hybrid
+            else 0.0
+        )
+        hybrid_solver_projection_l1 = float(
+            controls.get("hybrid_solver_projection_l1", 0.0)
+        )
+        hybrid_solver_constraint_violations = int(
+            controls.get("hybrid_solver_constraint_violations", 0.0) > 0.0
+        )
         inspection_readiness_ratio = float(
             np.clip(controls.get("inspection_readiness_ratio", 0.5), 0.0, 1.0)
         )
@@ -722,7 +1151,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
                     1.0,
                 )
             )
-            if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}
+            if self.environment_id in DEPLOYMENT_ENVIRONMENTS
             else 1.0
         )
         yard_availability = (
@@ -733,7 +1162,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
                     1.0,
                 )
             )
-            if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}
+            if self.environment_id in DEPLOYMENT_ENVIRONMENTS
             else 1.0
         )
         berth_availability = (
@@ -744,11 +1173,26 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
                     1.0,
                 )
             )
-            if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}
+            if self.environment_id in DEPLOYMENT_ENVIRONMENTS
             else 1.0
         )
         crane_availability *= berth_availability
         yard_availability *= berth_availability
+        if flexible:
+            health = float(np.clip(self._row_value("equipment_health_ratio"), 0.0, 1.0))
+            maintenance = float(
+                np.clip(self._row_value("maintenance_window_active"), 0.0, 1.0)
+            )
+            crane_availability *= health * (1.0 - 0.20 * maintenance)
+            yard_availability *= health * (1.0 - 0.15 * maintenance)
+        if hybrid:
+            # Maintenance temporarily consumes capacity; the solver priorities
+            # recover avoidable idle/rehandle losses without exceeding the
+            # terminal-approved availability envelope.
+            crane_availability *= 1.0 - 0.08 * maintenance_performed_ratio
+            yard_availability *= 1.0 - 0.06 * maintenance_performed_ratio
+            crane_availability *= 0.92 + 0.08 * hybrid_priorities["crane_task_priority"]
+            yard_availability *= 0.92 + 0.08 * hybrid_priorities["yard_slotting_priority"]
         crane_capacity = (
             self._parameter("crane_capacity_teu_per_hour")
             * controls["crane_ratio"]
@@ -806,8 +1250,49 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             else 0.0
         )
         delay_minutes = operational_delay_minutes + regulatory_delay_minutes
+        jit_deviation_hours = (
+            self._row_value("arrival_uncertainty_hours")
+            * (1.0 - hybrid_priorities["jit_arrival_priority"])
+            if hybrid
+            else 0.0
+        )
+        berth_conflict_hours = (
+            self._row_value("berth_conflict_ratio")
+            * (1.0 - hybrid_priorities["green_berth_priority"])
+            if hybrid
+            else 0.0
+        )
+        crane_task_late_teu = (
+            self._row_value("crane_task_backlog_teu")
+            * (1.0 - hybrid_priorities["crane_task_priority"])
+            if hybrid
+            else 0.0
+        )
+        yard_rehandles_teu = (
+            base_demand_teu
+            * self._row_value("yard_rehandle_ratio")
+            * (1.0 - 0.50 * hybrid_priorities["yard_slotting_priority"])
+            if hybrid
+            else 0.0
+        )
+        truck_queue_teu_hours = (
+            self._row_value("truck_gate_queue_teu")
+            * (1.0 - 0.55 * hybrid_priorities["truck_gate_priority"])
+            if hybrid
+            else 0.0
+        )
+        if hybrid:
+            delay_minutes += (
+                berth_conflict_hours * 60.0
+                + crane_task_late_teu / max(1.0, crane_capacity) * 60.0
+                + truck_queue_teu_hours
+                / max(1.0, self._row_value("truck_gate_capacity_teu_per_hour"))
+                * 60.0
+            )
 
         shore_demand_kw = self._shore_power_opportunity_kw()
+        if hybrid:
+            shore_demand_kw *= 0.85 + 0.15 * hybrid_priorities["green_berth_priority"]
         shore_power_kwh = shore_demand_kw * controls["shore_power_ratio"]
         regulatory_auxiliary_energy_kwh = (
             (maritime_hold_queue_teu + customs_hold_queue_teu)
@@ -820,6 +1305,16 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         )
         auxiliary_fuel_liters = auxiliary_energy_kwh / max(
             0.001, self._parameter("fuel_kwh_per_liter")
+        )
+        anchorage_auxiliary_fuel_liters = (
+            self._row_value("anchorage_auxiliary_fuel_l_per_hour")
+            * (1.0 - 0.35 * hybrid_priorities["jit_arrival_priority"])
+            if hybrid
+            else 0.0
+        )
+        auxiliary_fuel_liters += anchorage_auxiliary_fuel_liters
+        auxiliary_energy_kwh += anchorage_auxiliary_fuel_liters * self._parameter(
+            "fuel_kwh_per_liter"
         )
         base_load_kw = self._parameter("base_load_kw") + processed_teu * self._parameter(
             "load_kw_per_teu"
@@ -843,6 +1338,156 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             if processed_recovery_teu > 0
             else 0.0
         )
+        agv_charge_demand_kwh = (
+            min(
+                self._row_value("agv_charge_demand_kwh"),
+                self._parameter("agv_charger_capacity_kw")
+                * float(np.clip(self._row_value("charger_available_ratio"), 0.0, 1.0))
+                * float(np.clip(self._row_value("agv_fleet_available_ratio"), 0.0, 1.0)),
+            )
+            if flexible
+            else 0.0
+        )
+        agv_required_kwh = (
+            min(
+                agv_charge_demand_kwh,
+                self._row_value("agv_departure_requirement_kwh"),
+            )
+            if flexible
+            else 0.0
+        )
+        requested_agv_kwh = (
+            agv_charge_demand_kwh
+            * float(np.clip(controls.get("agv_charging_ratio", 1.0), 0.0, 1.0))
+            if flexible
+            else 0.0
+        )
+        # Departure energy is a hard service obligation. RL may move optional
+        # charging but cannot intentionally undercharge vehicles that are due.
+        agv_charged_kwh = max(agv_required_kwh, requested_agv_kwh)
+        agv_missed_required_kwh = max(0.0, agv_required_kwh - agv_charged_kwh)
+
+        reefer_baseline_load_kw = (
+            self._row_value("reefer_baseline_load_kw") if flexible else 0.0
+        )
+        minimum_reefer_service = (
+            self._parameter("reefer_minimum_service_ratio") if flexible else 1.0
+        )
+        requested_reefer_service = float(
+            np.clip(
+                controls.get("reefer_service_ratio", 1.0),
+                minimum_reefer_service,
+                1.0,
+            )
+        )
+        # A low temperature margin or accumulated thermal debt forces full
+        # service; this is an action shield, not a reward trade-off.
+        reefer_force_full_service = bool(
+            flexible
+            and (
+                self._row_value("reefer_thermal_margin_c") <= 0.75
+                or self._reefer_thermal_debt
+                >= 0.75 * self._parameter("reefer_thermal_debt_limit")
+            )
+        )
+        reefer_service_ratio = 1.0 if reefer_force_full_service else requested_reefer_service
+        reefer_energy_kwh = reefer_baseline_load_kw * reefer_service_ratio
+        reefer_thermal_debt = (
+            max(
+                0.0,
+                self._reefer_thermal_debt
+                + max(0.0, 1.0 - reefer_service_ratio) * 0.50
+                - max(0.0, reefer_service_ratio - 0.90)
+                * self._parameter("reefer_thermal_recovery_rate"),
+            )
+            if flexible
+            else 0.0
+        )
+
+        building_critical_load_kw = (
+            self._row_value("building_critical_load_kw") if flexible else 0.0
+        )
+        building_flexible_load_kw = (
+            self._row_value("building_flexible_load_kw") if flexible else 0.0
+        )
+        building_flexible_ratio = float(
+            np.clip(
+                controls.get("building_flexible_load_ratio", 1.0),
+                self._parameter("building_minimum_flexible_load_ratio") if flexible else 1.0,
+                1.0,
+            )
+        )
+        building_energy_kwh = (
+            building_critical_load_kw
+            + building_flexible_load_kw * building_flexible_ratio
+        )
+        full_flexible_energy_kwh = (
+            agv_charge_demand_kwh + reefer_baseline_load_kw + building_flexible_load_kw
+        )
+        scheduled_flexible_energy_kwh = (
+            agv_charged_kwh
+            + reefer_energy_kwh
+            + building_flexible_load_kw * building_flexible_ratio
+        )
+        demand_response_active = bool(
+            flexible and self._row_value("demand_response_active") >= 0.5
+        )
+        demand_response_ratio = float(
+            np.clip(controls.get("demand_response_ratio", 0.0), 0.0, 1.0)
+        )
+        demand_response_target_kwh = (
+            self._row_value("demand_response_target_kw") * demand_response_ratio
+            if demand_response_active
+            else 0.0
+        )
+        natural_flexible_reduction_kwh = max(
+            0.0, full_flexible_energy_kwh - scheduled_flexible_energy_kwh
+        )
+        remaining_response_kwh = max(
+            0.0, demand_response_target_kwh - natural_flexible_reduction_kwh
+        )
+        # Demand response first trims non-critical building demand, then AGV
+        # charging above the departure obligation. Refrigerated-container and
+        # building-critical loads are never response resources.
+        building_response_headroom = max(
+            0.0,
+            building_flexible_load_kw
+            * (
+                building_flexible_ratio
+                - self._parameter("building_minimum_flexible_load_ratio")
+            ),
+        )
+        building_response_kwh = min(remaining_response_kwh, building_response_headroom)
+        building_energy_kwh -= building_response_kwh
+        remaining_response_kwh -= building_response_kwh
+        agv_response_headroom = max(0.0, agv_charged_kwh - agv_required_kwh)
+        agv_response_kwh = min(remaining_response_kwh, agv_response_headroom)
+        agv_charged_kwh -= agv_response_kwh
+        demand_response_delivered_kwh = min(
+            demand_response_target_kwh,
+            natural_flexible_reduction_kwh + building_response_kwh + agv_response_kwh,
+        )
+        demand_response_non_delivery_kwh = max(
+            0.0, demand_response_target_kwh - demand_response_delivered_kwh
+        )
+        flexible_load_projection_kwh = (
+            abs(requested_agv_kwh - agv_charged_kwh)
+            + abs(requested_reefer_service - reefer_service_ratio)
+            * reefer_baseline_load_kw
+            + building_response_kwh
+            if flexible
+            else 0.0
+        )
+        equipment_health_ratio = (
+            float(np.clip(self._row_value("equipment_health_ratio"), 0.0, 1.0))
+            if flexible
+            else 1.0
+        )
+        equipment_health_projection = int(
+            flexible
+            and max(controls["crane_ratio"], controls["yard_ratio"])
+            > max(0.60, equipment_health_ratio)
+        )
         gross_load_kw = (
             base_load_kw
             + crane_load_kw
@@ -850,6 +1495,9 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             + shore_power_kwh
             + inspection_readiness_energy_kwh
             + recovery_energy_kwh
+            + agv_charged_kwh
+            + reefer_energy_kwh
+            + building_energy_kwh
         )
         battery_capacity = self._parameter("battery_capacity_kwh")
         battery_power_limit = self._parameter("battery_power_kw")
@@ -866,7 +1514,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
                     1.0,
                 )
             )
-            if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}
+            if self.environment_id in DEPLOYMENT_ENVIRONMENTS
             else 1.0
         )
         grid_capacity_kw = self._parameter("grid_capacity_kw") * grid_availability
@@ -912,6 +1560,14 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
                 if regulatory
                 else 0.0
             )
+            + (
+                self._parameter("agv_charger_capacity_kw")
+                + self._row_value("reefer_baseline_load_kw")
+                + self._row_value("building_critical_load_kw")
+                + self._row_value("building_flexible_load_kw")
+                if flexible
+                else 0.0
+            )
         )
         conservative_charge_limit = max(
             0.0, min(battery_power_limit, grid_capacity_kw - worst_case_base_load)
@@ -937,6 +1593,106 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             )
             battery_charge_kwh = 0.0
         next_battery_soc = projected_next_soc
+        # Grid capacity outranks the terminal-SOC preference. If the immutable
+        # critical/service load would otherwise exceed the import limit, force
+        # the minimum available discharge and record the projection. The policy
+        # must restore SOC later; it may never trade an immediate grid breach
+        # for a softer terminal objective.
+        emergency_grid_discharge_kwh = min(
+            max(0.0, gross_load_kw - grid_capacity_kw), available_discharge
+        )
+        if not flexible and emergency_grid_discharge_kwh > battery_discharge_kwh:
+            battery_discharge_kwh = emergency_grid_discharge_kwh
+            battery_charge_kwh = 0.0
+            next_battery_soc = float(
+                np.clip(
+                    self._battery_soc
+                    - battery_discharge_kwh
+                    / (discharge_efficiency * battery_capacity),
+                    min_soc,
+                    max_soc,
+                )
+            )
+        remaining_grid_excess_kwh = max(
+            0.0,
+            gross_load_kw + battery_charge_kwh - battery_discharge_kwh - grid_capacity_kw,
+        )
+        grid_projection_kwh = 0.0
+        if flexible and remaining_grid_excess_kwh > 0.0:
+            minimum_building_energy = (
+                building_critical_load_kw
+                + building_flexible_load_kw
+                * self._parameter("building_minimum_flexible_load_ratio")
+            )
+            building_grid_reduction = min(
+                remaining_grid_excess_kwh,
+                max(0.0, building_energy_kwh - minimum_building_energy),
+            )
+            building_energy_kwh -= building_grid_reduction
+            gross_load_kw -= building_grid_reduction
+            remaining_grid_excess_kwh -= building_grid_reduction
+
+            agv_grid_reduction = min(
+                remaining_grid_excess_kwh, max(0.0, agv_charged_kwh - agv_required_kwh)
+            )
+            agv_charged_kwh -= agv_grid_reduction
+            gross_load_kw -= agv_grid_reduction
+            remaining_grid_excess_kwh -= agv_grid_reduction
+
+            minimum_reefer_energy = reefer_baseline_load_kw * minimum_reefer_service
+            reefer_grid_reduction = min(
+                remaining_grid_excess_kwh,
+                0.0
+                if reefer_force_full_service
+                else max(0.0, reefer_energy_kwh - minimum_reefer_energy),
+            )
+            reefer_energy_kwh -= reefer_grid_reduction
+            gross_load_kw -= reefer_grid_reduction
+            remaining_grid_excess_kwh -= reefer_grid_reduction
+            if reefer_baseline_load_kw > 0:
+                reefer_service_ratio = reefer_energy_kwh / reefer_baseline_load_kw
+                reefer_thermal_debt = max(
+                    reefer_thermal_debt,
+                    self._reefer_thermal_debt
+                    + max(0.0, 1.0 - reefer_service_ratio) * 0.50,
+                )
+
+            # Shore power is lower priority than the immutable import limit.
+            # Curtailment is explicitly transferred back to auxiliary fuel so
+            # neither energy nor carbon disappears from the ledger.
+            shore_grid_reduction = min(remaining_grid_excess_kwh, shore_power_kwh)
+            shore_power_kwh -= shore_grid_reduction
+            auxiliary_energy_kwh += shore_grid_reduction
+            auxiliary_fuel_liters += shore_grid_reduction / max(
+                0.001, self._parameter("fuel_kwh_per_liter")
+            )
+            gross_load_kw -= shore_grid_reduction
+            remaining_grid_excess_kwh -= shore_grid_reduction
+            grid_projection_kwh = (
+                building_grid_reduction
+                + agv_grid_reduction
+                + reefer_grid_reduction
+                + shore_grid_reduction
+            )
+            flexible_load_projection_kwh += grid_projection_kwh
+            if building_flexible_load_kw > 0:
+                building_flexible_ratio = float(
+                    np.clip(
+                        (building_energy_kwh - building_critical_load_kw)
+                        / building_flexible_load_kw,
+                        self._parameter("building_minimum_flexible_load_ratio"),
+                        1.0,
+                    )
+                )
+            if demand_response_active:
+                response_credit = min(
+                    max(0.0, demand_response_target_kwh - demand_response_delivered_kwh),
+                    building_grid_reduction + agv_grid_reduction,
+                )
+                demand_response_delivered_kwh += response_credit
+                demand_response_non_delivery_kwh = max(
+                    0.0, demand_response_target_kwh - demand_response_delivered_kwh
+                )
         actual_battery_kw = battery_discharge_kwh - battery_charge_kwh
         projected_battery_kwh = abs(requested_battery_kw - actual_battery_kw)
         load_kw = gross_load_kw + battery_charge_kwh - battery_discharge_kwh
@@ -948,11 +1704,36 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             self._hour + 1 >= self.episode_hours
             and terminal_soc_error > self._parameter("terminal_soc_tolerance")
         )
-        safety_violations = int(peak_violation or delay_violation or terminal_soc_violation)
+        reefer_thermal_violation = int(
+            flexible
+            and reefer_thermal_debt > self._parameter("reefer_thermal_debt_limit")
+        )
+        agv_departure_violation = int(flexible and agv_missed_required_kwh > 1e-6)
+        maintenance_safety_violation = int(
+            hybrid and maintenance_due >= 0.95 and maintenance_debt > 1.0
+        )
+        safety_violations = (
+            int(
+                peak_violation
+                or terminal_soc_violation
+                or reefer_thermal_violation
+                or agv_departure_violation
+                or hybrid_solver_constraint_violations
+                or maintenance_safety_violation
+            )
+            if hybrid
+            else int(
+                peak_violation
+                or delay_violation
+                or terminal_soc_violation
+                or reefer_thermal_violation
+                or agv_departure_violation
+            )
+        )
 
         renewable_power_kw = (
             self._row_value("renewable_power_available_kw")
-            if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}
+            if self.environment_id in DEPLOYMENT_ENVIRONMENTS
             else 0.0
         )
         renewable_energy_kwh = min(max(0.0, load_kw), renewable_power_kw)
@@ -970,6 +1751,34 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         demand_charge_cost_cny = max(0.0, load_kw - previous_peak) * self._parameter(
             "demand_charge_cny_per_kw"
         )
+        demand_response_non_delivery_cost_cny = (
+            demand_response_non_delivery_kwh
+            * self._parameter("demand_response_non_delivery_cny_per_kwh")
+        )
+        agv_missed_energy_cost_cny = (
+            agv_missed_required_kwh * self._parameter("agv_missed_energy_cny_per_kwh")
+        )
+        reefer_safety_cost_cny = (
+            max(0.0, reefer_thermal_debt - 0.5)
+            * self._parameter("reefer_safety_cny_per_degree_hour")
+        )
+        maintenance_overdue_hours = (
+            max(0.0, maintenance_debt - 0.75) if hybrid else 0.0
+        )
+        hybrid_operations_cost_cny = (
+            jit_deviation_hours * self._parameter("jit_deviation_cost_cny_per_hour")
+            + berth_conflict_hours
+            * self._parameter("berth_conflict_cost_cny_per_hour")
+            + crane_task_late_teu
+            * self._parameter("crane_task_lateness_cny_per_teu")
+            + yard_rehandles_teu * self._parameter("yard_rehandle_cost_cny_per_teu")
+            + truck_queue_teu_hours
+            * self._parameter("truck_queue_cost_cny_per_teu_hour")
+            + maintenance_overdue_hours
+            * self._parameter("maintenance_overdue_cost_cny_per_hour")
+            if hybrid
+            else 0.0
+        )
         remaining_hours = max(1, self.episode_hours - (self._hour + 1))
         # The terminal value begins to matter eight hours ahead. This avoids
         # a short receding horizon postponing all recharging to the last few
@@ -982,10 +1791,14 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             + delay_cost_cny
             + battery_degradation_cost_cny
             + demand_charge_cost_cny
+            + demand_response_non_delivery_cost_cny
+            + agv_missed_energy_cost_cny
+            + reefer_safety_cost_cny
+            + hybrid_operations_cost_cny
         )
         terms = {
             "carbon": -carbon_kg / 6_000.0,
-            "shore_power": controls["shore_power_ratio"],
+            "shore_power": shore_power_kwh / max(1.0, shore_demand_kw),
             "cost": -cost / 12_000.0,
             "delay": -delay_minutes / 90.0,
             "safety": -float(safety_violations) * 4.0,
@@ -998,6 +1811,49 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
                 * (1.0 if self._hour + 1 >= self.episode_hours else restoration_pressure)
             ),
         }
+        if flexible:
+            terms.update(
+                agv_service=(
+                    agv_charged_kwh / max(1.0, agv_charge_demand_kwh)
+                    if agv_charge_demand_kwh > 0
+                    else 1.0
+                ),
+                reefer_safety=-reefer_thermal_debt
+                / max(0.01, self._parameter("reefer_thermal_debt_limit")),
+                demand_response=(
+                    demand_response_delivered_kwh
+                    / max(1.0, demand_response_target_kwh)
+                    if demand_response_target_kwh > 0
+                    else 1.0
+                ),
+                equipment_health=-(
+                    controls["crane_ratio"] * self._row_value("crane_fault_risk")
+                    + controls["yard_ratio"] * self._row_value("yard_fault_risk")
+                )
+                / 2.0,
+            )
+        if hybrid:
+            anchor_baseline = self._row_value("anchorage_auxiliary_fuel_l_per_hour")
+            terms.update(
+                jit_service=-0.5
+                * (
+                    jit_deviation_hours
+                    / max(1.0, self._row_value("arrival_uncertainty_hours"))
+                    + anchorage_auxiliary_fuel_liters / max(1.0, anchor_baseline)
+                ),
+                green_berth=-berth_conflict_hours,
+                crane_schedule=-crane_task_late_teu
+                / max(1.0, self._row_value("crane_task_backlog_teu")),
+                yard_slotting=-yard_rehandles_teu / max(1.0, base_demand_teu),
+                truck_flow=-truck_queue_teu_hours
+                / max(1.0, self._row_value("truck_gate_queue_teu")),
+                maintenance_risk=-0.5
+                * (
+                    maintenance_debt
+                    + self._row_value("failure_risk_forecast")
+                    * (1.0 - maintenance_performed_ratio)
+                ),
+            )
         throughput_bonus = 0.65 * processed_teu / max(1.0, demand_teu)
         regulatory_service_bonus = (
             0.20
@@ -1007,7 +1863,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             else 0.0
         )
         reward = throughput_bonus + regulatory_service_bonus + sum(
-            self.reward_weights[key] * value for key, value in terms.items()
+            self.reward_weights.get(key, 0.0) * value for key, value in terms.items()
         )
         return {
             "reward": float(reward),
@@ -1022,7 +1878,7 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "peak_violation_kw": float(peak_violation_kw),
             "shore_power_kwh": float(shore_power_kwh),
             "shore_power_opportunity_kwh": float(shore_demand_kw),
-            "shore_power_ratio": float(controls["shore_power_ratio"]),
+            "shore_power_ratio": float(shore_power_kwh / max(1.0, shore_demand_kw)),
             "energy_kwh": float(energy_kwh),
             "carbon_kg": float(carbon_kg),
             "grid_carbon_kg": float(grid_carbon_kg),
@@ -1039,6 +1895,12 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "battery_constraint_projection_kwh": float(projected_battery_kwh),
             "terminal_soc_error": float(terminal_soc_error),
             "demand_charge_cost_cny": float(demand_charge_cost_cny),
+            "demand_response_non_delivery_cost_cny": float(
+                demand_response_non_delivery_cost_cny
+            ),
+            "agv_missed_energy_cost_cny": float(agv_missed_energy_cost_cny),
+            "reefer_safety_cost_cny": float(reefer_safety_cost_cny),
+            "hybrid_operations_cost_cny": float(hybrid_operations_cost_cny),
             "crane_activation_ratio_sum": float(controls["crane_ratio"]),
             "yard_activation_ratio_sum": float(controls["yard_ratio"]),
             "maritime_inspection_arrivals_teu": float(maritime_inspection_arrivals_teu),
@@ -1055,6 +1917,39 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "recovery_energy_kwh": float(recovery_energy_kwh),
             "inspection_readiness_ratio_sum": inspection_readiness_ratio if regulatory else 0.0,
             "recovery_priority_ratio_sum": recovery_priority_ratio if regulatory else 0.0,
+            "agv_charge_demand_kwh": float(agv_charge_demand_kwh),
+            "agv_charged_kwh": float(agv_charged_kwh),
+            "agv_missed_required_kwh": float(agv_missed_required_kwh),
+            "reefer_energy_kwh": float(reefer_energy_kwh),
+            "reefer_thermal_debt": float(reefer_thermal_debt),
+            "reefer_thermal_violation_steps": float(reefer_thermal_violation),
+            "building_energy_kwh": float(building_energy_kwh),
+            "demand_response_target_kwh": float(demand_response_target_kwh),
+            "demand_response_delivered_kwh": float(demand_response_delivered_kwh),
+            "demand_response_non_delivery_kwh": float(
+                demand_response_non_delivery_kwh
+            ),
+            "flexible_load_projection_kwh": float(flexible_load_projection_kwh),
+            "equipment_health_projection_steps": float(equipment_health_projection),
+            "hybrid_solver_projection_l1": hybrid_solver_projection_l1,
+            "hybrid_solver_constraint_violations": float(
+                hybrid_solver_constraint_violations
+            ),
+            "jit_deviation_hours": float(jit_deviation_hours),
+            "anchorage_auxiliary_fuel_liters": float(
+                anchorage_auxiliary_fuel_liters
+            ),
+            "berth_conflict_hours": float(berth_conflict_hours),
+            "crane_task_late_teu": float(crane_task_late_teu),
+            "yard_rehandles_teu": float(yard_rehandles_teu),
+            "truck_queue_teu_hours": float(truck_queue_teu_hours),
+            "maintenance_overdue_hours": float(maintenance_overdue_hours),
+            "maintenance_performed_ratio": float(maintenance_performed_ratio),
+            "maintenance_debt": float(maintenance_debt),
+            "agv_charging_ratio": float(controls.get("agv_charging_ratio", 1.0)),
+            "reefer_service_ratio": float(reefer_service_ratio),
+            "building_flexible_load_ratio": float(building_flexible_ratio),
+            "demand_response_ratio": float(demand_response_ratio),
             "safety_violations": float(safety_violations),
             "peak_violation_steps": float(peak_violation),
             "delay_violation_steps": float(delay_violation),
@@ -1073,7 +1968,13 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
         hour = timestamp.hour if timestamp else self._hour % 24
         aggregate_label = (
             f"AGGREGATED-{int(self._row_value('vessels_at_berth'))}-VESSELS"
-            if self.environment_id in {"PortEnergyDispatchEnv-v2", "PortEnergyDispatchEnv-v4"}
+            if self.environment_id
+            in {
+                "PortEnergyDispatchEnv-v2",
+                "PortEnergyDispatchEnv-v4",
+                "PortEnergyDispatchEnv-v5",
+                "PortEnergyHybridResidualEnv-v6",
+            }
             else f"PUBLIC-DATA-{str(row['period'])}"
         )
         return {
@@ -1084,7 +1985,13 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             "source_id": str(row["source_id"]),
             "vessel_id": aggregate_label,
             "berth_id": "PORT-AGG"
-            if self.environment_id in {"PortEnergyDispatchEnv-v2", "PortEnergyDispatchEnv-v4"}
+            if self.environment_id
+            in {
+                "PortEnergyDispatchEnv-v2",
+                "PortEnergyDispatchEnv-v4",
+                "PortEnergyDispatchEnv-v5",
+                "PortEnergyHybridResidualEnv-v6",
+            }
             else f"B{(hour % 4) + 1}",
             "vessels_at_anchor": self._row_value("vessels_at_anchor"),
             "vessels_at_berth": self._row_value("vessels_at_berth"),
@@ -1133,9 +2040,18 @@ class PortEnergyDispatchEnv(gym.Env[np.ndarray, np.ndarray | int]):
             ),
         }
 
-    @staticmethod
-    def _normalize_weights(weights: dict[str, float]) -> dict[str, float]:
-        selected = {key: max(0.0, float(weights.get(key, 0.0))) for key in DEFAULT_REWARD_WEIGHTS}
+    def _normalize_weights(self, weights: dict[str, float]) -> dict[str, float]:
+        allowed = (
+            set(DEFAULT_HYBRID_REWARD_WEIGHTS)
+            if self.environment_id == "PortEnergyHybridResidualEnv-v6"
+            else set(DEFAULT_FLEX_REWARD_WEIGHTS)
+            if self.environment_id == "PortEnergyDispatchEnv-v5"
+            else set(DEFAULT_REWARD_WEIGHTS)
+        )
+        unknown = set(weights) - allowed
+        if unknown:
+            raise ValueError(f"Unknown reward weights: {', '.join(sorted(unknown))}")
+        selected = {key: max(0.0, float(value)) for key, value in weights.items()}
         total = sum(selected.values())
         if total <= 0:
             raise ValueError("At least one reward weight must be positive")
@@ -1180,6 +2096,9 @@ class MPCPolicy:
 
     def predict(self, env: PortEnergyDispatchEnv) -> dict[str, float]:
         actions = self.candidates()
+        if env.environment_id in FLEXIBLE_ENVIRONMENTS:
+            flexible_controls = self._flexible_controls(env)
+            actions = [{**controls, **flexible_controls} for controls in actions]
         target_soc = env._parameter("battery_initial_soc")
 
         def search_rank(item: tuple[float, float, float, dict[str, float]]) -> float:
@@ -1226,13 +2145,67 @@ class MPCPolicy:
             beam,
             key=lambda item: item[0] + self.terminal_soc_weight * abs(item[2] - target_soc),
         )[3]
-        if env.environment_id == "PortEnergyDispatchEnv-v4":
+        if env.environment_id in REGULATORY_ENVIRONMENTS:
             selected = {
                 **selected,
                 "inspection_readiness_ratio": 0.5,
                 "recovery_priority_ratio": 0.5,
             }
+        if env.environment_id == "PortEnergyHybridResidualEnv-v6":
+            from app.rl.hybrid_control import HybridOperationsSolver
+
+            requested = {
+                "jit_arrival_priority": env._row_value("jit_window_feasible_ratio"),
+                "green_berth_priority": 1.0
+                - env._row_value("berth_conflict_ratio"),
+                "crane_task_priority": env._row_value(
+                    "crane_precedence_pressure_ratio"
+                ),
+                "yard_slotting_priority": 1.0
+                - env._row_value("yard_rehandle_ratio"),
+                "truck_gate_priority": env._row_value(
+                    "truck_appointment_pressure_ratio"
+                ),
+                "maintenance_priority": env._row_value("maintenance_due_ratio"),
+            }
+            projected = HybridOperationsSolver().project(env, requested)
+            selected = {
+                **selected,
+                **projected.realized,
+                "hybrid_solver_projection_l1": projected.projection_l1,
+                "hybrid_solver_constraint_violations": float(
+                    projected.hard_constraint_violations
+                ),
+            }
         return selected
+
+    @staticmethod
+    def _flexible_controls(env: PortEnergyDispatchEnv) -> dict[str, float]:
+        price = float(env._row()["electricity_price_per_kwh"])
+        carbon = float(env._row()["grid_carbon_kg_per_kwh"])
+        charge_demand = env._row_value("agv_charge_demand_kwh")
+        departure_ratio = env._row_value("agv_departure_requirement_kwh") / max(
+            1.0, charge_demand
+        )
+        constrained = price >= 2.0 or carbon >= 0.45
+        thermal_margin = env._row_value("reefer_thermal_margin_c")
+        response_active = env._row_value("demand_response_active") >= 0.5
+        return {
+            "agv_charging_ratio": 1.0
+            if departure_ratio >= 0.70 or not constrained
+            else max(0.40, departure_ratio),
+            "reefer_service_ratio": 1.0
+            if thermal_margin <= 1.0
+            else 0.80
+            if constrained
+            else 1.0,
+            "building_flexible_load_ratio": 0.35
+            if response_active
+            else 0.55
+            if constrained
+            else 1.0,
+            "demand_response_ratio": 1.0 if response_active else 0.0,
+        }
 
     @staticmethod
     def _transition_cost(transition: dict[str, Any]) -> float:
@@ -1263,10 +2236,38 @@ class FixedDispatchPolicy:
 
     def predict(self, env: PortEnergyDispatchEnv) -> dict[str, float]:
         controls = dict(self.controls)
-        if env.environment_id == "PortEnergyDispatchEnv-v4":
+        if env.environment_id in REGULATORY_ENVIRONMENTS:
             controls.update(
                 inspection_readiness_ratio=0.35,
                 recovery_priority_ratio=0.35,
+            )
+        if env.environment_id in FLEXIBLE_ENVIRONMENTS:
+            controls.update(
+                agv_charging_ratio=1.0,
+                reefer_service_ratio=1.0,
+                building_flexible_load_ratio=1.0,
+                demand_response_ratio=0.0,
+            )
+        if env.environment_id == "PortEnergyHybridResidualEnv-v6":
+            from app.rl.hybrid_control import HybridOperationsSolver
+
+            projected = HybridOperationsSolver().project(
+                env,
+                {
+                    "jit_arrival_priority": 0.5,
+                    "green_berth_priority": 0.5,
+                    "crane_task_priority": 0.5,
+                    "yard_slotting_priority": 0.5,
+                    "truck_gate_priority": 0.5,
+                    "maintenance_priority": 0.5,
+                },
+            )
+            controls.update(
+                projected.realized,
+                hybrid_solver_projection_l1=projected.projection_l1,
+                hybrid_solver_constraint_violations=float(
+                    projected.hard_constraint_violations
+                ),
             )
         return controls
 
@@ -1325,6 +2326,23 @@ def encode_continuous_controls(controls: dict[str, float]) -> np.ndarray:
             [
                 controls.get("inspection_readiness_ratio", 0.5) * 2.0 - 1.0,
                 controls.get("recovery_priority_ratio", 0.5) * 2.0 - 1.0,
+            ]
+        )
+    if "agv_charging_ratio" in controls or "reefer_service_ratio" in controls:
+        reefer_minimum = 0.75
+        building_minimum = 0.35
+        values.extend(
+            [
+                controls.get("agv_charging_ratio", 1.0) * 2.0 - 1.0,
+                (controls.get("reefer_service_ratio", 1.0) - reefer_minimum)
+                / (1.0 - reefer_minimum)
+                * 2.0
+                - 1.0,
+                (controls.get("building_flexible_load_ratio", 1.0) - building_minimum)
+                / (1.0 - building_minimum)
+                * 2.0
+                - 1.0,
+                controls.get("demand_response_ratio", 0.0) * 2.0 - 1.0,
             ]
         )
     return np.array(values, dtype=np.float32)

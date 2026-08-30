@@ -31,6 +31,52 @@ def test_health_and_rl_capabilities_are_real() -> None:
     assert sum(item["family"] == "control_theory" for item in payload["algorithms"]) == 1
     assert payload["training_render_mode"] is None
     assert payload["evaluation_render_mode"] == "trajectory"
+    assert payload["business_scope"]["environment_id"] == "PortEnergyDispatchEnv-v5"
+    assert payload["business_scope"]["observation_count"] == 73
+    assert payload["business_scope"]["continuous_action_count"] == 10
+    assert payload["business_scope"]["claim_boundary"]["production_authority"] is False
+    assert payload["hybrid_business_scope"]["environment_id"] == (
+        "PortEnergyHybridResidualEnv-v6"
+    )
+    assert payload["hybrid_business_scope"]["policy_output_count"] == 16
+
+    coverage = client.get("/api/rl/business-coverage")
+    assert coverage.status_code == 200
+    assert coverage.json()["domain_count"] == 26
+    authority = {
+        item["domain"]: item for item in coverage.json()["domains"]
+    }["authority_release"]
+    assert authority["status"] == "prohibited_for_rl"
+
+    hybrid_coverage = client.get("/api/rl/hybrid-business-coverage")
+    assert hybrid_coverage.status_code == 200
+    assert hybrid_coverage.json()["decision_counts"]["rl_or_hybrid_strategy"] == 16
+    assert hybrid_coverage.json()["decision_counts"]["pure_control_or_physics"] == 1
+
+    replacement = client.get(
+        "/api/rl/datasets/port_la_2020_2024_operational_flex_hourly/replacement-readiness"
+    )
+    assert replacement.status_code == 200
+    assert replacement.json()["offline_schema_compatible"] is True
+    assert replacement.json()["site_training_ready"] is False
+    hybrid_replacement = client.get(
+        "/api/rl/datasets/port_la_2020_2024_hybrid_rl_hourly/replacement-readiness"
+    )
+    assert hybrid_replacement.status_code == 200
+    assert len(hybrid_replacement.json()["required_measurement_columns"]) == 66
+    assert len(hybrid_replacement.json()["blockers"]) == 13
+
+    evidence = client.get("/api/rl/operational-flex-evidence")
+    assert evidence.status_code == 200
+    if evidence.json()["available"]:
+        assert evidence.json()["schema_version"] == "operational-flex-business-value.v1"
+        assert evidence.json()["production_boundary"]["production_authority"] is False
+    else:
+        assert evidence.json()["status"] == "training_or_evaluation_pending"
+        assert evidence.json()["production_eligible"] is False
+    hybrid_evidence = client.get("/api/rl/hybrid-evidence")
+    assert hybrid_evidence.status_code == 200
+    assert hybrid_evidence.json()["production_eligible"] is False
 
 
 def test_shadow_snapshot_api_fails_closed_without_six_resident_live_sources() -> None:
@@ -368,18 +414,33 @@ def test_evidence_history_preserves_blocked_candidate_without_local_paths() -> N
 
 def test_port_scenarios_expose_fail_closed_v3_contract() -> None:
     contract = client.get("/api/scenarios/contract")
+    operational_flex_contract = client.get("/api/scenarios/operational-flex-contract")
+    hybrid_contract = client.get("/api/scenarios/hybrid-rl-contract")
     scenarios = client.get("/api/scenarios")
 
     assert contract.status_code == 200
     assert contract.json()["environment_id"] == "PortEnergyDispatchEnv-v3"
     assert "weather_and_navigation" in contract.json()["observations"]
     assert len(contract.json()["actions"]["continuous"]) == 4
+    assert operational_flex_contract.status_code == 200
+    assert operational_flex_contract.json()["environment_id"] == "PortEnergyDispatchEnv-v5"
+    assert len(operational_flex_contract.json()["actions"]["continuous"]) == 10
+    assert hybrid_contract.status_code == 200
+    assert hybrid_contract.json()["environment_id"] == "PortEnergyHybridResidualEnv-v6"
+    assert hybrid_contract.json()["observation_count"] == 106
+    assert hybrid_contract.json()["action_count"] == 16
 
     assert scenarios.status_code == 200
     items = {item["id"]: item for item in scenarios.json()}
     enhanced = items["port_la_vessel_activity_benchmark"]
+    operational_flex = items["port_la_operational_flex_benchmark"]
+    hybrid = items["port_la_hybrid_rl_benchmark"]
     assert enhanced["readiness"]["offline_benchmark_ready"] is True
     assert enhanced["dataset"]["rows"] == 43_848
+    assert operational_flex["readiness"]["offline_benchmark_ready"] is True
+    assert operational_flex["dataset"]["environment_id"] == "PortEnergyDispatchEnv-v5"
+    assert hybrid["readiness"]["offline_benchmark_ready"] is True
+    assert hybrid["dataset"]["environment_id"] == "PortEnergyHybridResidualEnv-v6"
     live_templates = [item for item in items.values() if item["mode"] == "live_port_template"]
     assert live_templates
     assert all(not item["readiness"]["production_ready"] for item in live_templates)
@@ -462,6 +523,28 @@ def test_xiaoyi_training_preview_preserves_nested_ui_configuration() -> None:
     assert config["total_steps"] == 32
     assert config["tau"] == 0
     assert config["reward_weights"] == {"carbon": 0.8, "safety": 0.2}
+
+
+def test_xiaoyi_training_preview_defaults_to_hybrid_rl_v6() -> None:
+    response = client.post(
+        "/api/assistant/actions/execute",
+        json={
+            "instruction": "小懿，开始训练碳排最低目标",
+            "action_id": "start_rl_training",
+            "dry_run": True,
+            "objective_id": "carbon_min",
+        },
+    )
+
+    assert response.status_code == 200
+    config = response.json()["recommendation"]["config"]
+    assert config["dataset_id"] == "port_la_2020_2024_hybrid_rl_hourly"
+    assert config["scenario"] == "port_la_hybrid_rl_benchmark"
+    assert config["scenario_environment_id"] == "PortEnergyHybridResidualEnv-v6"
+    assert config["asset_group"] == "vessel_berth_crane_yard_truck_energy_maintenance"
+    assert len(config["reward_weights"]) == 17
+    assert config["reward_weights"]["jit_service"] > 0
+    assert config["reward_weights"]["maintenance_risk"] > 0
 
 
 def test_http_dataset_inputs_cannot_read_arbitrary_server_paths() -> None:

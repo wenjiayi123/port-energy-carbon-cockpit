@@ -14,6 +14,11 @@ required_paths=(
   "$ROOT/backend/app/rl/landing_benchmark.py"
   "$ROOT/backend/app/rl/landing_readiness.py"
   "$ROOT/backend/app/rl/robust.py"
+  "$ROOT/backend/app/rl/hybrid_control.py"
+  "$ROOT/backend/app/rl/hybrid_business_scope.py"
+  "$ROOT/backend/app/rl/hybrid_tuning.py"
+  "$ROOT/backend/app/rl/hybrid_benchmark.py"
+  "$ROOT/backend/app/rl/site_dataset_replacement.py"
   "$ROOT/backend/app/api/routes_integration.py"
   "$ROOT/backend/app/integration/gateway.py"
   "$ROOT/backend/app/services/runtime_simulator.py"
@@ -22,6 +27,8 @@ required_paths=(
   "$ROOT/backend/app/api/routes_runtime.py"
   "$ROOT/backend/app/data/datasets/port_la_2020_2025_hourly.csv"
   "$ROOT/backend/app/data/datasets/port_la_2020_2025_monthly.csv"
+  "$ROOT/backend/app/data/datasets/port_la_2020_2024_hybrid_rl_hourly.csv"
+  "$ROOT/backend/app/data/datasets/port_la_2020_2024_hybrid_rl_hourly.metadata.json"
   "$ROOT/backend/app/env/gymnasium_adapter.py"
   "$ROOT/backend/Dockerfile"
   "$ROOT/frontend/Dockerfile"
@@ -29,6 +36,7 @@ required_paths=(
   "$ROOT/frontend/src/App.tsx"
   "$ROOT/scripts/start_demo.sh"
   "$ROOT/scripts/prepare_port_dataset.py"
+  "$ROOT/scripts/build_hybrid_rl_dataset.py"
   "$ROOT/scripts/fetch_port_la_public_dataset.py"
   "$ROOT/scripts/run_frontend_command.sh"
   "$ROOT/scripts/sign_port_snapshot.py"
@@ -38,6 +46,7 @@ required_paths=(
   "$ROOT/configs/carbon_factors.yaml"
   "$ROOT/configs/rl_search_space.json"
   "$ROOT/docs/RL_PIPELINE.md"
+  "$ROOT/docs/HYBRID_RL_V6_DESIGN.md"
   "$ROOT/docs/DATASETS.md"
   "$ROOT/docs/MODULE_AUDIT.md"
   "$ROOT/docs/PROJECT_METRICS.md"
@@ -69,6 +78,7 @@ if [ -z "$PYTHON_BIN" ] || [ ! -x "$PYTHON_BIN" ]; then
 fi
 
 PYTHONPATH="$ROOT/backend" "$PYTHON_BIN" -m app.rl.cli validate-data port_la_2020_2025_hourly >/dev/null
+PYTHONPATH="$ROOT/backend" "$PYTHON_BIN" -m app.rl.cli validate-data port_la_2020_2024_hybrid_rl_hourly >/dev/null
 
 if ! grep -q "公开数据校准实时模拟" \
   "$ROOT/frontend/src/components/PortCommandCenter.tsx"; then

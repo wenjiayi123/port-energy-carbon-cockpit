@@ -68,3 +68,51 @@ The reproducible MPC report is separately labelled
 Passing offline verification keeps `production_eligible=false`. Port deployment would still
 require calibrated TOS/EMS/meter data, tariff contracts, shadow-mode validation, identity and
 approval controls, rollback drills and an independent hard safety interlock.
+
+## Additive v5 operational-flex contract
+
+`PortEnergyDispatchEnv-v5` preserves every earlier environment and artifact. It extends v4 to
+73 observations and 10 continuous controls by adding AGV charging, reefer thermal flexibility,
+building flexible load, demand response, equipment health/maintenance and shore-power reservation
+state. DQN uses 243 curated coupled templates rather than the full 59,049-point Cartesian grid.
+
+Reward terms cover carbon, shore power, cost, delay, safety, peak, storage terminal value, AGV
+service, reefer safety, demand-response delivery and equipment-health exposure. Grid capacity,
+battery reachability, AGV departure energy, reefer thermal safety and critical building load are
+hard projections, not soft reward preferences. Authority release and physical dispatch remain
+outside the action space.
+
+See [the v5 contract](OPERATIONAL_FLEX_RL_V5.md). Its public-anchor package deliberately labels
+AGV/reefer/building/demand-response/health fields as modeled supplements. A site export can replace
+them through `scripts/prepare_port_dataset.py --column-map`, but training admission remains blocked
+until the replacement-readiness API verifies independent measurement, signed source receipts,
+lineage, calibration, 180-day shadow coverage, reconciliation and acceptance evidence.
+
+## v6 layered hybrid policy
+
+`PortEnergyHybridResidualEnv-v6` is continuous-only. PPO, SAC and TD3 emit ten
+bounded residuals around a causal feasible controller plus six strategic
+priorities. A deterministic solver turns the priorities into feasible JIT,
+green-berth, crane-task, yard-slot, truck-gate and maintenance allocations.
+DQN remains available only for the versioned v1–v5 discrete contracts.
+
+The 106-dimensional observation never reads a future dataset row. Seventeen
+reward terms express business value inside the safe set; grid capacity, terminal
+SOC reachability, AGV departure energy, reefer thermal safety, critical building
+load, berth compatibility, crane precedence, yard/gate capacity and statutory
+maintenance deadlines are hard projections.
+
+Formal selection fits PPO/SAC/TD3 candidates on `train`, ranks on `validation`,
+then trains three frozen final seeds. The test benchmark compares each seed with
+causal four-step MPC plus deterministic operations projection. Every seed must
+pass safety, value, 95% confidence and material RL-contribution gates; otherwise
+the report retains `no_rl_policy_admitted`.
+
+The frozen 2026-08-30 v6 run selected PPO candidate 1 and completed three
+50,000-step seeds. All three learned policies were safe and materially different
+from the controller, but none passed the global business-value gate. Cost, peak,
+crane-task lateness and truck queueing improved consistently; carbon, throughput,
+total delay, shore power and berth conflicts regressed. The MPC+OR comparator also
+recorded ten peak-safety violations across 48 windows, so it remains a benchmark,
+not an admitted control champion. The API exposes crane-task and truck-flow results
+as offline domain challengers while keeping every production authority disabled.

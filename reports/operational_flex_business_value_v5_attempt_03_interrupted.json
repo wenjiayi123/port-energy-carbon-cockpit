@@ -1,0 +1,17 @@
+{
+  "schema_version": "operational-flex-business-value-attempt.v1",
+  "started_at_local": "2026-08-30T18:16:36+08:00",
+  "stopped_at": "2026-08-30T10:50:49Z",
+  "elapsed": "00:34:13",
+  "command": "PYTHONPATH=backend backend/.venv/bin/python -m app.rl.operational_flex_benchmark",
+  "status": "interrupted_before_report_write",
+  "completed_phases": [
+    "four-step MPC and fixed baselines over 48 frozen windows",
+    "raw DQN/PPO/SAC/TD3 evaluation for three final seeds",
+    "partial PPO dominance projection"
+  ],
+  "output_report_written": false,
+  "reason": "The aggregate demand-response commitment gate was correct, but the one-step dominance projector did not yet reject low-commitment actions before execution. This could block an otherwise valid projected policy only at the final aggregate gate instead of falling back immediately.",
+  "remediation": "Require each accepted action to cover and deliver at least 98 percent of the MPC/external event target, add fixed 5 and 2 percent contraction levels before MPC fallback, retain the one-percent actual RL contribution gate, and rerun from the beginning.",
+  "production_eligible": false
+}

@@ -14,7 +14,16 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "backend"))
 
-from app.rl.dataset import PortDataset  # noqa: E402
+from app.rl.dataset import (  # noqa: E402
+    DATASET_DIR,
+    DEPLOYMENT_COLUMNS,
+    FLEXIBLE_OPERATIONS_COLUMNS,
+    HYBRID_OPERATIONS_COLUMNS,
+    OPERATIONAL_COLUMNS,
+    OPTIONAL_NUMERIC_COLUMNS,
+    REGULATORY_COLUMNS,
+    PortDataset,
+)
 
 
 CANONICAL_COLUMNS = {
@@ -93,6 +102,50 @@ OPTIONAL_UNITS = {
     "grid_available_ratio": "ratio",
     "shore_power_compatible_ratio": "ratio",
     "renewable_power_available_kw": "kW",
+    "maritime_inspection_ratio": "ratio",
+    "customs_inspection_ratio": "ratio",
+    "maritime_release_ratio": "ratio/hour",
+    "customs_release_ratio": "ratio/hour",
+    "document_readiness_ratio": "ratio",
+    "inspection_resource_available_ratio": "ratio",
+    "regulatory_scenario_observed": "0/1",
+    "expected_hold_hours": "hours",
+    "agv_fleet_available_ratio": "ratio",
+    "agv_mean_soc": "ratio",
+    "agv_charge_demand_kwh": "kWh/hour",
+    "agv_departure_requirement_kwh": "kWh/hour",
+    "charger_available_ratio": "ratio",
+    "reefer_connected_count": "count",
+    "reefer_baseline_load_kw": "kW",
+    "reefer_thermal_margin_c": "degC",
+    "building_critical_load_kw": "kW",
+    "building_flexible_load_kw": "kW",
+    "shore_power_reserved_kw": "kW",
+    "shore_power_window_remaining_hours": "hours",
+    "equipment_health_ratio": "ratio",
+    "crane_fault_risk": "ratio",
+    "yard_fault_risk": "ratio",
+    "demand_response_active": "0/1",
+    "demand_response_target_kw": "kW",
+    "demand_response_remaining_hours": "hours",
+    "renewable_power_forecast_kw": "kW",
+    "maintenance_window_active": "0/1",
+    "jit_window_feasible_ratio": "ratio",
+    "pilot_tug_readiness_ratio": "ratio",
+    "arrival_uncertainty_hours": "hours",
+    "anchorage_auxiliary_fuel_l_per_hour": "litres/hour",
+    "green_berth_candidate_ratio": "ratio",
+    "berth_conflict_ratio": "ratio",
+    "crane_task_backlog_teu": "TEU",
+    "crane_precedence_pressure_ratio": "ratio",
+    "yard_rehandle_ratio": "ratio",
+    "yard_slot_capacity_ratio": "ratio",
+    "truck_gate_queue_teu": "TEU",
+    "truck_appointment_pressure_ratio": "ratio",
+    "truck_gate_capacity_teu_per_hour": "TEU/hour",
+    "maintenance_due_ratio": "ratio",
+    "maintenance_resource_available_ratio": "ratio",
+    "failure_risk_forecast": "ratio",
 }
 
 
@@ -152,6 +205,22 @@ def parser() -> argparse.ArgumentParser:
         type=Path,
         help="JSON object with terminal environment parameters",
     )
+    result.add_argument(
+        "--column-map",
+        type=Path,
+        help=(
+            "JSON object mapping canonical field names to source CSV columns. "
+            "This is the preferred mapping interface for v4/v5 site exports."
+        ),
+    )
+    result.add_argument(
+        "--site-training-evidence",
+        type=Path,
+        help=(
+            "JSON object containing source domains, signed receipts, lineage, "
+            "calibration, shadow coverage and acceptance evidence."
+        ),
+    )
     result.add_argument("--source-id", required=True)
     result.add_argument("--source-url", action="append", default=[])
     result.add_argument("--license", dest="license_name", required=True)
@@ -166,10 +235,43 @@ def parser() -> argparse.ArgumentParser:
             "PortEnergyDispatchEnv-v1",
             "PortEnergyDispatchEnv-v2",
             "PortEnergyDispatchEnv-v3",
+            "PortEnergyDispatchEnv-v4",
+            "PortEnergyDispatchEnv-v5",
+            "PortEnergyHybridResidualEnv-v6",
         ],
         default="PortEnergyDispatchEnv-v1",
     )
     return result
+
+
+def required_operational_columns(environment_id: str) -> list[str]:
+    required: set[str] = set()
+    if environment_id in {
+        "PortEnergyDispatchEnv-v2",
+        "PortEnergyDispatchEnv-v3",
+        "PortEnergyDispatchEnv-v4",
+        "PortEnergyDispatchEnv-v5",
+        "PortEnergyHybridResidualEnv-v6",
+    }:
+        required |= OPERATIONAL_COLUMNS
+    if environment_id in {
+        "PortEnergyDispatchEnv-v3",
+        "PortEnergyDispatchEnv-v4",
+        "PortEnergyDispatchEnv-v5",
+        "PortEnergyHybridResidualEnv-v6",
+    }:
+        required |= DEPLOYMENT_COLUMNS
+    if environment_id in {
+        "PortEnergyDispatchEnv-v4",
+        "PortEnergyDispatchEnv-v5",
+        "PortEnergyHybridResidualEnv-v6",
+    }:
+        required |= REGULATORY_COLUMNS
+    if environment_id in {"PortEnergyDispatchEnv-v5", "PortEnergyHybridResidualEnv-v6"}:
+        required |= FLEXIBLE_OPERATIONS_COLUMNS
+    if environment_id == "PortEnergyHybridResidualEnv-v6":
+        required |= HYBRID_OPERATIONS_COLUMNS
+    return sorted(required)
 
 
 def main() -> None:
@@ -183,15 +285,42 @@ def main() -> None:
     if args.temporal_mode == "sequential_rows" and not args.time_col:
         raise SystemExit("--time-col is required for sequential_rows")
     frame = pd.read_csv(source)
-    mapping = {
-        str(getattr(args, argument_name)): canonical
+    source_by_canonical = {
+        canonical: str(getattr(args, argument_name))
         for canonical, argument_name in CANONICAL_COLUMNS.items()
     }
-    missing = sorted(column for column in mapping if column not in frame.columns)
+    if args.column_map:
+        column_map = json.loads(args.column_map.expanduser().read_text(encoding="utf-8"))
+        if not isinstance(column_map, dict) or not column_map:
+            raise SystemExit("--column-map must contain one non-empty JSON object")
+        allowed_columns = set(CANONICAL_COLUMNS) | OPTIONAL_NUMERIC_COLUMNS
+        unknown_columns = sorted(set(column_map) - allowed_columns)
+        if unknown_columns:
+            raise SystemExit(
+                "unsupported canonical columns in --column-map: "
+                + ", ".join(unknown_columns)
+            )
+        if not all(isinstance(value, str) and value.strip() for value in column_map.values()):
+            raise SystemExit("--column-map source column values must be non-empty strings")
+        source_by_canonical.update(
+            {str(name): str(source_name) for name, source_name in column_map.items()}
+        )
+    if len(set(source_by_canonical.values())) != len(source_by_canonical):
+        raise SystemExit("one source column cannot map to multiple canonical columns")
+    missing = sorted(
+        source_column
+        for source_column in source_by_canonical.values()
+        if source_column not in frame.columns
+    )
     if missing:
         raise SystemExit(f"source columns not found: {', '.join(missing)}")
-    renamed = frame.rename(columns=mapping)
-    canonical = renamed[list(CANONICAL_COLUMNS)].copy()
+    canonical = pd.DataFrame(
+        {
+            canonical_name: frame[source_column]
+            for canonical_name, source_column in source_by_canonical.items()
+            if canonical_name in CANONICAL_COLUMNS
+        }
+    )
     if args.time_col:
         if args.time_col not in frame.columns:
             raise SystemExit(f"source column not found: {args.time_col}")
@@ -202,6 +331,16 @@ def main() -> None:
             if source_column not in frame.columns:
                 raise SystemExit(f"source column not found: {source_column}")
             canonical[canonical_name] = frame[source_column]
+    for canonical_name, source_column in source_by_canonical.items():
+        if canonical_name not in CANONICAL_COLUMNS:
+            canonical[canonical_name] = frame[source_column]
+    operational_required = required_operational_columns(args.environment_id)
+    missing_operational = sorted(set(operational_required) - set(canonical.columns))
+    if missing_operational:
+        raise SystemExit(
+            f"{args.environment_id} source mapping is incomplete: "
+            + ", ".join(missing_operational)
+        )
     canonical["source_id"] = args.source_id
     output.parent.mkdir(parents=True, exist_ok=True)
     canonical.to_csv(output, index=False)
@@ -227,36 +366,13 @@ def main() -> None:
             if column in canonical.columns
         }
     )
-    operational_required = []
-    if args.environment_id in {
-        "PortEnergyDispatchEnv-v2",
-        "PortEnergyDispatchEnv-v3",
-    }:
-        operational_required.extend(
-            [
-                "vessels_at_anchor",
-                "vessels_at_berth",
-                "vessels_departed",
-                "average_days_at_berth",
-                "average_days_in_port",
-                "port_activity_observed",
-            ]
+    site_training_evidence = None
+    if args.site_training_evidence:
+        site_training_evidence = json.loads(
+            args.site_training_evidence.expanduser().read_text(encoding="utf-8")
         )
-    if args.environment_id == "PortEnergyDispatchEnv-v3":
-        operational_required.extend(
-            [
-                "wind_speed_m_s",
-                "wave_height_m",
-                "visibility_km",
-                "precipitation_mm",
-                "berth_available_ratio",
-                "crane_available_ratio",
-                "yard_available_ratio",
-                "grid_available_ratio",
-                "shore_power_compatible_ratio",
-                "renewable_power_available_kw",
-            ]
-        )
+        if not isinstance(site_training_evidence, dict):
+            raise SystemExit("--site-training-evidence must contain one JSON object")
     metadata = {
         "id": output.stem,
         "name": args.name,
@@ -284,15 +400,37 @@ def main() -> None:
             "not a mutable production-control table."
         ),
         "operational_feature_contract": {
-            "required_columns": operational_required,
+            "required_columns": sorted(set(operational_required)),
         },
+        "field_mapping": {
+            canonical_name: {
+                "source_column": source_column,
+                "transformation": "identity",
+            }
+            for canonical_name, source_column in sorted(source_by_canonical.items())
+        },
+        "site_training_evidence": site_training_evidence,
     }
     metadata = {key: value for key, value in metadata.items() if value is not None}
     output.with_suffix(".metadata.json").write_text(
         json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    print(json.dumps(PortDataset.load(output).describe(), ensure_ascii=False, indent=2))
+    if output.parent.resolve() == DATASET_DIR.resolve():
+        result = PortDataset.load(output).describe()
+    else:
+        result = {
+            "status": "mapped_not_registered",
+            "path": str(output),
+            "rows": int(len(canonical)),
+            "environment_id": args.environment_id,
+            "required_operational_columns": sorted(set(operational_required)),
+            "note": (
+                "Move the reviewed CSV and metadata into the server-owned dataset registry "
+                "before training; arbitrary filesystem paths are intentionally not executable."
+            ),
+        }
+    print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

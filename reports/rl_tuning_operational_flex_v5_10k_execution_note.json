@@ -1,0 +1,24 @@
+{
+  "schema_version": "rl-tuning-execution-note.v1",
+  "tuning_report": "reports/rl_tuning_operational_flex_v5_10k.json",
+  "tuning_report_sha256": "68a70c59adc72a1f9c287b76e685dc09ec578f01e8b96f4e1f7d67885709c10d",
+  "actual_command": "PYTHONPATH=backend backend/.venv/bin/python -m app.rl.tuning --algorithm all --dataset port_la_2020_2024_operational_flex_hourly --steps 10000 --final-seeds 17,37,59 --output reports/rl_tuning_operational_flex_v5_10k.json",
+  "actual_search_space_path": "configs/rl_search_space.json",
+  "actual_search_space_sha256": "e9718c1de61eae8c4346a8cbc361f3341626a87c8d6bb72dacfe2ec0243ce6a6",
+  "future_make_target_search_space_path": "configs/rl_search_space_operational_flex_v5.json",
+  "future_make_target_search_space_sha256": "a708c9c89fdbfe06084aad9f20336db24d6b7a97fdf36cb2b60af91fb33686f1",
+  "algorithm_candidate_payload_sha256_actual": "a384e3a24c6c27fd8645d0984f1d2f4de3d298fa14fb5dd5424e6650c3e1d337",
+  "algorithm_candidate_payload_sha256_v5_config": "a384e3a24c6c27fd8645d0984f1d2f4de3d298fa14fb5dd5424e6650c3e1d337",
+  "candidate_payloads_identical": true,
+  "protocol_text_difference": "The generic search-space file still describes historical final seeds 11,29,47. The CLI override and all twelve final model records use the predeclared v5 seeds 17,37,59. The dedicated v5 file corrects the descriptive seed policy for future runs.",
+  "fit_count": 20,
+  "fit_steps_each": 10000,
+  "recorded_fit_duration_seconds": 7854.539,
+  "algorithms": {
+    "dqn": {"selected_candidate_index": 1, "final_seeds": [17, 37, 59]},
+    "ppo": {"selected_candidate_index": 0, "final_seeds": [17, 37, 59]},
+    "sac": {"selected_candidate_index": 0, "final_seeds": [17, 37, 59]},
+    "td3": {"selected_candidate_index": 0, "final_seeds": [17, 37, 59]}
+  },
+  "production_eligible": false
+}

@@ -18,7 +18,7 @@ from fastapi import APIRouter, Body, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.services.kpi_engine import KpiEngine
-from app.rl.dataset import DEFAULT_DATASET_ID, registered_dataset_id
+from app.rl.dataset import registered_dataset_id
 from app.rl.policy_selection import resolve_requested_strategy
 from app.rl.scenarios import resolve_training_scenario
 from app.rl.training import training_service
@@ -26,6 +26,28 @@ from app.integration.gateway import integration_gateway
 from app.services.runtime_decision import runtime_decision_service
 from app.services.runtime_forecast import runtime_forecast_model
 from app.services.runtime_simulator import runtime_simulator
+
+
+DEFAULT_ASSISTANT_TRAINING_DATASET_ID = "port_la_2020_2024_hybrid_rl_hourly"
+DEFAULT_HYBRID_REWARD_WEIGHTS = {
+    "carbon": 0.12,
+    "shore_power": 0.04,
+    "cost": 0.12,
+    "delay": 0.10,
+    "safety": 0.18,
+    "peak": 0.06,
+    "storage": 0.04,
+    "agv_service": 0.05,
+    "reefer_safety": 0.06,
+    "demand_response": 0.04,
+    "equipment_health": 0.03,
+    "jit_service": 0.035,
+    "green_berth": 0.025,
+    "crane_schedule": 0.025,
+    "yard_slotting": 0.025,
+    "truck_flow": 0.025,
+    "maintenance_risk": 0.025,
+}
 
 
 router = APIRouter(tags=["assistant-linkage"])
@@ -81,11 +103,11 @@ TRAINING_OBJECTIVES: dict[str, dict[str, Any]] = {
     },
     "low_risk_validation": {
         "label": "低风险试运行目标",
-        "algorithm": "dqn",
+        "algorithm": "ppo",
         "total_steps": 90_000,
         "horizon_min": 240,
         "reward_weights": {"safety": 0.42, "carbon": 0.22, "cost": 0.18, "delay": 0.18},
-        "reason": "DQN 在 81 个可审计的岸电、岸桥、场内车辆与储能组合中学习，适合做离散动作对照。",
+        "reason": "v6 使用连续残差策略与硬约束投影；PPO 用作低风险连续策略对照，DQN 只保留给 v1-v5 历史环境。",
     },
 }
 
@@ -762,7 +784,11 @@ def _build_training_config(instruction: str, payload: dict[str, Any] | None = No
     profile = TRAINING_OBJECTIVES[objective_id]
     try:
         dataset_id = registered_dataset_id(
-            str(requested.get("dataset_id") or requested.get("data_file") or DEFAULT_DATASET_ID)
+            str(
+                requested.get("dataset_id")
+                or requested.get("data_file")
+                or DEFAULT_ASSISTANT_TRAINING_DATASET_ID
+            )
         )
     except ValueError as exc:
         logger.info("Assistant dataset selection rejected", exc_info=exc)
@@ -775,6 +801,17 @@ def _build_training_config(instruction: str, payload: dict[str, Any] | None = No
     except ValueError as exc:
         logger.info("Assistant scenario selection rejected", exc_info=exc)
         raise HTTPException(status_code=422, detail="scenario_configuration_invalid") from None
+    requested_reward_weights = requested.get("reward_weights")
+    reward_weights = (
+        requested_reward_weights
+        if requested_reward_weights is not None
+        else {
+            **DEFAULT_HYBRID_REWARD_WEIGHTS,
+            **profile["reward_weights"],
+        }
+        if dataset_id == DEFAULT_ASSISTANT_TRAINING_DATASET_ID
+        else profile["reward_weights"]
+    )
     return {
         "objective_id": objective_id,
         "objective_label": requested.get("objective_label") or profile["label"],
@@ -782,7 +819,12 @@ def _build_training_config(instruction: str, payload: dict[str, Any] | None = No
         "dataset_id": dataset_id,
         "data_file": dataset_id,
         **scenario,
-        "asset_group": requested.get("asset_group") or "berth_shore_power_yard_truck",
+        "asset_group": requested.get("asset_group")
+        or (
+            "vessel_berth_crane_yard_truck_energy_maintenance"
+            if dataset_id == DEFAULT_ASSISTANT_TRAINING_DATASET_ID
+            else "berth_shore_power_yard_truck"
+        ),
         "horizon_min": selected("horizon_min", profile["horizon_min"]),
         "step_min": 60,
         "total_steps": selected("total_steps", profile["total_steps"]),
@@ -792,7 +834,7 @@ def _build_training_config(instruction: str, payload: dict[str, Any] | None = No
         "tau": selected("tau", 0.005),
         "entropy_coef": selected("entropy_coef", 0.0),
         "guardrail_mode": requested.get("guardrail_mode") or "strict",
-        "reward_weights": requested.get("reward_weights") or profile["reward_weights"],
+        "reward_weights": reward_weights,
         "reason": requested.get("objective_reason") or profile["reason"],
         "seed": int(requested.get("seed") or 20260720),
         "eval_interval": selected("eval_interval", 5_000),
@@ -1280,7 +1322,11 @@ def _start_training(payload: dict[str, Any]) -> dict[str, Any]:
     )
     try:
         raw_config["dataset_id"] = registered_dataset_id(
-            str(raw_config.get("dataset_id") or raw_config.get("data_file") or DEFAULT_DATASET_ID)
+            str(
+                raw_config.get("dataset_id")
+                or raw_config.get("data_file")
+                or DEFAULT_ASSISTANT_TRAINING_DATASET_ID
+            )
         )
     except ValueError as exc:
         logger.info("Assistant training dataset rejected", exc_info=exc)

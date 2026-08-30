@@ -88,6 +88,58 @@ OPTIONAL_NUMERIC_COLUMNS = {
     "inspection_auxiliary_kwh_per_teu_hour",
     "released_staging_capacity_teu_per_hour",
     "recovery_capacity_ratio",
+    "agv_charger_capacity_kw",
+    "agv_charge_efficiency",
+    "reefer_minimum_service_ratio",
+    "reefer_thermal_debt_limit",
+    "reefer_thermal_recovery_rate",
+    "building_minimum_flexible_load_ratio",
+    "demand_response_non_delivery_cny_per_kwh",
+    "agv_missed_energy_cny_per_kwh",
+    "reefer_safety_cny_per_degree_hour",
+    "agv_fleet_available_ratio",
+    "agv_mean_soc",
+    "agv_charge_demand_kwh",
+    "agv_departure_requirement_kwh",
+    "charger_available_ratio",
+    "reefer_connected_count",
+    "reefer_baseline_load_kw",
+    "reefer_thermal_margin_c",
+    "building_critical_load_kw",
+    "building_flexible_load_kw",
+    "shore_power_reserved_kw",
+    "shore_power_window_remaining_hours",
+    "equipment_health_ratio",
+    "crane_fault_risk",
+    "yard_fault_risk",
+    "demand_response_active",
+    "demand_response_target_kw",
+    "demand_response_remaining_hours",
+    "renewable_power_forecast_kw",
+    "maintenance_window_active",
+    "jit_window_feasible_ratio",
+    "pilot_tug_readiness_ratio",
+    "arrival_uncertainty_hours",
+    "anchorage_auxiliary_fuel_l_per_hour",
+    "green_berth_candidate_ratio",
+    "berth_conflict_ratio",
+    "crane_task_backlog_teu",
+    "crane_precedence_pressure_ratio",
+    "yard_rehandle_ratio",
+    "yard_slot_capacity_ratio",
+    "truck_gate_queue_teu",
+    "truck_appointment_pressure_ratio",
+    "truck_gate_capacity_teu_per_hour",
+    "maintenance_due_ratio",
+    "maintenance_resource_available_ratio",
+    "failure_risk_forecast",
+    "hybrid_residual_trust_ratio",
+    "jit_deviation_cost_cny_per_hour",
+    "berth_conflict_cost_cny_per_hour",
+    "crane_task_lateness_cny_per_teu",
+    "yard_rehandle_cost_cny_per_teu",
+    "truck_queue_cost_cny_per_teu_hour",
+    "maintenance_overdue_cost_cny_per_hour",
 }
 OPERATIONAL_COLUMNS = {
     "vessels_at_anchor",
@@ -119,6 +171,46 @@ REGULATORY_COLUMNS = {
     "regulatory_scenario_observed",
     "expected_hold_hours",
 }
+FLEXIBLE_OPERATIONS_COLUMNS = {
+    "agv_fleet_available_ratio",
+    "agv_mean_soc",
+    "agv_charge_demand_kwh",
+    "agv_departure_requirement_kwh",
+    "charger_available_ratio",
+    "reefer_connected_count",
+    "reefer_baseline_load_kw",
+    "reefer_thermal_margin_c",
+    "building_critical_load_kw",
+    "building_flexible_load_kw",
+    "shore_power_reserved_kw",
+    "shore_power_window_remaining_hours",
+    "equipment_health_ratio",
+    "crane_fault_risk",
+    "yard_fault_risk",
+    "demand_response_active",
+    "demand_response_target_kw",
+    "demand_response_remaining_hours",
+    "renewable_power_forecast_kw",
+    "maintenance_window_active",
+}
+HYBRID_OPERATIONS_COLUMNS = {
+    "jit_window_feasible_ratio",
+    "pilot_tug_readiness_ratio",
+    "arrival_uncertainty_hours",
+    "anchorage_auxiliary_fuel_l_per_hour",
+    "green_berth_candidate_ratio",
+    "berth_conflict_ratio",
+    "crane_task_backlog_teu",
+    "crane_precedence_pressure_ratio",
+    "yard_rehandle_ratio",
+    "yard_slot_capacity_ratio",
+    "truck_gate_queue_teu",
+    "truck_appointment_pressure_ratio",
+    "truck_gate_capacity_teu_per_hour",
+    "maintenance_due_ratio",
+    "maintenance_resource_available_ratio",
+    "failure_risk_forecast",
+}
 RATIO_COLUMNS = {
     "shore_power_available_ratio",
     "berth_available_ratio",
@@ -134,6 +226,28 @@ RATIO_COLUMNS = {
     "inspection_resource_available_ratio",
     "regulatory_scenario_observed",
     "recovery_capacity_ratio",
+    "agv_charge_efficiency",
+    "reefer_minimum_service_ratio",
+    "building_minimum_flexible_load_ratio",
+    "agv_fleet_available_ratio",
+    "agv_mean_soc",
+    "charger_available_ratio",
+    "equipment_health_ratio",
+    "crane_fault_risk",
+    "yard_fault_risk",
+    "demand_response_active",
+    "maintenance_window_active",
+    "jit_window_feasible_ratio",
+    "pilot_tug_readiness_ratio",
+    "green_berth_candidate_ratio",
+    "berth_conflict_ratio",
+    "crane_precedence_pressure_ratio",
+    "yard_rehandle_ratio",
+    "yard_slot_capacity_ratio",
+    "truck_appointment_pressure_ratio",
+    "maintenance_due_ratio",
+    "maintenance_resource_available_ratio",
+    "failure_risk_forecast",
 }
 DRIFT_COLUMNS = {
     "loaded_import_teu",
@@ -312,6 +426,8 @@ class PortDataset:
             "PortEnergyDispatchEnv-v2",
             "PortEnergyDispatchEnv-v3",
             "PortEnergyDispatchEnv-v4",
+            "PortEnergyDispatchEnv-v5",
+            "PortEnergyHybridResidualEnv-v6",
         }:
             raise ValueError(f"Unsupported environment_id: {environment_id}")
         return environment_id
@@ -362,10 +478,35 @@ class PortDataset:
             OPERATIONAL_COLUMNS
             | (
                 DEPLOYMENT_COLUMNS
-                if self.environment_id in {"PortEnergyDispatchEnv-v3", "PortEnergyDispatchEnv-v4"}
+                if self.environment_id in {
+                    "PortEnergyDispatchEnv-v3",
+                    "PortEnergyDispatchEnv-v4",
+                    "PortEnergyDispatchEnv-v5",
+                    "PortEnergyHybridResidualEnv-v6",
+                }
                 else set()
             )
-            | (REGULATORY_COLUMNS if self.environment_id == "PortEnergyDispatchEnv-v4" else set())
+            | (
+                REGULATORY_COLUMNS
+                if self.environment_id
+                in {
+                    "PortEnergyDispatchEnv-v4",
+                    "PortEnergyDispatchEnv-v5",
+                    "PortEnergyHybridResidualEnv-v6",
+                }
+                else set()
+            )
+            | (
+                FLEXIBLE_OPERATIONS_COLUMNS
+                if self.environment_id
+                in {"PortEnergyDispatchEnv-v5", "PortEnergyHybridResidualEnv-v6"}
+                else set()
+            )
+            | (
+                HYBRID_OPERATIONS_COLUMNS
+                if self.environment_id == "PortEnergyHybridResidualEnv-v6"
+                else set()
+            )
         )
         available = [name for name in fields if name in self.frame.columns]
         required = list(

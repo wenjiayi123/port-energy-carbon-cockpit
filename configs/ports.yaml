@@ -91,6 +91,101 @@ regulatory_resilience_contract:
     dqn_discretization: "3×3×3×3×3×3 = 729 auditable combinations"
   production_authority: false
 
+operational_flex_contract:
+  environment_id: PortEnergyDispatchEnv-v5
+  evidence_label: PUBLIC_ANCHOR_OPERATIONAL_FLEX_SCENARIO_NOT_FIELD_TELEMETRY
+  extends: PortEnergyDispatchEnv-v4
+  observation_count: 73
+  observations:
+    flexible_operations:
+      - agv_fleet_available_ratio
+      - agv_mean_soc
+      - agv_charge_demand_kwh
+      - agv_departure_requirement_kwh
+      - charger_available_ratio
+      - reefer_connected_count
+      - reefer_critical_count
+      - reefer_power_demand_kw
+      - reefer_temperature_margin_c
+      - building_flexible_load_kw
+      - building_critical_load_kw
+      - building_comfort_margin_c
+      - demand_response_event_active
+      - demand_response_target_kw
+      - demand_response_price_per_kwh
+      - crane_health_ratio
+      - yard_health_ratio
+      - shore_power_health_ratio
+      - maintenance_active_ratio
+      - berth_reservation_pressure_ratio
+  actions:
+    continuous:
+      - shore_power_ratio
+      - crane_ratio
+      - yard_ratio
+      - battery_power_ratio
+      - inspection_readiness_ratio
+      - recovery_priority_ratio
+      - agv_charge_ratio
+      - reefer_service_ratio
+      - building_flex_ratio
+      - demand_response_ratio
+    dqn_curated_templates: 243
+  hard_constraints:
+    - grid_import_capacity
+    - battery_soc_and_terminal_reachability
+    - agv_departure_energy_obligation
+    - reefer_thermal_safety
+    - building_critical_load
+    - equipment_health_and_maintenance_capacity
+  authority_boundary:
+    - rl_controls_resource_envelopes_only
+    - regulatory_selection_and_release_are_exogenous
+    - physical_interlocks_remain_site_owned
+    - human_approval_and_rollback_are_mandatory
+  production_authority: false
+
+hybrid_rl_contract:
+  environment_id: PortEnergyHybridResidualEnv-v6
+  evidence_label: PUBLIC_ANCHOR_HYBRID_RL_SCENARIO_NOT_FIELD_TELEMETRY
+  extends: PortEnergyDispatchEnv-v5
+  observation_count: 106
+  action_count: 16
+  observations:
+    inherited_v5: 73
+    hybrid_operations: 16
+    hybrid_state_and_previous_priorities: 7
+    feasible_controller_reference: 10
+  actions:
+    bounded_controller_residuals: 10
+    rl_guided_solver_priorities:
+      - jit_arrival_priority
+      - green_berth_priority
+      - crane_task_priority
+      - yard_slotting_priority
+      - truck_gate_priority
+      - maintenance_priority
+    discrete_actions_supported: false
+  reward_terms: 17
+  decision_split:
+    rl_or_hybrid_strategy_domains: 16
+    pure_control_or_physics_domains: 1
+    deterministic_governance_authority_or_safety_domains: 10
+  hard_constraints:
+    - grid_import_capacity
+    - battery_soc_and_terminal_reachability
+    - agv_departure_energy_obligation
+    - reefer_thermal_safety
+    - building_critical_load
+    - vessel_berth_compatibility
+    - crane_task_precedence
+    - yard_slot_capacity
+    - truck_gate_capacity
+    - statutory_maintenance_due_date
+    - authority_release_exogenous
+    - physical_dispatch_disabled
+  production_authority: false
+
 ports:
   - id: port_la_public_benchmark
     name: Port of Los Angeles 2020-2025 energy-carbon benchmark
@@ -146,6 +241,53 @@ ports:
       terminal_readiness_and_recovery: policy_controllable
       production_authority: false
     note: Propagates authority holds into terminal delay, auxiliary energy, peak load, cost and carbon without claiming field telemetry.
+
+  - id: port_la_operational_flex_benchmark
+    name: Port of Los Angeles 2020-2024 public-anchor operational-flex benchmark
+    mode: offline_public_benchmark
+    timezone: America/Los_Angeles
+    currency: CNY
+    dataset_id: port_la_2020_2024_operational_flex_hourly
+    environment_id: PortEnergyDispatchEnv-v5
+    production_dispatch_authorized: false
+    adapters: {}
+    regulatory_profile:
+      - Public vessel, throughput and grid anchors with deterministic engineering supplements
+      - Automated guided vehicle, reefer, building, demand-response and equipment-health fields require site replacement
+      - Regulatory selection and release remain exogenous authority inputs
+    regulatory_sources:
+      - https://www.portoflosangeles.org/business/statistics/vessel-activity
+      - https://www.portoflosangeles.org/business/statistics/container-statistics
+      - https://www.eia.gov/electricity/data/eia861m/
+    authority_boundary:
+      resource_envelopes: policy_controllable
+      authority_decisions_and_physical_interlocks: exogenous
+      production_authority: false
+    note: Registered v5 training scenario; 73 observations and 10 actions are executable offline, while modeled supplements are explicitly not field telemetry.
+
+  - id: port_la_hybrid_rl_benchmark
+    name: Port of Los Angeles 2020-2024 public-anchor hybrid residual-RL benchmark
+    mode: offline_public_benchmark
+    timezone: America/Los_Angeles
+    currency: CNY
+    dataset_id: port_la_2020_2024_hybrid_rl_hourly
+    environment_id: PortEnergyHybridResidualEnv-v6
+    production_dispatch_authorized: false
+    adapters: {}
+    regulatory_profile:
+      - Public vessel, throughput and grid anchors with deterministic hybrid-operation supplements
+      - RL emits bounded controller residuals and solver priorities, never named executable orders
+      - Named schedules, safety projections, authority decisions and physical interlocks remain external
+    regulatory_sources:
+      - https://www.portoflosangeles.org/business/statistics/vessel-activity
+      - https://www.portoflosangeles.org/business/statistics/container-statistics
+      - https://www.eia.gov/electricity/data/eia861m/
+    authority_boundary:
+      strategy_weights_and_bounded_residuals: policy_controllable
+      named_schedule_and_fast_control: deterministic_solver_or_controller
+      authority_decisions_and_physical_interlocks: exogenous
+      production_authority: false
+    note: Registered v6 scenario; 106 observations and 16 continuous hybrid outputs are executable offline, while all new operational fields remain replaceable modeled supplements.
 
   - id: port_la_live_template
     name: Port of Los Angeles production connector template

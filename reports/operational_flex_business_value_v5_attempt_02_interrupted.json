@@ -1,0 +1,17 @@
+{
+  "schema_version": "operational-flex-business-value-attempt.v1",
+  "started_at_local": "2026-08-30T17:01:48+08:00",
+  "stopped_at": "2026-08-30T10:14:25Z",
+  "elapsed": "01:12:37",
+  "command": "PYTHONPATH=backend backend/.venv/bin/python -m app.rl.operational_flex_benchmark",
+  "status": "interrupted_before_report_write",
+  "completed_phases": [
+    "four-step MPC and fixed baselines over 48 frozen windows",
+    "raw DQN/PPO/SAC/TD3 evaluation for three final seeds",
+    "partial PPO dominance projection"
+  ],
+  "output_report_written": false,
+  "reason": "Pre-admission business audit found that delivery percentage used the policy-selected demand-response commitment as its denominator. A policy could reduce commitment and still report full delivery without covering the external event target.",
+  "remediation": "Add a demand-response commitment gate relative to the full MPC/external-event target, require at least 98 percent commitment and at least 98 percent delivery, preserve all other gates, parallelize independent seed-window evaluations, and rerun from the beginning.",
+  "production_eligible": false
+}

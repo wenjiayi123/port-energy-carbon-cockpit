@@ -13,7 +13,7 @@ import numpy as np
 
 from app.rl.catalog import ALGORITHM_CATALOG
 from app.rl.dataset import DEFAULT_DATASET_ID, PROJECT_ROOT, PortDataset
-from app.rl.environment import PortEnergyDispatchEnv
+from app.rl.robust import CausalForecastPortEnv
 from app.rl.training import TrainingService
 
 
@@ -80,6 +80,16 @@ def _mean_totals(items: list[dict[str, Any]]) -> dict[str, float]:
         "delay_violation_steps",
         "soc_violation_steps",
         "peak_kw",
+        "hybrid_solver_projection_l1",
+        "hybrid_solver_constraint_violations",
+        "jit_deviation_hours",
+        "anchorage_auxiliary_fuel_liters",
+        "berth_conflict_hours",
+        "crane_task_late_teu",
+        "yard_rehandles_teu",
+        "truck_queue_teu_hours",
+        "maintenance_overdue_hours",
+        "maintenance_performed_ratio",
     )
     return {key: round(float(np.mean([float(item[key]) for item in items])), 6) for key in keys}
 
@@ -101,7 +111,7 @@ def evaluate_model(
             if dataset.temporal_mode == "sequential_rows"
             else config["episode_hours"]
         )
-        env = PortEnergyDispatchEnv(
+        env = CausalForecastPortEnv(
             dataset=config["data_file"],
             split=split,
             action_mode="discrete" if config["algorithm"] == "dqn" else "continuous",
@@ -153,7 +163,7 @@ def train_candidate(
     )
     if config["validation_split"] != "validation" or config["test_split"] != "test":
         raise RuntimeError("Temporal split contract was not preserved")
-    env = PortEnergyDispatchEnv(
+    env = CausalForecastPortEnv(
         dataset=config["data_file"],
         split="train",
         action_mode="discrete" if algorithm == "dqn" else "continuous",

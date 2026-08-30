@@ -171,6 +171,8 @@ interface TrainingDataFile {
   id: string;
   label: string;
   path: string;
+  scenario: string;
+  assetGroup: string;
   description: string;
 }
 
@@ -219,11 +221,11 @@ const trainingObjectives = [
     id: 'low_risk_validation',
     label: '低风险试运行',
     command: '小懿，开始训练低风险试运行目标',
-    algorithm: 'dqn',
+    algorithm: 'ppo',
     totalSteps: 90000,
     horizonMin: 240,
     rewardWeights: { carbon: 0.22, shore_power: 0.0, cost: 0.18, delay: 0.18, safety: 0.42, peak: 0.0, storage: 0.08 },
-    reason: '在 81 个可审计岸电、装卸资源与储能组合中学习离散调度动作。',
+    reason: 'v6 使用连续残差策略与硬约束投影；PPO 用于低风险连续策略对照，DQN 仅保留给 v1–v5 历史环境。',
   },
 ] satisfies TrainingObjective[];
 
@@ -260,14 +262,16 @@ const rlAlgorithms: RlAlgorithmOption[] = [
     id: 'dqn',
     label: 'DQN',
     tag: 'Discrete',
-    description: '离散动作强化学习：在岸电、岸桥、堆场资源和储能的 81 个组合中学习 Q 值。',
+    description: '离散动作强化学习：v1–v3 为 81 个组合，v4 为 729 个组合，v5 为 243 个覆盖十类资源包络的策划模板。',
     defaults: { total_steps: 120000, batch_size: 128, learning_rate: 0.0001, gamma: 0.99, tau: 0, entropy_coef: 0 },
   },
 ];
 
 const trainingDataFiles: TrainingDataFile[] = [
-  { id: 'port_la_2020_2024_vessel_activity_hourly', label: '洛杉矶港官方逐日船舶活动增强集', path: 'port_la_2020_2024_vessel_activity_hourly', description: '43,848小时能碳序列 + 1,238条港方逐日锚泊、靠泊、离港和在港时间记录；2020–2022训练、2023验证、2024测试，非报告日明确标记为插值。' },
-  { id: 'port_la_2020_2025_hourly', label: '洛杉矶港 × EIA 2020–2025 小时基准', path: 'port_la_2020_2025_hourly', description: '洛杉矶港72个月度TEU锚点 + EIA LADWP 52,608小时电力/碳信号；2020–2023训练、2024验证、2025测试，源数据覆盖率98.32%。' },
+  { id: 'port_la_2020_2024_hybrid_rl_hourly', label: 'v6 分层混合智能公开锚点集', path: 'port_la_2020_2024_hybrid_rl_hourly', scenario: 'port_la_hybrid_rl_benchmark', assetGroup: 'vessel_berth_crane_yard_truck_energy_maintenance', description: '43,848小时公开船舶/吞吐/电网锚点 + 明示的可替换工程情景；106维因果观测、10个有界控制残差、6个运筹优先级。现场接入时按同列合同替换，不冒充生产遥测。' },
+  { id: 'port_la_2020_2024_operational_flex_hourly', label: 'v5 全业务柔性调度公开锚点集', path: 'port_la_2020_2024_operational_flex_hourly', scenario: 'port_la_operational_flex_benchmark', assetGroup: 'shore_crane_yard_storage_regulatory_agv_reefer_building_dr', description: '43,848小时公开船舶/吞吐/电网锚点 + 可替换的自动导引车、冷藏箱、楼宇、需求响应、设备健康、预约与监管工程情景；73维观测、10维动作，补足字段不冒充现场遥测。' },
+  { id: 'port_la_2020_2024_vessel_activity_hourly', label: '洛杉矶港官方逐日船舶活动增强集', path: 'port_la_2020_2024_vessel_activity_hourly', scenario: 'port_la_vessel_activity_benchmark', assetGroup: 'berth_shore_power_yard_truck', description: '43,848小时能碳序列 + 1,238条港方逐日船舶活动记录；2020–2022训练、2023验证、2024测试，非报告日明确标记为插值。' },
+  { id: 'port_la_2020_2025_hourly', label: '洛杉矶港 × EIA 2020–2025 小时基准', path: 'port_la_2020_2025_hourly', scenario: 'port_la_public_benchmark', assetGroup: 'berth_shore_power_yard_truck', description: '洛杉矶港72个月度TEU锚点 + EIA LADWP 52,608小时电力/碳信号；2020–2023训练、2024验证、2025测试，源数据覆盖率98.32%。' },
 ];
 
 const rewardWeightLabels: Record<string, string> = {
@@ -278,7 +282,72 @@ const rewardWeightLabels: Record<string, string> = {
   safety: '安全',
   peak: '峰值',
   storage: '储能终端 SOC',
+  agv_service: '自动导引车充电履约',
+  reefer_safety: '冷藏箱热安全',
+  demand_response: '需求响应交付',
+  equipment_health: '设备健康保护',
+  jit_service: '准时到港',
+  green_berth: '绿色泊位',
+  crane_schedule: '岸桥任务排序',
+  yard_slotting: '堆场箱位',
+  truck_flow: '集卡闸口',
+  maintenance_risk: '预测性检修',
 };
+
+const legacyRewardWeightKeys = new Set(['carbon', 'shore_power', 'cost', 'delay', 'safety', 'peak', 'storage']);
+const flexRewardDefaults: Record<string, number> = {
+  agv_service: 0.06,
+  reefer_safety: 0.07,
+  demand_response: 0.05,
+  equipment_health: 0.03,
+};
+const flexRewardWeightKeys = new Set([
+  ...legacyRewardWeightKeys,
+  ...Object.keys(flexRewardDefaults),
+]);
+const hybridRewardDefaults: Record<string, number> = {
+  carbon: 0.12,
+  shore_power: 0.04,
+  cost: 0.12,
+  delay: 0.10,
+  safety: 0.18,
+  peak: 0.06,
+  storage: 0.04,
+  agv_service: 0.05,
+  reefer_safety: 0.06,
+  demand_response: 0.04,
+  equipment_health: 0.03,
+  jit_service: 0.035,
+  green_berth: 0.025,
+  crane_schedule: 0.025,
+  yard_slotting: 0.025,
+  truck_flow: 0.025,
+  maintenance_risk: 0.025,
+};
+const hybridRewardWeightKeys = new Set(Object.keys(hybridRewardDefaults));
+
+function alignRewardWeightsForDataset(
+  weights: Record<string, number>,
+  datasetId: string,
+) {
+  if (datasetId === 'port_la_2020_2024_hybrid_rl_hourly') {
+    return Object.fromEntries(
+      Object.entries({ ...hybridRewardDefaults, ...weights })
+        .filter(([key]) => hybridRewardWeightKeys.has(key))
+        .map(([key, value]) => [key, Number(value)]),
+    );
+  }
+  if (datasetId === 'port_la_2020_2024_operational_flex_hourly') {
+    return Object.fromEntries(
+      Object.entries({ ...flexRewardDefaults, ...weights })
+        .filter(([key]) => flexRewardWeightKeys.has(key))
+        .map(([key, value]) => [key, Number(value)]),
+    );
+  }
+  return Object.fromEntries(
+    Object.entries(weights).filter(([key]) => legacyRewardWeightKeys.has(key)),
+  );
+}
 
 const trainingParamFields: Array<{ key: NumericTrainingParamKey; label: string; min: number; max?: number; step: string }> = [
   { key: 'total_steps', label: '训练总步数', min: 0, max: 5000000, step: '1000' },
@@ -295,11 +364,12 @@ const trainingParamFields: Array<{ key: NumericTrainingParamKey; label: string; 
 
 function createTrainingParams(profile: TrainingObjective): TrainingParams {
   const algorithm = rlAlgorithms.find((item) => item.id === profile.algorithm) ?? rlAlgorithms[0];
+  const dataFile = trainingDataFiles[0];
   return {
     algorithm: profile.algorithm,
-    data_file: trainingDataFiles[0].path,
-    scenario: 'port_la_vessel_activity_benchmark',
-    asset_group: 'berth_shore_power_yard_truck',
+    data_file: dataFile.path,
+    scenario: dataFile.scenario,
+    asset_group: dataFile.assetGroup,
     horizon_min: profile.horizonMin,
     step_min: 60,
     total_steps: profile.totalSteps,
@@ -312,7 +382,7 @@ function createTrainingParams(profile: TrainingObjective): TrainingParams {
     seed: 20260720,
     eval_interval: 5000,
     checkpoint_interval: 20000,
-    reward_weights: { ...profile.rewardWeights },
+    reward_weights: alignRewardWeightsForDataset(profile.rewardWeights, dataFile.id),
   };
 }
 
@@ -356,6 +426,8 @@ function resolveDataFileProfile(path: string) {
     id: 'custom_csv',
     label: '自定义港口 CSV',
     path,
+    scenario: '',
+    assetGroup: '',
     description: '后端会在启动前校验列、数值、train/test 分区和数据集哈希。',
   };
 }
@@ -819,7 +891,10 @@ export function XiaoyiLinkageHub({
   }
 
   function applyAlgorithm(algorithmId: string) {
-    const algorithm = rlAlgorithms.find((item) => item.id === algorithmId) ?? rlAlgorithms[0];
+    const requested = trainingParams.data_file === 'port_la_2020_2024_hybrid_rl_hourly' && algorithmId === 'dqn'
+      ? 'ppo'
+      : algorithmId;
+    const algorithm = rlAlgorithms.find((item) => item.id === requested) ?? rlAlgorithms[0];
     setTrainingParams((current) => ({
       ...current,
       algorithm: algorithm.id,
@@ -984,7 +1059,15 @@ export function XiaoyiLinkageHub({
   }
 
   function completeExecution(actionId: string, resultSummary: string, result: unknown, instruction = '') {
-    setExecution(actionId, 'completed', instruction, {
+    const payload = result && typeof result === 'object' ? result as Record<string, any> : {};
+    const statuses = [
+      payload.status,
+      payload.result?.status,
+      payload.execution?.status,
+      payload.execution_result?.status,
+    ].map((value) => String(value ?? '').toLowerCase());
+    const failed = payload.ok === false || statuses.some((status) => ['failed', 'error', 'blocked', 'unavailable'].includes(status));
+    setExecution(actionId, failed ? 'failed' : 'completed', instruction, {
       resultSummary,
       resultCode: pretty(result).slice(0, 900),
     });
@@ -1067,48 +1150,58 @@ export function XiaoyiLinkageHub({
       instruction: nextCommand,
       action_id: (actionId ?? selectedAction) || undefined,
     };
-    const data = await api('/api/assistant/actions/execute', { method: 'POST', body: payload });
-    setPacket(pretty(data));
-    if (!data.matched) {
-      const chat = await api('/api/xiaoyi/chat', { method: 'POST', body: { question: nextCommand, mode: 'brief', top_k: 5 } });
-      const text = chat.result?.answer || chat.answer || '小懿已接收问题，但暂未返回可展示答案。';
-      completeExecution('xiaoyi_chat', '未匹配到联动按钮，已转为小懿普通问答。', chat, nextCommand);
-      await typeAnswer(text);
-      addLog('XIAOYI', '普通问答已交给小懿');
-      return;
-    }
-    setPendingPacket(data);
-    const action = data.action ?? {};
-    const will = data.will_execute ?? {};
-    const recommendation = data.recommendation;
-    const recommendedObjective = recommendation?.config?.objective_id ?? recommendation?.objective_id;
-    if (action.id === 'start_rl_training' && typeof recommendedObjective === 'string') {
-      setSelectedObjective(recommendedObjective);
-    }
-    setExecution(String(action.id ?? 'matched_action'), data.human_confirmation?.required ? 'pending_confirmation' : 'completed', nextCommand, {
-      label: String(action.label ?? '待确认动作'),
-      buttonLabel: String(will.button?.label ?? action.button_label ?? '后台动作'),
-      apiMethod: String(will.backend_request?.method ?? action.backend_request?.method ?? actionContracts[String(action.id ?? '')]?.method ?? 'POST'),
-      apiPath: String(will.backend_request?.path ?? action.backend_request?.path ?? actionContracts[String(action.id ?? '')]?.path ?? '/api/assistant/actions/execute'),
-      confirmationRequired: Boolean(data.human_confirmation?.required),
-      resultSummary: data.human_confirmation?.required ? '动作已识别，等待人工确认后执行。' : '动作已识别，可直接查询或 dry-run。',
-      resultCode: pretty(data).slice(0, 900),
-    });
-    const lines = [
-      `已识别：${action.label ?? '待确认动作'}`,
-      will.button?.label ? `将执行按钮：${will.button.label}` : '将执行后台联动动作。',
-      will.backend_request?.path ? `将调用接口：${will.backend_request.method ?? 'POST'} ${will.backend_request.path}` : '',
-      recommendation?.config ? `推荐算法：${String(recommendation.config.algorithm ?? '').toUpperCase()}，训练步数：${recommendation.config.total_steps}` : '',
-      data.human_confirmation?.required ? '需要人工确认后执行。' : '可直接查询或 dry-run。',
-    ].filter(Boolean);
-    await typeAnswer(lines.join('\n'));
-    addLog('XIAOYI', `动作识别：${action.id ?? 'unknown'}`);
-    if (autoExecute && !data.human_confirmation?.required) {
-      await wait(420);
-      const clicked = await clickMappedButton(data);
-      if (!clicked) {
-        await typeAnswer('动作已经识别，但当前页面没有找到可点击按钮。请在指令中心重新执行。');
+    try {
+      const data = await api('/api/assistant/actions/execute', { method: 'POST', body: payload });
+      setPacket(pretty(data));
+      if (!data.matched) {
+        const chat = await api('/api/xiaoyi/chat', { method: 'POST', body: { question: nextCommand, mode: 'brief', top_k: 5 } });
+        const text = chat.result?.answer || chat.answer || '小懿已接收问题，但暂未返回可展示答案。';
+        completeExecution('xiaoyi_chat', '未匹配到联动按钮，已转为小懿普通问答。', chat, nextCommand);
+        await typeAnswer(text);
+        addLog('XIAOYI', '普通问答已交给小懿');
+        return;
       }
+      setPendingPacket(data);
+      const action = data.action ?? {};
+      const will = data.will_execute ?? {};
+      const recommendation = data.recommendation;
+      const recommendedObjective = recommendation?.config?.objective_id ?? recommendation?.objective_id;
+      if (action.id === 'start_rl_training' && typeof recommendedObjective === 'string') {
+        setSelectedObjective(recommendedObjective);
+      }
+      setExecution(String(action.id ?? 'matched_action'), data.human_confirmation?.required ? 'pending_confirmation' : 'completed', nextCommand, {
+        label: String(action.label ?? '待确认动作'),
+        buttonLabel: String(will.button?.label ?? action.button_label ?? '后台动作'),
+        apiMethod: String(will.backend_request?.method ?? action.backend_request?.method ?? actionContracts[String(action.id ?? '')]?.method ?? 'POST'),
+        apiPath: String(will.backend_request?.path ?? action.backend_request?.path ?? actionContracts[String(action.id ?? '')]?.path ?? '/api/assistant/actions/execute'),
+        confirmationRequired: Boolean(data.human_confirmation?.required),
+        resultSummary: data.human_confirmation?.required ? '动作已识别，等待人工确认后执行。' : '动作已识别，可直接查询或 dry-run。',
+        resultCode: pretty(data).slice(0, 900),
+      });
+      const lines = [
+        `已识别：${action.label ?? '待确认动作'}`,
+        will.button?.label ? `将执行按钮：${will.button.label}` : '将执行后台联动动作。',
+        will.backend_request?.path ? `将调用接口：${will.backend_request.method ?? 'POST'} ${will.backend_request.path}` : '',
+        recommendation?.config ? `推荐算法：${String(recommendation.config.algorithm ?? '').toUpperCase()}，训练步数：${recommendation.config.total_steps}` : '',
+        data.human_confirmation?.required ? '需要人工确认后执行。' : '可直接查询或 dry-run。',
+      ].filter(Boolean);
+      await typeAnswer(lines.join('\n'));
+      addLog('XIAOYI', `动作识别：${action.id ?? 'unknown'}`);
+      if (autoExecute && !data.human_confirmation?.required) {
+        await wait(420);
+        const clicked = await clickMappedButton(data);
+        if (!clicked) {
+          await typeAnswer('动作已经识别，但当前页面没有找到可点击按钮。请在指令中心重新执行。');
+        }
+      }
+    } catch (error) {
+      failExecution((actionId ?? selectedAction) || 'xiaoyi_intent', error, nextCommand);
+      setPendingPacket(null);
+      setPacket(`执行失败：${String(error)}`);
+      setAnswer(`执行失败：${String(error)}。请检查训练参数或联动服务后重试。`);
+      addLog('XIAOYI/ERROR', String(error));
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -1906,7 +1999,7 @@ export function XiaoyiLinkageHub({
               <div className="xiaoyi-algorithm-advisor" aria-label="小懿五算法训练顾问">
                 <header>
                   <span><Bot size={13} />小懿训练顾问</span>
-                  <b>五算法同一环境契约</b>
+                  <b>五算法版本化环境契约</b>
                 </header>
                 <div>
                   {rlAlgorithms.map((algorithm) => (
@@ -1914,6 +2007,8 @@ export function XiaoyiLinkageHub({
                       className={trainingParams.algorithm === algorithm.id ? 'active' : ''}
                       type="button"
                       key={algorithm.id}
+                      disabled={trainingParams.data_file === 'port_la_2020_2024_hybrid_rl_hourly' && algorithm.id === 'dqn'}
+                      title={trainingParams.data_file === 'port_la_2020_2024_hybrid_rl_hourly' && algorithm.id === 'dqn' ? 'v6 是 16 维连续动作环境，DQN 仅用于历史离散环境' : algorithm.description}
                       onClick={() => applyAlgorithm(algorithm.id)}
                     >
                       <b>{algorithm.label}</b>
@@ -1921,7 +2016,7 @@ export function XiaoyiLinkageHub({
                     </button>
                   ))}
                 </div>
-                <p>推荐使用逐日船舶活动增强集训练；旧 52,608 小时基准完整保留，用于能碳长周期证据对照。</p>
+                <p>v6 默认采用“RL 战略残差 + 确定性控制/运筹投影”：16 个策略输出覆盖跨时段资源与船—泊—桥—场—车—能—检修协同；v1–v5 完整保留作纵向对照。</p>
               </div>
               <div className="training-progress-label">
                 <span>训练进度</span>
@@ -2284,10 +2379,14 @@ export function XiaoyiLinkageHub({
                     <em>{objective.reason}</em>
                   </label>
                   <label>
-                    <small>4种RL算法 / 1种控制基线</small>
+                    <small>3种v6 RL / 1种历史RL / 1种控制基线</small>
                     <select id="trainingAlgorithmSelect" value={trainingParams.algorithm} onChange={(event) => applyAlgorithm(event.target.value)}>
                       {rlAlgorithms.map((item) => (
-                        <option value={item.id} key={item.id}>{item.label} · {item.tag}</option>
+                        <option
+                          value={item.id}
+                          key={item.id}
+                          disabled={trainingParams.data_file === 'port_la_2020_2024_hybrid_rl_hourly' && item.id === 'dqn'}
+                        >{item.label} · {item.tag}{trainingParams.data_file === 'port_la_2020_2024_hybrid_rl_hourly' && item.id === 'dqn' ? ' · v6不适用' : ''}</option>
                       ))}
                     </select>
                     <em>{selectedAlgorithmProfile.description}</em>
@@ -2298,7 +2397,18 @@ export function XiaoyiLinkageHub({
                         id="trainingDataSelect"
                         list="trainingDataOptions"
                         value={trainingParams.data_file}
-                        onChange={(event) => setTrainingParams((current) => ({ ...current, data_file: event.target.value }))}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          const dataFile = trainingDataFiles.find((item) => item.path === value);
+                          setTrainingParams((current) => ({
+                            ...current,
+                            algorithm: value === 'port_la_2020_2024_hybrid_rl_hourly' && current.algorithm === 'dqn' ? 'ppo' : current.algorithm,
+                            data_file: value,
+                            scenario: dataFile?.scenario ?? current.scenario,
+                            asset_group: dataFile?.assetGroup ?? current.asset_group,
+                            reward_weights: alignRewardWeightsForDataset(current.reward_weights, value),
+                          }));
+                        }}
                       />
                       <datalist id="trainingDataOptions">
                         {trainingDataFiles.map((item) => (
@@ -2326,8 +2436,8 @@ export function XiaoyiLinkageHub({
                   </label>
                   <label>
                     <small>安全护栏</small>
-                      <input value="strict · environment constraints" readOnly />
-                      <em>数据包声明的 v1/v2/v3 环境契约，固定 60 分钟 step。</em>
+                      <input value="strict · dataset-declared environment constraints" readOnly />
+                      <em>按数据包声明的 v1–v6 环境合同执行硬约束，固定 60 分钟 step；v6 的确定性投影不可被策略绕过。</em>
                   </label>
                 </div>
 
@@ -2350,7 +2460,15 @@ export function XiaoyiLinkageHub({
 
                 <div className="studio-subtitle">Reward Weights</div>
                 <div className="reward-weight-editor studio-reward-grid">
-                  {Object.entries(rewardWeightLabels).map(([key, label]) => (
+                  {Object.entries(rewardWeightLabels)
+                    .filter(([key]) => (
+                      trainingParams.data_file === 'port_la_2020_2024_hybrid_rl_hourly'
+                        ? hybridRewardWeightKeys.has(key)
+                        : trainingParams.data_file === 'port_la_2020_2024_operational_flex_hourly'
+                          ? flexRewardWeightKeys.has(key)
+                          : legacyRewardWeightKeys.has(key)
+                    ))
+                    .map(([key, label]) => (
                     <label key={key}>
                       <small>{label}</small>
                       <input
@@ -2362,7 +2480,7 @@ export function XiaoyiLinkageHub({
                         onChange={(event) => updateRewardWeight(key, event.target.value)}
                       />
                     </label>
-                  ))}
+                    ))}
                 </div>
               </section>
 

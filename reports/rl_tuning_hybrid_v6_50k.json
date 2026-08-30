@@ -1,0 +1,713 @@
+{
+  "schema_version": "hybrid-rl-tuning.v1",
+  "generated_at": "2026-08-30T14:28:43.834247Z",
+  "evidence_label": "OFFLINE_HYBRID_RL_NOT_FIELD_KPI",
+  "dataset_id": "port_la_2020_2024_hybrid_rl_hourly",
+  "dataset_package_sha256": "79d35e148f770ded4f4fd4f357a8d3a11498c9e544c43d2314d4bc35b8c60249",
+  "environment_id": "PortEnergyHybridResidualEnv-v6",
+  "selection_protocol": {
+    "fit_split": "train",
+    "algorithm_and_hyperparameter_selection_split": "validation",
+    "final_report_split": "test",
+    "test_accessed_after_selection": true,
+    "search_steps_per_fit": 20000,
+    "final_steps_per_fit": 50000,
+    "selection_seed": 23,
+    "final_seeds": [
+      17,
+      37,
+      59
+    ]
+  },
+  "search_results": [
+    {
+      "phase": "search",
+      "algorithm": "ppo",
+      "candidate_index": 0,
+      "hyperparameters": {
+        "learning_rate": 0.0003,
+        "batch_size": 64,
+        "gamma": 0.99,
+        "entropy_coef": 0.0
+      },
+      "steps": 20000,
+      "seed": 23,
+      "training": {
+        "duration_sec": 723.052,
+        "actual_timesteps": 20224,
+        "resolved_hyperparameters": {
+          "policy": "MlpPolicy",
+          "learning_rate": 0.0003,
+          "batch_size": 64,
+          "gamma": 0.99,
+          "tau": 0.005,
+          "entropy_coef": 0.0,
+          "exploration_fraction": 0.25,
+          "episode_hours": 24
+        },
+        "fit_split": "train",
+        "selection_split": "validation",
+        "test_accessed": false,
+        "render_during_fit_or_selection": false,
+        "validation": {
+          "split": "validation",
+          "episodes": 48,
+          "steps": 1152,
+          "mean": {
+            "reward": 11.369953,
+            "energy_kwh": 361636.33486,
+            "carbon_kg": 111089.561794,
+            "cost": 694457.623412,
+            "delay_minutes": 412.55936,
+            "processed_teu": 23395.999187,
+            "safety_violations": 0.0,
+            "peak_violation_steps": 0.0,
+            "delay_violation_steps": 0.020833,
+            "soc_violation_steps": 0.0,
+            "peak_kw": 15912.706806,
+            "hybrid_solver_projection_l1": 1.658939,
+            "hybrid_solver_constraint_violations": 0.0,
+            "jit_deviation_hours": 9.246571,
+            "anchorage_auxiliary_fuel_liters": 867.734796,
+            "berth_conflict_hours": 0.269445,
+            "crane_task_late_teu": 897.51009,
+            "yard_rehandles_teu": 2866.601873,
+            "truck_queue_teu_hours": 2682.536877,
+            "maintenance_overdue_hours": 0.0031,
+            "maintenance_performed_ratio": 4.594129
+          },
+          "selection_score": 11.369953
+        }
+      },
+      "artifact_path": "reports/rl_tuning_hybrid_v6_50k_artifacts/search-ppo-candidate-0-steps-20000-seed-23.zip",
+      "artifact_sha256": "7dea59856ac993a28b079adeeb9a61f163f7cfd985fc8b6662e27f4e86bc2940"
+    },
+    {
+      "phase": "search",
+      "algorithm": "ppo",
+      "candidate_index": 1,
+      "hyperparameters": {
+        "learning_rate": 0.0001,
+        "batch_size": 128,
+        "gamma": 0.995,
+        "entropy_coef": 0.005
+      },
+      "steps": 20000,
+      "seed": 23,
+      "training": {
+        "duration_sec": 722.971,
+        "actual_timesteps": 20224,
+        "resolved_hyperparameters": {
+          "policy": "MlpPolicy",
+          "learning_rate": 0.0001,
+          "batch_size": 128,
+          "gamma": 0.995,
+          "tau": 0.005,
+          "entropy_coef": 0.005,
+          "exploration_fraction": 0.25,
+          "episode_hours": 24
+        },
+        "fit_split": "train",
+        "selection_split": "validation",
+        "test_accessed": false,
+        "render_during_fit_or_selection": false,
+        "validation": {
+          "split": "validation",
+          "episodes": 48,
+          "steps": 1152,
+          "mean": {
+            "reward": 11.620503,
+            "energy_kwh": 361225.827562,
+            "carbon_kg": 110977.297181,
+            "cost": 686416.254077,
+            "delay_minutes": 382.705072,
+            "processed_teu": 23413.723153,
+            "safety_violations": 0.0,
+            "peak_violation_steps": 0.0,
+            "delay_violation_steps": 0.0,
+            "soc_violation_steps": 0.0,
+            "peak_kw": 15873.082731,
+            "hybrid_solver_projection_l1": 7.170474,
+            "hybrid_solver_constraint_violations": 0.0,
+            "jit_deviation_hours": 7.925157,
+            "anchorage_auxiliary_fuel_liters": 846.033894,
+            "berth_conflict_hours": 0.289424,
+            "crane_task_late_teu": 792.987034,
+            "yard_rehandles_teu": 2753.247885,
+            "truck_queue_teu_hours": 2374.228238,
+            "maintenance_overdue_hours": 0.186915,
+            "maintenance_performed_ratio": 2.45616
+          },
+          "selection_score": 11.620503
+        }
+      },
+      "artifact_path": "reports/rl_tuning_hybrid_v6_50k_artifacts/search-ppo-candidate-1-steps-20000-seed-23.zip",
+      "artifact_sha256": "e8d753aa9a02d22761c0853674df43a8f4c5654cfb169a824c4ac7c4a83f2e1e"
+    },
+    {
+      "phase": "search",
+      "algorithm": "sac",
+      "candidate_index": 0,
+      "hyperparameters": {
+        "learning_rate": 0.0003,
+        "batch_size": 256,
+        "gamma": 0.99,
+        "tau": 0.005
+      },
+      "steps": 20000,
+      "seed": 23,
+      "training": {
+        "duration_sec": 1226.493,
+        "actual_timesteps": 20000,
+        "resolved_hyperparameters": {
+          "policy": "MlpPolicy",
+          "learning_rate": 0.0003,
+          "batch_size": 256,
+          "gamma": 0.99,
+          "tau": 0.005,
+          "entropy_coef": 0.0,
+          "exploration_fraction": 0.25,
+          "episode_hours": 24
+        },
+        "fit_split": "train",
+        "selection_split": "validation",
+        "test_accessed": false,
+        "render_during_fit_or_selection": false,
+        "validation": {
+          "split": "validation",
+          "episodes": 48,
+          "steps": 1152,
+          "mean": {
+            "reward": 10.609323,
+            "energy_kwh": 352441.599082,
+            "carbon_kg": 109680.55811,
+            "cost": 698632.405204,
+            "delay_minutes": 489.00121,
+            "processed_teu": 23293.521535,
+            "safety_violations": 0.0,
+            "peak_violation_steps": 0.0,
+            "delay_violation_steps": 0.020833,
+            "soc_violation_steps": 0.0,
+            "peak_kw": 15638.915948,
+            "hybrid_solver_projection_l1": 4.459084,
+            "hybrid_solver_constraint_violations": 0.0,
+            "jit_deviation_hours": 13.147254,
+            "anchorage_auxiliary_fuel_liters": 911.784081,
+            "berth_conflict_hours": 0.527076,
+            "crane_task_late_teu": 1262.145754,
+            "yard_rehandles_teu": 2971.715535,
+            "truck_queue_teu_hours": 2980.543166,
+            "maintenance_overdue_hours": 0.097197,
+            "maintenance_performed_ratio": 3.737557
+          },
+          "selection_score": 10.609323
+        }
+      },
+      "artifact_path": "reports/rl_tuning_hybrid_v6_50k_artifacts/search-sac-candidate-0-steps-20000-seed-23.zip",
+      "artifact_sha256": "85238239b4de02f04dcebd1fc4d259034d98fff856c07dda8947b9c4443a9bee"
+    },
+    {
+      "phase": "search",
+      "algorithm": "sac",
+      "candidate_index": 1,
+      "hyperparameters": {
+        "learning_rate": 0.0001,
+        "batch_size": 256,
+        "gamma": 0.995,
+        "tau": 0.01
+      },
+      "steps": 20000,
+      "seed": 23,
+      "training": {
+        "duration_sec": 1562.449,
+        "actual_timesteps": 20000,
+        "resolved_hyperparameters": {
+          "policy": "MlpPolicy",
+          "learning_rate": 0.0001,
+          "batch_size": 256,
+          "gamma": 0.995,
+          "tau": 0.01,
+          "entropy_coef": 0.0,
+          "exploration_fraction": 0.25,
+          "episode_hours": 24
+        },
+        "fit_split": "train",
+        "selection_split": "validation",
+        "test_accessed": false,
+        "render_during_fit_or_selection": false,
+        "validation": {
+          "split": "validation",
+          "episodes": 48,
+          "steps": 1152,
+          "mean": {
+            "reward": 10.091951,
+            "energy_kwh": 347312.366392,
+            "carbon_kg": 106610.753382,
+            "cost": 680835.973672,
+            "delay_minutes": 575.156912,
+            "processed_teu": 22977.329609,
+            "safety_violations": 0.0,
+            "peak_violation_steps": 0.0,
+            "delay_violation_steps": 0.083333,
+            "soc_violation_steps": 0.0,
+            "peak_kw": 15305.627856,
+            "hybrid_solver_projection_l1": 0.970167,
+            "hybrid_solver_constraint_violations": 0.0,
+            "jit_deviation_hours": 8.958221,
+            "anchorage_auxiliary_fuel_liters": 863.380748,
+            "berth_conflict_hours": 0.489963,
+            "crane_task_late_teu": 1614.439667,
+            "yard_rehandles_teu": 2964.753879,
+            "truck_queue_teu_hours": 2689.88322,
+            "maintenance_overdue_hours": 0.0,
+            "maintenance_performed_ratio": 6.731876
+          },
+          "selection_score": 10.091951
+        }
+      },
+      "artifact_path": "reports/rl_tuning_hybrid_v6_50k_artifacts/search-sac-candidate-1-steps-20000-seed-23.zip",
+      "artifact_sha256": "e90be7d7a5d535a5c7edc681aad0c0f3008569f73a236d58ed635eef38c22515"
+    },
+    {
+      "phase": "search",
+      "algorithm": "td3",
+      "candidate_index": 0,
+      "hyperparameters": {
+        "learning_rate": 0.0003,
+        "batch_size": 256,
+        "gamma": 0.99,
+        "tau": 0.005
+      },
+      "steps": 20000,
+      "seed": 23,
+      "training": {
+        "duration_sec": 1519.839,
+        "actual_timesteps": 20000,
+        "resolved_hyperparameters": {
+          "policy": "MlpPolicy",
+          "learning_rate": 0.0003,
+          "batch_size": 256,
+          "gamma": 0.99,
+          "tau": 0.005,
+          "entropy_coef": 0.0,
+          "exploration_fraction": 0.25,
+          "episode_hours": 24
+        },
+        "fit_split": "train",
+        "selection_split": "validation",
+        "test_accessed": false,
+        "render_during_fit_or_selection": false,
+        "validation": {
+          "split": "validation",
+          "episodes": 48,
+          "steps": 1152,
+          "mean": {
+            "reward": 10.799373,
+            "energy_kwh": 349375.341871,
+            "carbon_kg": 107797.061008,
+            "cost": 684785.789541,
+            "delay_minutes": 500.373106,
+            "processed_teu": 23315.139,
+            "safety_violations": 0.0,
+            "peak_violation_steps": 0.0,
+            "delay_violation_steps": 0.145833,
+            "soc_violation_steps": 0.0,
+            "peak_kw": 15723.198311,
+            "hybrid_solver_projection_l1": 7.80529,
+            "hybrid_solver_constraint_violations": 0.0,
+            "jit_deviation_hours": 7.01554,
+            "anchorage_auxiliary_fuel_liters": 825.942032,
+            "berth_conflict_hours": 0.531401,
+            "crane_task_late_teu": 1654.513009,
+            "yard_rehandles_teu": 3329.63766,
+            "truck_queue_teu_hours": 2779.874325,
+            "maintenance_overdue_hours": 0.0,
+            "maintenance_performed_ratio": 6.563974
+          },
+          "selection_score": 10.799373
+        }
+      },
+      "artifact_path": "reports/rl_tuning_hybrid_v6_50k_artifacts/search-td3-candidate-0-steps-20000-seed-23.zip",
+      "artifact_sha256": "3955cd9d58c609318cd3438d0bb8d41b253c96de4962ce2af44ba79f7a46e71c"
+    },
+    {
+      "phase": "search",
+      "algorithm": "td3",
+      "candidate_index": 1,
+      "hyperparameters": {
+        "learning_rate": 0.0001,
+        "batch_size": 256,
+        "gamma": 0.995,
+        "tau": 0.01
+      },
+      "steps": 20000,
+      "seed": 23,
+      "training": {
+        "duration_sec": 1674.839,
+        "actual_timesteps": 20000,
+        "resolved_hyperparameters": {
+          "policy": "MlpPolicy",
+          "learning_rate": 0.0001,
+          "batch_size": 256,
+          "gamma": 0.995,
+          "tau": 0.01,
+          "entropy_coef": 0.0,
+          "exploration_fraction": 0.25,
+          "episode_hours": 24
+        },
+        "fit_split": "train",
+        "selection_split": "validation",
+        "test_accessed": false,
+        "render_during_fit_or_selection": false,
+        "validation": {
+          "split": "validation",
+          "episodes": 48,
+          "steps": 1152,
+          "mean": {
+            "reward": 9.907794,
+            "energy_kwh": 347547.371281,
+            "carbon_kg": 106735.660037,
+            "cost": 693330.077542,
+            "delay_minutes": 639.98645,
+            "processed_teu": 23255.803215,
+            "safety_violations": 0.0,
+            "peak_violation_steps": 0.0,
+            "delay_violation_steps": 0.083333,
+            "soc_violation_steps": 0.0,
+            "peak_kw": 16068.165922,
+            "hybrid_solver_projection_l1": 6.03687,
+            "hybrid_solver_constraint_violations": 0.0,
+            "jit_deviation_hours": 4.469377,
+            "anchorage_auxiliary_fuel_liters": 791.660472,
+            "berth_conflict_hours": 0.624968,
+            "crane_task_late_teu": 1962.212497,
+            "yard_rehandles_teu": 3259.257592,
+            "truck_queue_teu_hours": 3795.841229,
+            "maintenance_overdue_hours": 0.143337,
+            "maintenance_performed_ratio": 4.621447
+          },
+          "selection_score": 9.907794
+        }
+      },
+      "artifact_path": "reports/rl_tuning_hybrid_v6_50k_artifacts/search-td3-candidate-1-steps-20000-seed-23.zip",
+      "artifact_sha256": "b43d74dd67bda5c5fac3bc386f612e85882a35adc4ef2c6dec093168f34f7fd9"
+    }
+  ],
+  "selected": {
+    "algorithm": "ppo",
+    "candidate_index": 1,
+    "hyperparameters": {
+      "learning_rate": 0.0001,
+      "batch_size": 128,
+      "gamma": 0.995,
+      "entropy_coef": 0.005
+    },
+    "selection_reason": "zero validation safety first, then minimum safety violations, then maximum validation return; test inaccessible until frozen"
+  },
+  "final_seed_results": [
+    {
+      "phase": "final",
+      "algorithm": "ppo",
+      "candidate_index": 1,
+      "hyperparameters": {
+        "learning_rate": 0.0001,
+        "batch_size": 128,
+        "gamma": 0.995,
+        "entropy_coef": 0.005
+      },
+      "steps": 50000,
+      "seed": 17,
+      "training": {
+        "duration_sec": 2087.805,
+        "actual_timesteps": 50176,
+        "resolved_hyperparameters": {
+          "policy": "MlpPolicy",
+          "learning_rate": 0.0001,
+          "batch_size": 128,
+          "gamma": 0.995,
+          "tau": 0.005,
+          "entropy_coef": 0.005,
+          "exploration_fraction": 0.25,
+          "episode_hours": 24
+        },
+        "fit_split": "train",
+        "selection_split": "validation",
+        "test_accessed": false,
+        "render_during_fit_or_selection": false,
+        "validation": {
+          "split": "validation",
+          "episodes": 48,
+          "steps": 1152,
+          "mean": {
+            "reward": 11.8185,
+            "energy_kwh": 348564.654688,
+            "carbon_kg": 109093.804779,
+            "cost": 666655.961228,
+            "delay_minutes": 461.042539,
+            "processed_teu": 23404.075863,
+            "safety_violations": 0.0,
+            "peak_violation_steps": 0.0,
+            "delay_violation_steps": 0.020833,
+            "soc_violation_steps": 0.0,
+            "peak_kw": 15140.81314,
+            "hybrid_solver_projection_l1": 9.310458,
+            "hybrid_solver_constraint_violations": 0.0,
+            "jit_deviation_hours": 4.333342,
+            "anchorage_auxiliary_fuel_liters": 790.822851,
+            "berth_conflict_hours": 0.995461,
+            "crane_task_late_teu": 792.987034,
+            "yard_rehandles_teu": 2821.469065,
+            "truck_queue_teu_hours": 2862.593995,
+            "maintenance_overdue_hours": 0.0,
+            "maintenance_performed_ratio": 4.948512
+          },
+          "selection_score": 11.8185
+        }
+      },
+      "artifact_path": "reports/rl_tuning_hybrid_v6_50k_artifacts/final-ppo-candidate-1-steps-50000-seed-17.zip",
+      "artifact_sha256": "76f470ad3cae1dbc719433c40ddd308420c917a3bd63401ba81c055bb1e4ae90",
+      "test": {
+        "split": "test",
+        "episodes": 48,
+        "steps": 1152,
+        "mean": {
+          "reward": 8.820142,
+          "energy_kwh": 369285.355755,
+          "carbon_kg": 117052.925304,
+          "cost": 768583.982806,
+          "delay_minutes": 750.516804,
+          "processed_teu": 27270.600678,
+          "safety_violations": 0.0,
+          "peak_violation_steps": 0.0,
+          "delay_violation_steps": 0.208333,
+          "soc_violation_steps": 0.0,
+          "peak_kw": 15904.588257,
+          "hybrid_solver_projection_l1": 9.291159,
+          "hybrid_solver_constraint_violations": 0.0,
+          "jit_deviation_hours": 4.526268,
+          "anchorage_auxiliary_fuel_liters": 1195.785548,
+          "berth_conflict_hours": 1.193128,
+          "crane_task_late_teu": 931.76038,
+          "yard_rehandles_teu": 3368.090468,
+          "truck_queue_teu_hours": 3432.55241,
+          "maintenance_overdue_hours": 0.0,
+          "maintenance_performed_ratio": 4.845482
+        },
+        "selection_score": 8.820142
+      }
+    },
+    {
+      "phase": "final",
+      "algorithm": "ppo",
+      "candidate_index": 1,
+      "hyperparameters": {
+        "learning_rate": 0.0001,
+        "batch_size": 128,
+        "gamma": 0.995,
+        "entropy_coef": 0.005
+      },
+      "steps": 50000,
+      "seed": 37,
+      "training": {
+        "duration_sec": 2128.063,
+        "actual_timesteps": 50176,
+        "resolved_hyperparameters": {
+          "policy": "MlpPolicy",
+          "learning_rate": 0.0001,
+          "batch_size": 128,
+          "gamma": 0.995,
+          "tau": 0.005,
+          "entropy_coef": 0.005,
+          "exploration_fraction": 0.25,
+          "episode_hours": 24
+        },
+        "fit_split": "train",
+        "selection_split": "validation",
+        "test_accessed": false,
+        "render_during_fit_or_selection": false,
+        "validation": {
+          "split": "validation",
+          "episodes": 48,
+          "steps": 1152,
+          "mean": {
+            "reward": 11.982359,
+            "energy_kwh": 355006.331662,
+            "carbon_kg": 108924.547475,
+            "cost": 665612.063709,
+            "delay_minutes": 409.967306,
+            "processed_teu": 23400.148929,
+            "safety_violations": 0.0,
+            "peak_violation_steps": 0.0,
+            "delay_violation_steps": 0.020833,
+            "soc_violation_steps": 0.0,
+            "peak_kw": 15651.510577,
+            "hybrid_solver_projection_l1": 14.694261,
+            "hybrid_solver_constraint_violations": 0.0,
+            "jit_deviation_hours": 4.333342,
+            "anchorage_auxiliary_fuel_liters": 790.822851,
+            "berth_conflict_hours": 0.664575,
+            "crane_task_late_teu": 792.987034,
+            "yard_rehandles_teu": 2477.585465,
+            "truck_queue_teu_hours": 2376.33074,
+            "maintenance_overdue_hours": 0.0,
+            "maintenance_performed_ratio": 5.308705
+          },
+          "selection_score": 11.982359
+        }
+      },
+      "artifact_path": "reports/rl_tuning_hybrid_v6_50k_artifacts/final-ppo-candidate-1-steps-50000-seed-37.zip",
+      "artifact_sha256": "6e44222ae7e740e15785e7d62907b84851411c66a9b3f548b677cce512859500",
+      "test": {
+        "split": "test",
+        "episodes": 48,
+        "steps": 1152,
+        "mean": {
+          "reward": 8.964767,
+          "energy_kwh": 375278.823385,
+          "carbon_kg": 116580.468174,
+          "cost": 767096.910165,
+          "delay_minutes": 699.506491,
+          "processed_teu": 27257.19622,
+          "safety_violations": 0.0,
+          "peak_violation_steps": 0.0,
+          "delay_violation_steps": 0.208333,
+          "soc_violation_steps": 0.0,
+          "peak_kw": 16262.593257,
+          "hybrid_solver_projection_l1": 15.189612,
+          "hybrid_solver_constraint_violations": 0.0,
+          "jit_deviation_hours": 4.526268,
+          "anchorage_auxiliary_fuel_liters": 1195.785548,
+          "berth_conflict_hours": 0.796588,
+          "crane_task_late_teu": 931.76038,
+          "yard_rehandles_teu": 2968.552681,
+          "truck_queue_teu_hours": 2935.197496,
+          "maintenance_overdue_hours": 0.0,
+          "maintenance_performed_ratio": 5.306238
+        },
+        "selection_score": 8.964767
+      }
+    },
+    {
+      "phase": "final",
+      "algorithm": "ppo",
+      "candidate_index": 1,
+      "hyperparameters": {
+        "learning_rate": 0.0001,
+        "batch_size": 128,
+        "gamma": 0.995,
+        "entropy_coef": 0.005
+      },
+      "steps": 50000,
+      "seed": 59,
+      "training": {
+        "duration_sec": 2114.145,
+        "actual_timesteps": 50176,
+        "resolved_hyperparameters": {
+          "policy": "MlpPolicy",
+          "learning_rate": 0.0001,
+          "batch_size": 128,
+          "gamma": 0.995,
+          "tau": 0.005,
+          "entropy_coef": 0.005,
+          "exploration_fraction": 0.25,
+          "episode_hours": 24
+        },
+        "fit_split": "train",
+        "selection_split": "validation",
+        "test_accessed": false,
+        "render_during_fit_or_selection": false,
+        "validation": {
+          "split": "validation",
+          "episodes": 48,
+          "steps": 1152,
+          "mean": {
+            "reward": 11.965194,
+            "energy_kwh": 353678.749133,
+            "carbon_kg": 108504.700496,
+            "cost": 664191.997186,
+            "delay_minutes": 421.359861,
+            "processed_teu": 23385.834736,
+            "safety_violations": 0.0,
+            "peak_violation_steps": 0.0,
+            "delay_violation_steps": 0.020833,
+            "soc_violation_steps": 0.0,
+            "peak_kw": 15598.899405,
+            "hybrid_solver_projection_l1": 19.284784,
+            "hybrid_solver_constraint_violations": 0.0,
+            "jit_deviation_hours": 4.333342,
+            "anchorage_auxiliary_fuel_liters": 790.822851,
+            "berth_conflict_hours": 0.748159,
+            "crane_task_late_teu": 792.987034,
+            "yard_rehandles_teu": 2477.585465,
+            "truck_queue_teu_hours": 2373.512166,
+            "maintenance_overdue_hours": 0.0,
+            "maintenance_performed_ratio": 9.12451
+          },
+          "selection_score": 11.965194
+        }
+      },
+      "artifact_path": "reports/rl_tuning_hybrid_v6_50k_artifacts/final-ppo-candidate-1-steps-50000-seed-59.zip",
+      "artifact_sha256": "8f09ea0efe1fc68ef39a8113290ea18cd4aa5bc405d1700b5a5e1f4a9421f68e",
+      "test": {
+        "split": "test",
+        "episodes": 48,
+        "steps": 1152,
+        "mean": {
+          "reward": 8.78247,
+          "energy_kwh": 374106.645164,
+          "carbon_kg": 116218.599142,
+          "cost": 766320.10511,
+          "delay_minutes": 734.402547,
+          "processed_teu": 27210.202617,
+          "safety_violations": 0.0,
+          "peak_violation_steps": 0.0,
+          "delay_violation_steps": 0.208333,
+          "soc_violation_steps": 0.0,
+          "peak_kw": 16237.219007,
+          "hybrid_solver_projection_l1": 19.844804,
+          "hybrid_solver_constraint_violations": 0.0,
+          "jit_deviation_hours": 4.526268,
+          "anchorage_auxiliary_fuel_liters": 1195.785548,
+          "berth_conflict_hours": 0.89677,
+          "crane_task_late_teu": 931.76038,
+          "yard_rehandles_teu": 2968.552681,
+          "truck_queue_teu_hours": 2934.009295,
+          "maintenance_overdue_hours": 0.0,
+          "maintenance_performed_ratio": 9.125901
+        },
+        "selection_score": 8.78247
+      }
+    }
+  ],
+  "runtime": {
+    "available": true,
+    "python": "3.12.13",
+    "python_implementation": "CPython",
+    "platform": "darwin",
+    "machine": "x86_64",
+    "numpy": "1.26.4",
+    "torch": "2.2.2",
+    "gymnasium": "1.0.0",
+    "stable_baselines3": "2.4.1",
+    "device": "cpu"
+  },
+  "code_sha256": {
+    "backend/app/rl/environment.py": "9b55f51f5f2b7d6b6d2c835013708f0666b7e41b22c4684d6c785d1a5ad7b565",
+    "backend/app/rl/hybrid_control.py": "06bf7dc70e40583c104327934fac263b03d3a4f0a76891aeef5ba84766d12df1",
+    "backend/app/rl/training.py": "0edc5707769332999dd570b59d2a742d1cde760e0aac8f6a88f87614816014bc",
+    "backend/app/rl/tuning.py": "2366e5030d0e88841f0f262a5d9709a088a623eff0a1f3f13338a9cfcd0f24a0",
+    "backend/app/rl/hybrid_tuning.py": "cdd6a9fce094a07c20bfdbc5e0e1b74412d58c6b837ea6fe11d8ff801fa33f57",
+    "scripts/build_hybrid_rl_dataset.py": "95a40c76ef1e305543cea9268fc1e77d30651a8bb9888414dcddd842179ffc1b"
+  },
+  "production_boundary": {
+    "simulation_mode": true,
+    "live_data_verified": false,
+    "dispatch_allowed": false,
+    "production_authority": false
+  },
+  "limitations": [
+    "New v6 operational fields are deterministic engineering scenarios, not port telemetry.",
+    "Validation selects the algorithm and hyperparameters; test is final evidence only.",
+    "All search and final artifacts are retained, including losing candidates and seeds."
+  ]
+}

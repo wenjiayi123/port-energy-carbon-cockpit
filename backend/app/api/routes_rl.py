@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import logging
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Body, HTTPException
@@ -10,14 +12,26 @@ from app.rl.dataset import (
     load_registered_dataset,
     registered_dataset_id,
 )
+from app.rl.business_scope import business_scope_contract
+from app.rl.hybrid_business_scope import hybrid_business_scope_contract
+from app.rl.hybrid_evidence import summarize_hybrid_evidence
 from app.rl.landing_readiness import assess_dataset_landing_readiness
 from app.rl.policy_selection import resolve_requested_strategy
 from app.rl.scenarios import resolve_training_scenario
+from app.rl.site_dataset_replacement import assess_site_replacement_readiness
 from app.rl.training import training_service, utc_now
 
 
 router = APIRouter(tags=["reinforcement-learning"])
 logger = logging.getLogger(__name__)
+OPERATIONAL_FLEX_REPORT = (
+    Path(__file__).resolve().parents[3]
+    / "reports"
+    / "operational_flex_business_value_v5.json"
+)
+HYBRID_RL_REPORT = (
+    Path(__file__).resolve().parents[3] / "reports" / "hybrid_rl_business_value_v6.json"
+)
 
 
 def _registered_api_dataset(payload: dict[str, Any]) -> str:
@@ -41,6 +55,60 @@ def _api_training_config(payload: dict[str, Any]) -> dict[str, Any]:
 @router.get("/rl/capabilities")
 def capabilities() -> dict[str, Any]:
     return {"updated_at": utc_now(), **training_service.capabilities()}
+
+
+@router.get("/rl/business-coverage")
+def business_coverage() -> dict[str, Any]:
+    return {"updated_at": utc_now(), **business_scope_contract()}
+
+
+@router.get("/rl/hybrid-business-coverage")
+def hybrid_business_coverage() -> dict[str, Any]:
+    return {"updated_at": utc_now(), **hybrid_business_scope_contract()}
+
+
+@router.get("/rl/hybrid-evidence")
+def hybrid_evidence() -> dict[str, Any]:
+    if not HYBRID_RL_REPORT.exists():
+        return {
+            "available": False,
+            "status": "training_or_evaluation_pending",
+            "report_path": "reports/hybrid_rl_business_value_v6.json",
+            "production_eligible": False,
+            "updated_at": utc_now(),
+        }
+    try:
+        payload = json.loads(HYBRID_RL_REPORT.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Hybrid-RL evidence could not be read", exc_info=exc)
+        raise HTTPException(status_code=503, detail="hybrid_rl_evidence_invalid") from None
+    if payload.get("schema_version") != "hybrid-rl-business-value.v1":
+        raise HTTPException(status_code=503, detail="hybrid_rl_evidence_invalid")
+    return {
+        "available": True,
+        **payload,
+        "evidence_summary": summarize_hybrid_evidence(payload),
+    }
+
+
+@router.get("/rl/operational-flex-evidence")
+def operational_flex_evidence() -> dict[str, Any]:
+    if not OPERATIONAL_FLEX_REPORT.exists():
+        return {
+            "available": False,
+            "status": "training_or_evaluation_pending",
+            "report_path": "reports/operational_flex_business_value_v5.json",
+            "production_eligible": False,
+            "updated_at": utc_now(),
+        }
+    try:
+        payload = json.loads(OPERATIONAL_FLEX_REPORT.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Operational-flex evidence could not be read", exc_info=exc)
+        raise HTTPException(status_code=503, detail="operational_flex_evidence_invalid") from None
+    if payload.get("schema_version") != "operational-flex-business-value.v1":
+        raise HTTPException(status_code=503, detail="operational_flex_evidence_invalid")
+    return {"available": True, **payload}
 
 
 @router.get("/rl/algorithms")
@@ -73,6 +141,16 @@ def dataset_landing_readiness(dataset_id: str) -> dict[str, Any]:
     except Exception as exc:
         logger.info("Dataset landing-readiness request rejected", exc_info=exc)
         raise HTTPException(status_code=422, detail="dataset_landing_readiness_failed") from None
+
+
+@router.get("/rl/datasets/{dataset_id}/replacement-readiness")
+def dataset_replacement_readiness(dataset_id: str) -> dict[str, Any]:
+    try:
+        dataset = load_registered_dataset(registered_dataset_id(dataset_id))
+        return assess_site_replacement_readiness(dataset)
+    except Exception as exc:
+        logger.info("Dataset replacement-readiness request rejected", exc_info=exc)
+        raise HTTPException(status_code=422, detail="dataset_replacement_readiness_failed") from None
 
 
 @router.post("/rl/train/start")
