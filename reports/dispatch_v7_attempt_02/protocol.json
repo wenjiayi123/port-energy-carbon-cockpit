@@ -1,0 +1,33 @@
+{
+  "algorithm": "cross_entropy_method_episodic_policy_search",
+  "fit_split": "train",
+  "selection_split": "validation",
+  "test_split": "test",
+  "test_is_retrospective": true,
+  "test_note": "2024 was used by v6; this is a regression test, not a new untouched year.",
+  "seeds": [
+    17,
+    37,
+    59
+  ],
+  "iterations": 32,
+  "population": 16,
+  "elites": 4,
+  "train_windows_per_iteration": 6,
+  "convergence_gate": "last four validation objective range <= 0.25 percent",
+  "admission_gate": "every seed passes business constraints and >= 0.1 percent learned saving",
+  "created_at": "2026-09-07T00:46:46.971147+00:00",
+  "code_sha256": {
+    "backend/app/rl/dispatch_policy_v7.py": "907d0996eee809fb25c747e7714e8ea3cedceb18dab121325b52ac11130daea6",
+    "backend/app/rl/train_dispatch_v7.py": "e47b7efabe21ae57e614e082ada6bb8a5c7fb80b7f8facf348c597c056fb8397",
+    "backend/app/rl/environment.py": "9b55f51f5f2b7d6b6d2c835013708f0666b7e41b22c4684d6c785d1a5ad7b565",
+    "backend/app/rl/robust.py": "10b30c950904855eccfd233f8212da6b838876f47bc8a44a4ecd0c2cf02cb290",
+    "backend/app/rl/hybrid_control.py": "06bf7dc70e40583c104327934fac263b03d3a4f0a76891aeef5ba84766d12df1"
+  },
+  "production_boundary": {
+    "simulation_mode": true,
+    "live_data_verified": false,
+    "dispatch_allowed": false,
+    "production_authority": false
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "created_at": "2026-09-07T01:17:34.438657+00:00",
+  "fit_split": "train",
+  "selection_split": "validation",
+  "test_split": "test",
+  "training_results_path": "reports/dispatch_v7_attempt_03/training_results.json",
+  "training_results_sha256": "6bdb4e3d3fd2d7890ca7a0dde3c0ebbb34e25d63c2759ac7dd30bf8de80937e0",
+  "training_protocol_path": "reports/dispatch_v7_attempt_03/protocol.json",
+  "training_protocol_sha256": "5cc60afcae9c732893a8b0b1a79b44a3abf3af4e846fec2098b711c787038561",
+  "reference_selection_path": "reports/dispatch_v7_guarded_attempt_01/static_validation_selection.json",
+  "reference_selection_sha256": "60fca626f82ed7b43adde1aa341e4f95cd03703e02e2e540a9e47b47269a6334",
+  "reference_static_weights": [
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      -0.5493061443340549,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      -0.5493061443340549,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  ],
+  "code_sha256": {
+    "backend/app/rl/dispatch_policy_v7.py": "907d0996eee809fb25c747e7714e8ea3cedceb18dab121325b52ac11130daea6",
+    "backend/app/rl/train_dispatch_v7.py": "e47b7efabe21ae57e614e082ada6bb8a5c7fb80b7f8facf348c597c056fb8397",
+    "backend/app/rl/refine_dispatch_v7.py": "7b6d9859c5c61f34de556a98693670af605f2309ae26ddc30b7b0264d5a1e146",
+    "backend/app/rl/guarded_dispatch_v7.py": "a6968a6d6d5be707818e55bc08bc03ca9f7f3e21fad799850535f6f446c021a5",
+    "backend/app/rl/evaluate_guarded_dispatch_v7.py": "5f3ea9e086f7c099773b7233461d4f01e7443391f29cae28241207222043ddef",
+    "backend/app/rl/evaluate_dispatch_v7.py": "20e1fd475536c7538315b6bc2bbcbbb86e5f1e875fb3f7a1e7ec746678c1178c",
+    "backend/app/rl/environment.py": "9b55f51f5f2b7d6b6d2c835013708f0666b7e41b22c4684d6c785d1a5ad7b565",
+    "backend/app/rl/robust.py": "10b30c950904855eccfd233f8212da6b838876f47bc8a44a4ecd0c2cf02cb290",
+    "backend/app/rl/hybrid_control.py": "06bf7dc70e40583c104327934fac263b03d3a4f0a76891aeef5ba84766d12df1",
+    "backend/app/rl/qualified_dispatch_v7.py": "8fe61a5ca69e4bc4cdd868e4395dcd891f329d1c3be54d4e3736a6f69af1507d"
+  },
+  "production_boundary": {
+    "simulation_mode": true,
+    "live_data_verified": false,
+    "dispatch_allowed": false,
+    "production_authority": false
+  },
+  "admission_gate": "Unchanged: all three seeds must pass every business/CI check versus all three comparators and >=0.1 percent extra settled-cost improvement."
+}

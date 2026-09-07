@@ -92,6 +92,29 @@ hybrid-business-value:
 verify-hybrid-business-value:
 	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.hybrid_benchmark --verify-report reports/hybrid_rl_business_value_v6.json
 
+.PHONY: train-dispatch-v7 refine-dispatch-v7 evaluate-dispatch-v7 verify-dispatch-v7 verify-switch-v7
+
+V7_RUN_DIR ?= reports/dispatch_v7_reproduction
+V7_REFINED_DIR ?= reports/dispatch_v7_reproduction_refined
+V7_EVAL_DIR ?= reports/dispatch_v7_reproduction_evaluation
+V7_QUALIFIED_DIR ?= reports/dispatch_v7_reproduction_qualified
+
+train-dispatch-v7:
+	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.train_dispatch_v7 --output "$(V7_RUN_DIR)"
+
+refine-dispatch-v7:
+	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.refine_dispatch_v7 "$(V7_RUN_DIR)" "$(V7_REFINED_DIR)"
+
+evaluate-dispatch-v7:
+	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.evaluate_guarded_dispatch_v7 "$(V7_REFINED_DIR)" "$(V7_EVAL_DIR)"
+	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.qualified_dispatch_v7 "$(V7_REFINED_DIR)" "$(V7_EVAL_DIR)" "$(V7_QUALIFIED_DIR)"
+
+verify-dispatch-v7:
+	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.verify_dispatch_v7 reports/dispatch_v7_qualified_attempt_01/business_value.json
+
+verify-switch-v7:
+	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.dispatch_switch_v7
+
 verify-benchmark:
 	PYTHONPATH=backend backend/.venv/bin/python -m app.rl.legacy_extension_verify verify reports/offline_benchmark_v3.json
 

@@ -91,6 +91,23 @@ def hybrid_evidence() -> dict[str, Any]:
     }
 
 
+@router.get("/rl/dispatch-v7/evidence")
+def dispatch_v7_evidence() -> dict[str, Any]:
+    from app.rl.dispatch_switch_v7 import evidence
+
+    return evidence()
+
+
+@router.post("/rl/dispatch-v7/replay-switch")
+def dispatch_v7_replay(payload: dict[str, Any] = Body(default={})) -> dict[str, Any]:
+    from app.rl.dispatch_switch_v7 import replay_switches
+
+    try:
+        return replay_switches(int(payload.get("start_index", 0)))
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=422, detail="invalid_replay_start") from None
+
+
 @router.get("/rl/operational-flex-evidence")
 def operational_flex_evidence() -> dict[str, Any]:
     if not OPERATIONAL_FLEX_REPORT.exists():

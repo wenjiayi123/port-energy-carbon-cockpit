@@ -25,6 +25,7 @@ import {
   type DecisionImpactState,
 } from './components/DecisionImpactOverlay';
 import { XiaoyiLinkageHub } from './components/XiaoyiLinkageHub';
+import { DispatchLearningEvidence } from './components/DispatchLearningEvidence';
 import {
   RuntimeClosedLoopPanel,
   type RuntimeSnapshot,
@@ -2134,6 +2135,7 @@ export function App() {
                     <b>AUTHORITY / LEDGER / SETTLEMENT / PROTECTION / PLC INTERLOCK REMAIN OUTSIDE RL</b>
                   </footer>
                 </section>
+                <DispatchLearningEvidence />
                 <div className="training-monitor-grid">
                   <div className="training-console">
                     <div className="training-console-head">

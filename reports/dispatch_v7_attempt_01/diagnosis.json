@@ -1,0 +1,11 @@
+{
+  "status": "stopped_for_numerical_safety_defect",
+  "validation_start_index": 5208,
+  "hour": 17,
+  "grid_capacity_kw": 16660.0,
+  "calculated_load_kw": 16660.000000000004,
+  "false_peak_violation_kw": 3.637978807091713e-12,
+  "cause": "Exact > 0 comparison turns floating point roundoff into a safety violation and dominates training return.",
+  "action": "Preserve this failed attempt. Retrain all seeds with a versioned ULP tolerance shared by every comparator.",
+  "production_authority": false
+}

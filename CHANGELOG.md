@@ -4,6 +4,31 @@ All notable project changes are documented here.
 
 ## [Unreleased]
 
+### Added — v7 offline dispatch evidence (2026-09-07)
+
+- Causal, service-constrained CEM policy search with three seeds and 115,200
+  training steps per seed; all three pass the predefined convergence and
+  business gates across 96 retrospective 24-hour scenarios.
+- Validation-selected policy 37 reduces scenario cost by 1.109% versus causal
+  MPC and by a further 0.338% versus the validation-selected static comparator.
+  Maritime/customs inspection, waiting and post-release recovery are modeled
+  external factors; reported savings remain simulated, not field cash savings.
+- Frozen model/source/data fingerprints, real training curves, retained failed
+  experiments, and independently recomputable admission reports.
+- Evidence and 72-hour policy-switch replay APIs plus a cockpit evidence panel;
+  state is preserved across both switches and damaged artifacts fall back to MPC.
+- Release and CI verification for the v7 evidence and switching contract. Existing
+  v1–v6 artifacts remain unchanged and physical dispatch remains disabled.
+
+### Fixed
+
+- Pin the vulnerable Browserslist transitive dependency to patched 4.28.7 for
+  GHSA-c83g-rgw3-j3cx and GHSA-73wf-gq98-2v4g, preserving existing overrides.
+- The additive v7 environment distinguishes floating-point roundoff from genuine
+  grid-limit breaches while preserving actual energy flows and historical physics.
+- Service-dominance guards align admitted learned actions with the cost, carbon,
+  throughput, shore-power, queue and inventory non-regression requirements.
+
 ## [0.4.0] - 2026-08-14
 
 ### Added

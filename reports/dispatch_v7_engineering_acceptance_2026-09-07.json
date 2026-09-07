@@ -1,0 +1,48 @@
+{
+  "schema": "dispatch-engineering-acceptance.v7",
+  "date": "2026-09-07",
+  "backend_full_regression": {
+    "passed": 216,
+    "scope": "Full backend suite before final qualified adapter import change"
+  },
+  "final_v7_regression": {
+    "passed": 11,
+    "scope": "Re-executed after final qualified adapter change"
+  },
+  "frontend_build": "TypeScript and Vite build passed after final component styling",
+  "evidence_verification": {
+    "passed": true,
+    "checks": 15
+  },
+  "legacy_v6_verification": "passed",
+  "privacy_scan": "passed",
+  "browser": {
+    "actions": [
+      "open RL evidence",
+      "refresh v7 evidence",
+      "run 72-hour switching replay",
+      "wait for final receipt"
+    ],
+    "replay_passed": true,
+    "state_preserved": "2/2",
+    "safety_violations": 0,
+    "final_mode": "causal_mpc",
+    "console_error_count": 0
+  },
+  "scope": "Local offline module acceptance; not complete system-wide or field acceptance",
+  "production_boundary": {
+    "simulation_mode": true,
+    "live_data_verified": false,
+    "dispatch_allowed": false,
+    "production_authority": false
+  },
+  "sha256": {
+    "reports/dispatch_v7_current.json": "93a9f3de7f5fa242205d72b3c7b21221239daf963374a3af540d428d75124cf2",
+    "reports/dispatch_v7_qualified_attempt_01/business_value.json": "96a22887996fa6704bbceb7b348e27c2e4021a6b6e2f46ff2e361268e5269aef",
+    "reports/dispatch_v7_cutover_acceptance_2026-09-07.json": "ace6bdf6c9a75b9894265df797ac06ab9f86d3a0e1f2012a13a0ee16cdb1fbc8",
+    "backend/app/rl/dispatch_switch_v7.py": "3efd2b57381eb6909bc59d11975e346ad5ecf8616b940b24907e91d99a875115",
+    "backend/app/api/routes_rl.py": "2508d21d4a222a55e6b47957c4c7e2e5fa58427f9a1232c8db9eba96e188e642",
+    "frontend/src/components/DispatchLearningEvidence.tsx": "8b47f4375a8a62d6450e0214ee1934c4fc7ea91fe2506464f18fcde6a7516d4a",
+    "frontend/src/styles/global.css": "b82de0e77705555bb0d2ed1a4f30fd530725a0f3830a56f1ffa8cd372aa03a4e"
+  }
+}

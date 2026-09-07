@@ -1,0 +1,6 @@
+{
+  "schema_version": "dispatch-v7-current.v1",
+  "report_path": "reports/dispatch_v7_qualified_attempt_01/business_value.json",
+  "report_sha256": "96a22887996fa6704bbceb7b348e27c2e4021a6b6e2f46ff2e361268e5269aef",
+  "production_authority": false
+}
