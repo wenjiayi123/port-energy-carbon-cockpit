@@ -185,6 +185,36 @@ def test_decision_requires_distinct_approvers_then_executes_and_rolls_back(tmp_p
     assert statistics["production_qualification_evidence"] is False
 
 
+def test_execution_rechecks_changed_equipment_limits_and_records_actual_command(tmp_path) -> None:
+    simulator = build_simulator()
+    service = RuntimeDecisionService(
+        simulator, runtime_forecast_model,
+        state_path=tmp_path / "decisions.json", audit_writer=None,
+    )
+    record = service.create(
+        objective="balanced", idempotency_key="thermal-create", requested_by="operator"
+    )
+    assert record["projected_action"]["battery_power_kw"] > 900
+    for index in range(record["required_approvals"]):
+        service.approve(
+            record["decision_id"], approver_id=f"approver-{index}", decision="approve",
+            comment="review passed", idempotency_key=f"thermal-approve-{index}",
+        )
+    before = simulator.inject_scenario("battery_overtemperature", 12)
+    executed = service.execute(
+        record["decision_id"], idempotency_key="thermal-execute", executor_id="sim-executor"
+    )
+    receipt = executed["execution_receipt"]
+    assert receipt["applied_action"]["battery_power_kw"] == 900
+    assert receipt["applied_action"]["battery_power_kw"] == simulator.snapshot()["signals"][
+        "battery.power_kw"
+    ]["value"]
+    assert receipt["input_snapshot_sha256"] == before["snapshot_sha256"]
+    assert receipt["execution_safety_projection"][0]["constraint_id"] == "BESS_SOC_THERMAL_ENVELOPE"
+    assert executed["projected_action"] == record["projected_action"]
+    assert service.audit(record["decision_id"])["record_sha256_valid"] is True
+
+
 def test_runtime_loss_fails_closed_for_prediction_and_decision(tmp_path) -> None:
     simulator = build_simulator()
     simulator.inject_scenario("communications_loss", 3)

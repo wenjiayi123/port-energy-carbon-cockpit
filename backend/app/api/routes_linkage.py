@@ -12,6 +12,7 @@ import sys
 import time
 from typing import Any
 from urllib.error import URLError
+from urllib.parse import urlsplit
 from urllib.request import Request as UrlRequest, urlopen
 
 from fastapi import APIRouter, Body, HTTPException
@@ -595,7 +596,7 @@ def _sanitize_integration_output(value: str) -> str:
 
 def _python_for_xiaoyi() -> str:
     candidates = [
-        PROJECT_ROOT / "backend" / ".venv" / "bin" / "python",
+        XIAOYI_PROJECT / ".venv" / "bin" / "python",
         Path(sys.executable),
     ]
     for candidate in candidates:
@@ -604,11 +605,14 @@ def _python_for_xiaoyi() -> str:
     return "python"
 
 
-def _xiaoyi_start_command() -> str:
-    return (
-        f"cd {XIAOYI_PROJECT} && python scripts/build_index.py && "
-        f"{_python_for_xiaoyi()} -m uvicorn app.main:app --host 127.0.0.1 --port 8010"
-    )
+def _xiaoyi_start_command() -> list[str]:
+    launcher = XIAOYI_PROJECT / "run.sh"
+    if launcher.is_file():
+        return ["bash", str(launcher)]
+    return [
+        _python_for_xiaoyi(), "-m", "uvicorn", "app.main:app",
+        "--host", "127.0.0.1", "--port", str(urlsplit(XIAOYI_BASE_URL).port or 8010),
+    ]
 
 
 def xiaoyi_status() -> dict[str, Any]:
@@ -652,21 +656,37 @@ def launch_xiaoyi(payload: dict[str, Any] | None = None, dry_run: bool = False) 
     if dry_run:
         packet["status"] = "ready_to_launch"
         return packet
-
-    _xiaoyi_process = subprocess.Popen(
-        ["bash", "-lc", _xiaoyi_start_command()],
-        cwd=str(XIAOYI_PROJECT),
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        start_new_session=True,
-        env={**os.environ, "ENERGY_CARBON_LINKAGE_SOURCE": str(payload.get("source") or "energy-carbon-cockpit")},
-    )
+    running = _process_state(_xiaoyi_process)
+    if running["running"]:
+        return {**packet, "status": "starting", "pid": running["pid"], "health": status}
+    try:
+        _xiaoyi_process = subprocess.Popen(
+            _xiaoyi_start_command(),
+            cwd=str(XIAOYI_PROJECT),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+            env={
+                **os.environ,
+                "XIAOYI_PORT": str(urlsplit(XIAOYI_BASE_URL).port or 8010),
+                "ENERGY_CARBON_LINKAGE_SOURCE": str(payload.get("source") or "energy-carbon-cockpit"),
+            },
+        )
+    except OSError:
+        logger.exception("Xiaoyi process could not be started")
+        packet.update({"status": "failed", "error": "xiaoyi_launch_failed"})
+        _append_log("start_xiaoyi_ai", "failed", packet)
+        return packet
     _last_xiaoyi_launch = {"ts": _utc_now(), "pid": _xiaoyi_process.pid, "source": payload.get("source") or "energy-carbon-cockpit"}
-    packet.update({"status": "launched", "pid": _xiaoyi_process.pid})
+    packet.update({"status": "starting", "pid": _xiaoyi_process.pid})
     for _ in range(20):
         health = xiaoyi_status()
         if health["online"]:
             packet.update({"status": "online", "health": health})
+            break
+        returncode = _xiaoyi_process.poll()
+        if returncode is not None:
+            packet.update({"status": "failed", "error": "xiaoyi_process_exited", "returncode": returncode})
             break
         time.sleep(0.35)
     _append_log("start_xiaoyi_ai", str(packet["status"]), packet)
@@ -676,7 +696,10 @@ def launch_xiaoyi(payload: dict[str, Any] | None = None, dry_run: bool = False) 
 def sailing_status() -> dict[str, Any]:
     project_file = SAILING_PROJECT / "project.godot"
     smoke_script = SAILING_PROJECT / "tools" / "ship_rl_smoke_test.gd"
-    launchable = SAILING_PROJECT.exists() and project_file.exists() and GODOT_EXECUTABLE.exists()
+    launchable = (
+        SAILING_PROJECT.is_dir() and project_file.is_file()
+        and GODOT_EXECUTABLE.is_file() and os.access(GODOT_EXECUTABLE, os.X_OK)
+    )
     return {
         "ok": launchable,
         "updated_at": _utc_now(),
@@ -718,14 +741,27 @@ def launch_sailing(payload: dict[str, Any] | None = None, dry_run: bool = False)
     if running["running"] and not payload.get("force_new"):
         packet.update({"status": "already_running", "pid": running["pid"]})
         return packet
-    _sailing_process = subprocess.Popen(
-        command,
-        cwd=str(SAILING_PROJECT),
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        start_new_session=True,
-        env={**os.environ, "ENERGY_CARBON_SAILING_PRESET": preset},
-    )
+    try:
+        _sailing_process = subprocess.Popen(
+            command,
+            cwd=str(SAILING_PROJECT),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+            env={**os.environ, "ENERGY_CARBON_SAILING_PRESET": preset},
+        )
+        returncode = _sailing_process.wait(timeout=0.2)
+    except subprocess.TimeoutExpired:
+        returncode = None
+    except OSError:
+        logger.exception("Sailing process could not be started")
+        packet.update({"status": "failed", "error": "sailing_launch_failed"})
+        _append_log("open_sailing_simulator", "failed", packet)
+        return packet
+    if returncode is not None:
+        packet.update({"status": "failed", "error": "sailing_process_exited", "returncode": returncode})
+        _append_log("open_sailing_simulator", "failed", packet)
+        return packet
     _last_sailing_launch = {"ts": _utc_now(), "pid": _sailing_process.pid, "preset": preset, "source": payload.get("source") or "energy-carbon-cockpit"}
     packet.update({"status": "launched", "pid": _sailing_process.pid})
     _append_log("open_sailing_simulator", "launched", packet)
@@ -736,9 +772,12 @@ def run_sailing_smoke(payload: dict[str, Any] | None = None, dry_run: bool = Fal
     payload = payload or {}
     command = [str(GODOT_EXECUTABLE), "--headless", "--path", str(SAILING_PROJECT), "--script", SMOKE_SCRIPT]
     packet = {"type": "godot_headless_smoke_test", "dry_run": dry_run, "launcher": "configured-local-integration", "script": SMOKE_SCRIPT}
-    if not sailing_status()["launchable"]:
+    status = sailing_status()
+    if not status["launchable"]:
         packet.update({"status": "failed", "error": "航行模拟器项目或 Godot 可执行文件不存在"})
         return packet
+    if not status["smoke_script"]["exists"]:
+        return {**packet, "status": "failed", "error": "sailing_smoke_script_missing"}
     if dry_run:
         packet["status"] = "ready_to_run"
         return packet
@@ -750,6 +789,9 @@ def run_sailing_smoke(payload: dict[str, Any] | None = None, dry_run: bool = Fal
     except subprocess.TimeoutExpired:
         logger.warning("Sailing smoke test timed out")
         packet.update({"status": "timeout", "error": "smoke_test_timeout"})
+    except OSError:
+        logger.exception("Sailing smoke test could not be started")
+        packet.update({"status": "failed", "error": "sailing_smoke_launch_failed"})
     _append_log("run_sailing_rl_smoke_test", str(packet["status"]), packet)
     return packet
 
@@ -1286,17 +1328,19 @@ def _execute_action(action: dict[str, Any], payload: dict[str, Any], dry_run: bo
         return _start_training(payload)
     if action_id == "view_rl_training_status":
         return _training_status()
-    if action_id == "pause_rl_training":
-        return _control_training("pause")
-    if action_id == "resume_rl_training":
-        return _control_training("resume")
-    if action_id == "stop_rl_training":
-        return _control_training("stop")
+    if action_id in {"pause_rl_training", "resume_rl_training", "stop_rl_training"}:
+        control_action = action_id.removesuffix("_rl_training")
+        if dry_run:
+            return {"status": "ready_to_" + control_action, "training": _training_status()}
+        return _control_training(control_action)
     if action_id == "run_policy_test":
-        return _simulate_policy(payload)
+        return _registered_policy_test(payload)
     if action_id == "verify_policy_for_online":
-        verify = _verify_policy(payload)
-        dispatch = _dispatch_policy({**payload, "dry_run": True})
+        verify = _registered_policy_verification(payload)
+        dispatch = (
+            _dispatch_policy({**payload, "strategy_id": verify["policy_id"], "dry_run": True})
+            if verify["ok"] else {"status": "blocked_policy_not_admitted", "dry_run": True}
+        )
         return {"status": "dry_run_ready" if verify["ok"] else "blocked", "verify": verify, "dispatch": dispatch}
     return {"status": "not_implemented", "action_id": action_id}
 
@@ -1347,6 +1391,48 @@ def _start_training(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _strategies() -> list[dict[str, Any]]:
     return training_service.strategies()
+
+
+def _registered_policy_test(payload: dict[str, Any]) -> dict[str, Any]:
+    policies = training_service.registry()["policies"]
+    requested = payload.get("strategy_id")
+    usable = [
+        item for item in policies
+        if item.get("stage") in {"verified_offline", "validated_offline"}
+        and item.get("artifact_integrity") == "verified"
+        and item.get("dataset_status") == "verified"
+        and item.get("evaluation_status") == "tested"
+        and (not requested or requested == "auto:latest" or item["policy_id"] == requested)
+    ]
+    if not usable:
+        return {"status": "blocked", "error": "no_registered_policy_test_evidence"}
+    policy = next((item for item in usable if item["stage"] == "verified_offline"), usable[0])
+    return {
+        "status": "tested",
+        "source": "persisted_offline_registry_evidence",
+        "policy": policy,
+        "metrics": policy["evaluation_metrics"],
+    }
+
+
+def _registered_policy_verification(payload: dict[str, Any]) -> dict[str, Any]:
+    evidence = _registered_policy_test(payload)
+    policy = evidence.get("policy", {})
+    checks = [
+        {"name": "persisted_test_evidence", "passed": evidence["status"] == "tested"},
+        {"name": "persisted_offline_verification", "passed": policy.get("verification_status") == "verified"},
+        {"name": "zero_safety_violations", "passed": policy.get("evaluation_metrics", {}).get("safety_violations") == 0},
+    ]
+    passed = all(item["passed"] for item in checks)
+    return {
+        "ok": passed,
+        "status": "verified" if passed else "blocked",
+        "policy_id": policy.get("policy_id"),
+        "checks": checks,
+        "risk_level": "low" if passed else "high",
+        "source": "persisted_offline_registry_evidence",
+        "production_authority": False,
+    }
 
 
 def _simulate_policy(payload: dict[str, Any] | None = None) -> dict[str, Any]:

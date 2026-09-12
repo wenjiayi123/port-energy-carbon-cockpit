@@ -82,14 +82,14 @@ export function DecisionImpactOverlay({ state, onClose }: DecisionImpactOverlayP
             {error ? <CircleAlert size={27} /> : <CheckCircle2 size={27} />}
           </div>
           <div>
-            <span>{error ? 'EXECUTION EXCEPTION' : 'RL DECISION IMPACT REPORT'} · {report.eyebrow}</span>
-            <h2>{error ? `${report.title}未完成` : report.title}</h2>
+            <span>{error ? 'EXECUTION EXCEPTION' : 'DECISION IMPACT REPORT'} · {report.eyebrow}</span>
+            <h2>{error ? '本次操作未完成' : report.title}</h2>
             <p>{error ?? report.subtitle}</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="关闭 RL 决策影响报告"><X size={20} /></button>
+          <button type="button" onClick={onClose} aria-label="关闭决策影响报告"><X size={20} /></button>
         </header>
 
-        <div className="decision-impact-result-grid">
+        {!error && <div className="decision-impact-result-grid">
           {report.results.map((item) => (
             <article className={`tone-${item.tone ?? 'green'}`} key={item.label}>
               <small>{item.label}</small>
@@ -97,7 +97,7 @@ export function DecisionImpactOverlay({ state, onClose }: DecisionImpactOverlayP
               {item.detail && <span>{item.detail}</span>}
             </article>
           ))}
-        </div>
+        </div>}
 
         <div className="decision-impact-detail-grid">
           <article className="decision-impact-algorithm-card">
@@ -107,15 +107,15 @@ export function DecisionImpactOverlay({ state, onClose }: DecisionImpactOverlayP
             <span><Gauge size={13} />{report.objective}</span>
           </article>
           <article>
-            <h3><Zap size={15} />执行行为</h3>
+            <h3><Zap size={15} />{error ? '计划行为（未确认完成）' : '执行行为'}</h3>
             <ul>{report.actions.map((item) => <li key={item}>{item}</li>)}</ul>
           </article>
           <article>
             <h3><ShieldCheck size={15} />风险与护栏</h3>
             <div className="decision-impact-risk-list">
               {report.risks.map((item) => (
-                <span className={item.level} key={item.label}>
-                  {item.level === 'guard' ? <CheckCircle2 size={13} /> : <CircleAlert size={13} />}
+                <span className={error ? 'watch' : item.level} key={item.label}>
+                  {!error && item.level === 'guard' ? <CheckCircle2 size={13} /> : <CircleAlert size={13} />}
                   <b>{item.label}</b><small>{item.detail}</small>
                 </span>
               ))}

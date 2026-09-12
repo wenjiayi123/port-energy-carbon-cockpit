@@ -175,6 +175,20 @@ def test_oidc_rejects_expired_and_tampered_tokens(monkeypatch) -> None:
     ).status_code == 401
 
 
+def test_oidc_rejects_equivalent_noncanonical_signature_encoding(monkeypatch) -> None:
+    private_key = _configure_oidc(monkeypatch)
+    token = _oidc_token(private_key, role="viewer")
+    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+    # Ed25519 has a 64-byte signature: only the high two bits of the final
+    # base64url character carry data. Changing a padding bit must be rejected.
+    last_index = alphabet.index(token[-1])
+    noncanonical = token[:-1] + alphabet[last_index | 1]
+    response = TestClient(create_app()).get(
+        "/api/security/context", headers={"Authorization": f"Bearer {noncanonical}"}
+    )
+    assert response.status_code == 401
+
+
 def test_oidc_operator_role_is_required_for_mutation(monkeypatch) -> None:
     private_key = _configure_oidc(monkeypatch)
     viewer = _oidc_token(private_key, role="viewer")

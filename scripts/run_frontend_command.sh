@@ -18,7 +18,9 @@ resolve_pnpm() {
 
   for candidate in \
     "/opt/homebrew/bin/pnpm" \
-    "/usr/local/bin/pnpm"
+    "/usr/local/bin/pnpm" \
+    "$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback/pnpm" \
+    "$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/pnpm"
   do
     if [ -x "$candidate" ]; then
       printf '%s\n' "$candidate"
@@ -52,10 +54,19 @@ fi
 
 if ! command -v node >/dev/null 2>&1; then
   PNPM_DIR="$(cd "$(dirname "$PNPM_BIN")" && pwd)"
-  BUNDLED_NODE="$PNPM_DIR/../../node/bin/node"
-  if [ -x "$BUNDLED_NODE" ]; then
-    export PATH="$(dirname "$BUNDLED_NODE"):$PATH"
-  else
+  # Finder launches have a minimal PATH. Resolve Node beside the selected
+  # package manager, including both layouts of the existing local runtime.
+  for candidate in \
+    "$PNPM_DIR/node" \
+    "$PNPM_DIR/../node/bin/node" \
+    "$PNPM_DIR/../../node/bin/node"
+  do
+    if [ -x "$candidate" ]; then
+      export PATH="$(dirname "$candidate"):$PATH"
+      break
+    fi
+  done
+  if ! command -v node >/dev/null 2>&1; then
     echo "Node.js 20+ is required and was not found on PATH" >&2
     exit 1
   fi

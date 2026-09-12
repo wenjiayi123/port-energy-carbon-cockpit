@@ -73,6 +73,7 @@ interface RuntimeClosedLoopPanelProps {
 }
 
 function fmt(value: unknown, digits = 1) {
+  if (value === null || value === undefined || value === '') return '--';
   const number = Number(value);
   if (!Number.isFinite(number)) return '--';
   return new Intl.NumberFormat('zh-CN', {
@@ -269,7 +270,7 @@ export function RuntimeClosedLoopPanel({
             <em>数据 SHA-256 <b>{shortHash(forecast?.model?.dataset_sha256)}</b></em>
             <em>分区 <b>Train → Validation → Test</b></em>
             <em>1h held-out 负荷 MAE <b>{fmt(forecast?.model?.held_out_test_mae_by_horizon?.['1']?.terminal_load_kw, 1)} kW</b></em>
-            <em>推理窃取测试未来行 <b>{forecast?.model?.future_test_rows_accessed_during_inference ? 'YES · BLOCK' : 'NO'}</b></em>
+            <em>推理窃取测试未来行 <b>{!forecast?.model ? '--' : forecast.model.future_test_rows_accessed_during_inference ? 'YES · BLOCK' : 'NO'}</b></em>
             <em>边界 <b>终端负荷为工程派生目标</b></em>
           </article>
         </div>
@@ -320,8 +321,8 @@ export function RuntimeClosedLoopPanel({
         </div>
         <div className="runtime-actions decision-actions">
           <button id="btnRuntimeCreateDecision" type="button" disabled={busy || !snapshot?.decision_allowed} onClick={() => void onCreateDecision()}><Zap size={13} />生成当前推荐</button>
-          <button id="btnRuntimeApproveSupervisor" type="button" disabled={busy || !decision || approvals.some((item: Record<string, any>) => item.approver_id === 'shift-supervisor')} onClick={() => void onApprove('shift-supervisor')}><CheckCircle2 size={13} />班组长审批</button>
-          <button id="btnRuntimeApproveEnergyManager" type="button" disabled={busy || !decision || approvals.some((item: Record<string, any>) => item.approver_id === 'energy-duty-manager')} onClick={() => void onApprove('energy-duty-manager')}><CheckCircle2 size={13} />能源经理审批</button>
+          <button id="btnRuntimeApproveSupervisor" type="button" disabled={busy || !['awaiting_approval', 'approved'].includes(decisionStatus) || approvals.some((item: Record<string, any>) => item.approver_id === 'shift-supervisor')} onClick={() => void onApprove('shift-supervisor')}><CheckCircle2 size={13} />班组长审批</button>
+          <button id="btnRuntimeApproveEnergyManager" type="button" disabled={busy || !['awaiting_approval', 'approved'].includes(decisionStatus) || approvals.some((item: Record<string, any>) => item.approver_id === 'energy-duty-manager')} onClick={() => void onApprove('energy-duty-manager')}><CheckCircle2 size={13} />能源经理审批</button>
           <button id="btnRuntimeExecute" type="button" disabled={busy || decisionStatus !== 'approved'} onClick={() => void onExecute()}><Play size={13} />模拟执行</button>
           <button id="btnRuntimeRollback" type="button" disabled={busy || decisionStatus !== 'executed_simulation'} onClick={() => void onRollback()}><RotateCcw size={13} />回滚</button>
         </div>

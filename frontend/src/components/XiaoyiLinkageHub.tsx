@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { fetchJson } from '../lib/api';
 import {
   Activity,
   Bot,
@@ -351,7 +352,7 @@ function alignRewardWeightsForDataset(
 
 const trainingParamFields: Array<{ key: NumericTrainingParamKey; label: string; min: number; max?: number; step: string }> = [
   { key: 'total_steps', label: '训练总步数', min: 0, max: 5000000, step: '1000' },
-  { key: 'horizon_min', label: '训练 horizon(min)', min: 60, max: 1440, step: '30' },
+  { key: 'horizon_min', label: '训练 horizon(min)', min: 240, max: 1440, step: '60' },
   { key: 'batch_size', label: 'batch size', min: 1, max: 1024, step: '1' },
   { key: 'learning_rate', label: 'learning rate', min: 0, max: 0.01, step: '0.00001' },
   { key: 'gamma', label: 'gamma', min: 0.8, max: 1, step: '0.001' },
@@ -510,18 +511,18 @@ const commandCatalog: CommandCatalogItem[] = [
   { id: 'set_balanced_dispatch', label: '均衡调度', command: '小懿，切到均衡调度', group: '调度偏好', buttonId: 'btnXiaoyiPreferenceBalanced' },
   { id: 'set_low_carbon_priority', label: '低碳优先', command: '小懿，切到低碳优先', group: '调度偏好', buttonId: 'btnXiaoyiPreferenceLowCarbon' },
   { id: 'set_shore_power_preference', label: '岸电优先', command: '小懿，切到岸电优先', group: '调度偏好', buttonId: 'btnXiaoyiPreferenceShorePower' },
-  { id: 'start_xiaoyi_ai', label: '启动小懿AI', command: '小懿，启动小懿AI', group: '小懿/RL/模拟器' },
-  { id: 'start_rl_training', label: '启动 RL 训练', command: '小懿，开始训练碳排最低目标', group: '小懿/RL/模拟器' },
-  { id: 'view_rl_training_status', label: '查看训练状态', command: '小懿，查看训练状态', group: '小懿/RL/模拟器' },
-  { id: 'pause_rl_training', label: '暂停 RL 训练', command: '小懿，暂停训练', group: '小懿/RL/模拟器' },
-  { id: 'resume_rl_training', label: '继续 RL 训练', command: '小懿，继续训练', group: '小懿/RL/模拟器' },
-  { id: 'stop_rl_training', label: '停止 RL 训练', command: '小懿，停止训练', group: '小懿/RL/模拟器' },
-  { id: 'run_policy_test', label: '读取登记策略测试', command: '小懿，读取训练后登记策略测试', group: '小懿/RL/模拟器' },
-  { id: 'verify_policy_for_online', label: '上线验证 dry-run', command: '小懿，验证这个策略能不能上线', group: '小懿/RL/模拟器' },
-  { id: 'open_sailing_simulator', label: '启动航行模拟器', command: '小懿，启动航行模拟器', group: '小懿/RL/模拟器' },
-  { id: 'start_navigation_demo', label: '启动航线演示', command: '小懿，启动航线演示', group: '小懿/RL/模拟器' },
-  { id: 'switch_ship_view', label: '切换船舶视角', command: '小懿，切换船舶视角', group: '小懿/RL/模拟器' },
-  { id: 'run_sailing_rl_smoke_test', label: '运行 smoke test', command: '小懿，运行航行 smoke test', group: '小懿/RL/模拟器' },
+  { id: 'start_xiaoyi_ai', label: '启动小懿AI', command: '小懿，启动小懿AI', group: '小懿/RL/模拟器', buttonId: 'btnXiaoyiStart' },
+  { id: 'start_rl_training', label: '启动 RL 训练', command: '小懿，开始训练碳排最低目标', group: '小懿/RL/模拟器', buttonId: 'btnStartTraining' },
+  { id: 'view_rl_training_status', label: '查看训练状态', command: '小懿，查看训练状态', group: '小懿/RL/模拟器', buttonId: 'btnTrainingStatus' },
+  { id: 'pause_rl_training', label: '暂停 RL 训练', command: '小懿，暂停训练', group: '小懿/RL/模拟器', buttonId: 'btnPauseTraining' },
+  { id: 'resume_rl_training', label: '继续 RL 训练', command: '小懿，继续训练', group: '小懿/RL/模拟器', buttonId: 'btnPauseTraining' },
+  { id: 'stop_rl_training', label: '停止 RL 训练', command: '小懿，停止训练', group: '小懿/RL/模拟器', buttonId: 'btnStopTraining' },
+  { id: 'run_policy_test', label: '读取登记策略测试', command: '小懿，读取训练后登记策略测试', group: '小懿/RL/模拟器', buttonId: 'btnPolicyTest' },
+  { id: 'verify_policy_for_online', label: '上线验证 dry-run', command: '小懿，验证这个策略能不能上线', group: '小懿/RL/模拟器', buttonId: 'btnVerifyPolicy' },
+  { id: 'open_sailing_simulator', label: '启动航行模拟器', command: '小懿，启动航行模拟器', group: '小懿/RL/模拟器', buttonId: 'btnSailingLaunch' },
+  { id: 'start_navigation_demo', label: '启动航线演示', command: '小懿，启动航线演示', group: '小懿/RL/模拟器', buttonId: 'btnSailingDemo' },
+  { id: 'switch_ship_view', label: '切换船舶视角', command: '小懿，切换船舶视角', group: '小懿/RL/模拟器', buttonId: 'btnShipView' },
+  { id: 'run_sailing_rl_smoke_test', label: '运行 smoke test', command: '小懿，运行航行 smoke test', group: '小懿/RL/模拟器', buttonId: 'btnSailingSmoke' },
 ];
 
 const clickableActions = new Set(commandCatalog.map((item) => item.id));
@@ -608,30 +609,27 @@ function wait(ms: number) {
 }
 
 function chartPoints(series: JsonMap[], key: string, width = 520, height = 150, padding = 12) {
-  if (!series.length) return '';
-  const values = series.map((item) => Number(item[key] ?? 0));
-  const minimum = Math.min(...values);
-  const maximum = Math.max(...values);
+  const points = series.flatMap((item, index) => {
+    const value = item[key];
+    return typeof value === 'number' && Number.isFinite(value) ? [{ value, index }] : [];
+  });
+  if (!points.length) return '';
+  const minimum = Math.min(...points.map((item) => item.value));
+  const maximum = Math.max(...points.map((item) => item.value));
   const range = Math.max(0.0001, maximum - minimum);
-  return values.map((value, index) => {
-    const x = padding + (index / Math.max(1, values.length - 1)) * (width - padding * 2);
-    const y = height - padding - ((value - minimum) / range) * (height - padding * 2);
+  return points.map(({ value, index }) => {
+    const x = padding + index / Math.max(1, series.length - 1) * (width - padding * 2);
+    const y = height - padding - (value - minimum) / range * (height - padding * 2);
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(' ');
 }
 
 async function api(path: string, options: JsonRequestInit = {}) {
-  const response = await fetch(path, {
+  return fetchJson(path, {
     ...options,
     cache: 'no-store',
-    headers: options.body ? { 'Content-Type': 'application/json' } : options.headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
-  const data = (await response.json().catch(() => ({}))) as JsonMap;
-  if (!response.ok) {
-    throw new Error(data.detail || response.statusText);
-  }
-  return data;
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+  }) as Promise<JsonMap>;
 }
 
 function statusLabel(data: JsonMap | null, path: string[], fallback: string) {
@@ -666,6 +664,7 @@ export function XiaoyiLinkageHub({
   const [trainingHistoryOpen, setTrainingHistoryOpen] = useState(false);
   const [trainingHistory, setTrainingHistory] = useState<JsonMap | null>(null);
   const [trainingHistoryLoading, setTrainingHistoryLoading] = useState(false);
+  const [trainingHistoryError, setTrainingHistoryError] = useState('');
   const [automationMode, setAutomationMode] = useState<AutomationMode>('idle');
   const [automationStepIndex, setAutomationStepIndex] = useState(0);
   const [stageModal, setStageModal] = useState<StageModalState | null>(null);
@@ -704,6 +703,8 @@ export function XiaoyiLinkageHub({
   const suppressOrbClickRef = useRef(false);
   const xiaoyiTrainingRunRef = useRef(false);
   const logSequenceRef = useRef(0);
+  const actionRunningRef = useRef(false);
+  const xiaoyiStartupPendingRef = useRef(false);
 
   useEffect(() => {
     if (externalOpenToken > 0) {
@@ -848,7 +849,7 @@ export function XiaoyiLinkageHub({
       gamma: recommended.gamma,
       tau: recommended.tau,
       entropy_coef: recommended.entropy_coef,
-      reward_weights: { ...recommended.reward_weights },
+      reward_weights: alignRewardWeightsForDataset(profile.rewardWeights, current.data_file),
     }));
   }, [selectedObjective]);
 
@@ -861,7 +862,7 @@ export function XiaoyiLinkageHub({
     const profile = shortcut.objectiveId ? trainingObjectives.find((item) => item.id === shortcut.objectiveId) : null;
     if (profile) {
       setSelectedObjective(profile.id);
-      setTrainingParams((current) => ({ ...createTrainingParams(profile), data_file: current.data_file }));
+      setTrainingParams(createTrainingParams(profile));
     }
     setCommand(shortcut.command);
     setSelectedAction(shortcut.actionId);
@@ -880,10 +881,11 @@ export function XiaoyiLinkageHub({
       await startTraining(profile);
       return;
     }
-    await runCatalogAction(shortcut.actionId, shortcut.command);
+    await executeCatalogAction(shortcut.actionId, shortcut.command);
   }
 
   function selectTrainingObjective(objectiveId: string) {
+    setTrainingReviewOpen(false);
     const next = trainingObjectives.find((item) => item.id === objectiveId) ?? trainingObjectives[0];
     setSelectedObjective(next.id);
     setSelectedAction('start_rl_training');
@@ -891,6 +893,7 @@ export function XiaoyiLinkageHub({
   }
 
   function applyAlgorithm(algorithmId: string) {
+    setTrainingReviewOpen(false);
     const requested = trainingParams.data_file === 'port_la_2020_2024_hybrid_rl_hourly' && algorithmId === 'dqn'
       ? 'ppo'
       : algorithmId;
@@ -908,11 +911,13 @@ export function XiaoyiLinkageHub({
   }
 
   function updateTrainingNumber(key: NumericTrainingParamKey, value: string) {
+    setTrainingReviewOpen(false);
     const next = Number(value);
     setTrainingParams((current) => ({ ...current, [key]: Number.isFinite(next) ? next : 0 }));
   }
 
   function updateRewardWeight(key: string, value: string) {
+    setTrainingReviewOpen(false);
     const next = Number(value);
     setTrainingParams((current) => ({
       ...current,
@@ -1065,12 +1070,15 @@ export function XiaoyiLinkageHub({
       payload.result?.status,
       payload.execution?.status,
       payload.execution_result?.status,
+      payload.verify?.status,
+      payload.dispatch?.status,
     ].map((value) => String(value ?? '').toLowerCase());
-    const failed = payload.ok === false || statuses.some((status) => ['failed', 'error', 'blocked', 'unavailable'].includes(status));
+    const failed = payload.ok === false || payload.verify?.ok === false || statuses.some((status) => ['failed', 'error', 'blocked', 'unavailable'].some((prefix) => status === prefix || status.startsWith(`${prefix}_`)));
     setExecution(actionId, failed ? 'failed' : 'completed', instruction, {
       resultSummary,
       resultCode: pretty(result).slice(0, 900),
     });
+    if (failed) throw new Error(payload.detail ?? payload.error ?? payload.execution_result?.message ?? payload.execution_result?.result?.error ?? payload.execution_result?.result?.reason ?? payload.result?.message ?? resultSummary);
   }
 
   function failExecution(actionId: string, error: unknown, instruction = '') {
@@ -1080,22 +1088,46 @@ export function XiaoyiLinkageHub({
     });
   }
 
-  async function typeAnswer(text: string) {
+  async function runUiAction(actionId: string, task: () => Promise<unknown>) {
+    if (actionRunningRef.current) return;
+    actionRunningRef.current = true;
     setBusy(true);
+    if (!['start_xiaoyi_ai', 'refresh_linkage_status'].includes(actionId)) xiaoyiStartupPendingRef.current = false;
+    setPendingPacket(null);
+    try {
+      await task();
+    } catch (error) {
+      failExecution(actionId, error, command);
+      setPendingPacket(null);
+      setStageModal(null);
+      setPacket(`执行失败：${String(error)}`);
+      setAnswer(`执行失败：${String(error)}。请检查参数或联动服务后重试。`);
+      addLog('ACTION/ERROR', `${actionId} · ${String(error)}`);
+    } finally {
+      actionRunningRef.current = false;
+      setBusy(false);
+    }
+  }
+
+  async function typeAnswer(text: string) {
     setAnswer('正在读取工具结果并核验来源边界…');
     await wait(600);
     setAnswer(text);
-    setBusy(false);
   }
 
   async function refreshAll() {
     const [nextHealth, nextTraining, nextSailing, nextRegistry] = await Promise.all([
-      api('/api/linkage/health').catch((error) => ({ error: String(error) })),
+      api('/api/linkage/health').catch((error) => ({ summary: { runtime: '后端离线', xiaoyi: '小懿状态未能核验', rl: '训练状态未能核验', sailing: '模拟器状态未能核验' }, error: String(error) })),
       api('/api/rl/train/status').catch((error) => ({ status: 'offline', error: String(error) })),
       api('/api/sailing/status').catch((error) => ({ label: '航行模拟器待检查', error: String(error) })),
       api('/api/rl/actions/registry').catch((error) => ({ count: commandCatalog.length, error: String(error) })),
     ]);
     setHealth(nextHealth);
+    const xiaoyi = (nextHealth as JsonMap).systems?.xiaoyi_ai;
+    if (xiaoyiStartupPendingRef.current && xiaoyi?.online === true) {
+      xiaoyiStartupPendingRef.current = false;
+      completeExecution('start_xiaoyi_ai', '小懿健康检查已通过，服务在线。', xiaoyi, '小懿，启动小懿AI');
+    }
     setTrainingStatus(nextTraining);
     setSailingStatus(nextSailing);
     setActionRegistry(nextRegistry);
@@ -1142,7 +1174,6 @@ export function XiaoyiLinkageHub({
       resultSummary: '小懿正在识别意图并匹配可执行动作。',
       resultCode: 'intent_matching',
     });
-    setBusy(true);
     setPendingPacket(null);
     setPacket('小懿正在判断动作...');
     const payload = {
@@ -1200,8 +1231,6 @@ export function XiaoyiLinkageHub({
       setPacket(`执行失败：${String(error)}`);
       setAnswer(`执行失败：${String(error)}。请检查训练参数或联动服务后重试。`);
       addLog('XIAOYI/ERROR', String(error));
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -1233,13 +1262,17 @@ export function XiaoyiLinkageHub({
     }
     target.classList.add('linkage-autoclick-target');
     xiaoyiTrainingRunRef.current = true;
-    target.click();
+    await startTraining();
     window.setTimeout(() => target.classList.remove('linkage-autoclick-target'), 1400);
     return true;
   }
 
   async function clickMappedButton(packetData: PendingPacket) {
     const actionId = String(packetData.action?.id ?? packetData.will_execute?.action_id ?? '');
+    const requiredState: Record<string, string[]> = { pause_rl_training: ['running'], resume_rl_training: ['paused'], stop_rl_training: ['running', 'paused'] };
+    if (requiredState[actionId] && !requiredState[actionId].includes(String(trainingStatus?.status))) {
+      throw new Error('训练状态不满足此动作，请先刷新训练状态。');
+    }
     const selector = String(packetData.will_execute?.button?.selector ?? packetData.action?.button_selector ?? '');
     if (!clickableActions.has(actionId) || !selector) return false;
     const preludeSteps = actionPreludeSteps[actionId] ?? [];
@@ -1264,7 +1297,8 @@ export function XiaoyiLinkageHub({
       const step = steps[index];
       setClickSequence((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, status: 'locating' } : item));
       const stepTarget = document.querySelector<HTMLButtonElement>(step.selector);
-      if (!stepTarget || stepTarget.disabled) {
+      const isLocalAction = commandCatalog.some((item) => `#${item.buttonId}` === step.selector);
+      if (!stepTarget || (stepTarget.disabled && !isLocalAction)) {
         setClickSequence((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, status: 'failed' } : item));
         setExecution(actionId, 'failed', command || String(packetData.action?.label ?? ''), {
           buttonLabel: step.label,
@@ -1281,12 +1315,19 @@ export function XiaoyiLinkageHub({
       setAnswer(`正在执行 ${index + 1}/${steps.length}：${step.label}`);
       addLog('XIAOYI/CLICK', `步骤 ${index + 1}/${steps.length}：${step.label}`);
       await wait(620);
-      stepTarget.click();
-      await wait(720);
-      stepTarget.classList.remove('linkage-autoclick-target');
+      try {
+        const mappedAction = index === steps.length - 1 ? actionId : commandCatalog.find((item) => `#${item.buttonId}` === step.selector)?.id;
+        if (!mappedAction) throw new Error(`按钮没有绑定可等待的执行处理：${step.selector}`);
+        await executeCatalogAction(mappedAction, commandCatalog.find((item) => item.id === mappedAction)?.command ?? command);
+      } catch (error) {
+        setClickSequence((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, status: 'failed' } : item));
+        throw error;
+      } finally {
+        stepTarget.classList.remove('linkage-autoclick-target');
+      }
       setClickSequence((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, status: 'done' } : item));
     }
-    setAnswer(`已完成 ${steps.length} 步联动：${label}。执行结果已同步到驾驶舱。`);
+    setPendingPacket(null);
     addLog('XIAOYI/CLICK', `${actionId} · ${steps.length} steps completed`);
     return true;
   }
@@ -1304,6 +1345,7 @@ export function XiaoyiLinkageHub({
     completeExecution(String(payload.action_id ?? 'confirmed_action'), `执行结果：${data.execution_result?.status ?? '完成'}。`, data, command);
     await typeAnswer(`执行结果：${data.execution_result?.status ?? '完成'}。`);
     addLog('EXEC', `${payload.action_id} · ${data.execution_result?.status ?? 'done'}`);
+    setPendingPacket(null);
     await refreshAll();
   }
 
@@ -1314,14 +1356,38 @@ export function XiaoyiLinkageHub({
     setPacket('正在启动小懿AI...');
     const data = await api('/api/xiaoyi/launch', { method: 'POST', body: { confirm: true, source: 'energy_carbon_cockpit' } });
     setPacket(pretty(data));
-    completeExecution('start_xiaoyi_ai', `执行结果：${data.result?.status ?? '完成'}。`, data, '小懿，启动小懿AI');
-    await typeAnswer(`执行结果：${data.result?.status ?? '完成'}。\n小懿地址：${data.status?.base_url ?? 'http://127.0.0.1:8010'}`);
+    const starting = data.result?.status === 'starting';
+    xiaoyiStartupPendingRef.current = starting;
+    if (starting) {
+      setExecution('start_xiaoyi_ai', 'executing', '小懿，启动小懿AI', { resultSummary: '小懿进程已启动，健康检查尚未通过；请稍后刷新状态。', resultCode: pretty(data).slice(0, 900) });
+    } else {
+      completeExecution('start_xiaoyi_ai', `执行结果：${data.result?.status ?? '完成'}。`, data, '小懿，启动小懿AI');
+    }
+    await typeAnswer(`${starting ? '小懿正在启动，等待健康检查通过；可稍后刷新状态。' : `执行结果：${data.result?.status ?? '完成'}。`}\n小懿地址：${data.status?.base_url ?? 'http://127.0.0.1:8010'}`);
     addLog('XIAOYI', `start_xiaoyi_ai · ${data.result?.status ?? 'done'}`);
     await refreshAll();
   }
 
+  function validateTrainingParams(params: TrainingParams) {
+    for (const field of trainingParamFields) {
+      const value = params[field.key];
+      if (!Number.isFinite(value) || value < field.min || (field.max !== undefined && value > field.max)) {
+        throw new Error(`${field.label} 必须在 ${field.min}–${field.max ?? '∞'} 范围内。`);
+      }
+    }
+    if (params.algorithm !== 'mpc' && (!Number.isInteger(params.total_steps) || params.total_steps < 32)) throw new Error('RL 训练总步数必须为 32–5,000,000 的整数。');
+    for (const key of ['horizon_min', 'batch_size', 'seed', 'eval_interval', 'checkpoint_interval'] as const) {
+      if (!Number.isInteger(params[key])) throw new Error(`${key} 必须为整数。`);
+    }
+    if (params.horizon_min % 60 !== 0) throw new Error('训练 horizon 必须为 60 分钟的整数倍。');
+    if (params.algorithm !== 'mpc' && params.learning_rate <= 0) throw new Error('RL learning rate 必须大于 0。');
+    if (!params.data_file.trim() || !params.scenario.trim() || !params.asset_group.trim()) throw new Error('训练数据、场景和资产组不能为空。');
+    if (Object.values(params.reward_weights).some((value) => !Number.isFinite(value) || value < 0 || value > 1)) throw new Error('奖励权重必须在 0–1 范围内。');
+  }
+
   async function startTraining(targetObjective = objective) {
     const targetParams = targetObjective.id === objective.id ? trainingParams : createTrainingParams(targetObjective);
+    validateTrainingParams(targetParams);
     const targetConfig = buildTrainingDraftConfig(targetObjective, targetParams);
     const targetWarnings = buildTrainingRiskWarnings(targetParams);
     const targetAlgorithm = resolveAlgorithmProfile(targetParams.algorithm);
@@ -1383,6 +1449,7 @@ export function XiaoyiLinkageHub({
   }
 
   async function confirmStartTraining() {
+    validateTrainingParams(trainingParams);
     const instruction = objective.command;
     setCommand(instruction);
     setSelectedAction('start_rl_training');
@@ -1430,13 +1497,16 @@ export function XiaoyiLinkageHub({
 
   async function openTrainingHistory() {
     setTrainingHistoryOpen(true);
-    if (trainingHistory) return;
+    if (trainingHistoryLoading) return;
     setTrainingHistoryLoading(true);
+    setTrainingHistoryError('');
     try {
       const data = await api('/api/rl/training/history');
       setTrainingHistory(data.run ?? data);
       addLog('RL/EVIDENCE', `历史收敛记录已载入：${data.run?.run_id ?? 'offline-run'}`);
     } catch (error) {
+      setTrainingHistoryError(String(error));
+      setTrainingHistory(null);
       failExecution('training_history', error, '查看历史收敛曲线');
     } finally {
       setTrainingHistoryLoading(false);
@@ -1473,6 +1543,7 @@ export function XiaoyiLinkageHub({
       failExecution(actionId, error, instruction);
       setAnswer(`${actionLabel}失败：${String(error)}`);
       addLog('RL/CONTROL', `${actionId} · failed`);
+      throw error;
     }
   }
 
@@ -1602,6 +1673,10 @@ export function XiaoyiLinkageHub({
     setCommand(instruction);
     setSelectedAction(actionId);
     await executeGateway(actionId, instruction);
+    // The drawer is a fixed overlay. Close it before handing focus to the
+    // panel, otherwise the newly opened panel is rendered underneath it and
+    // its controls cannot be clicked.
+    setOpen(false);
     await onOpenTopPanel?.(panel);
     await typeAnswer(`已打开AI决策面板：${commandCatalog.find((item) => item.id === actionId)?.label ?? panel}。`);
     addLog('TOP-PANEL', `${actionId} · opened`);
@@ -1613,6 +1688,7 @@ export function XiaoyiLinkageHub({
     setCommand(instruction);
     setSelectedAction(actionId);
     onSetGreenPreference?.(preference.value, preference.label);
+    setOpen(false);
     await onOpenTopPanel?.(preference.panel);
     const data = await executeGateway(actionId, instruction, { green_preference: preference.value });
     const result = data.execution_result?.result ?? {};
@@ -1639,6 +1715,7 @@ export function XiaoyiLinkageHub({
     const result = data.execution_result?.result ?? {};
     setHealth(result);
     if (onOpenTopPanel) {
+      setOpen(false);
       await onOpenTopPanel('api');
     } else {
       await onRunApiCheck?.();
@@ -1653,6 +1730,7 @@ export function XiaoyiLinkageHub({
     setSelectedAction(actionId);
     const data = await executeGateway(actionId, instruction);
     const result = data.execution_result?.result ?? {};
+    setOpen(false);
     await onOpenTopPanel?.('runtime');
     if (actionId === 'summarize_runtime_state') {
       const signals = result.signals ?? {};
@@ -1692,14 +1770,17 @@ export function XiaoyiLinkageHub({
     const data = await executeGateway('check_sailing_status', instruction);
     const status = data.execution_result?.result?.sailing_status ?? {};
     setSailingStatus(status);
+    setOpen(false);
     await onOpenTopPanel?.('simulation');
     await typeAnswer(status.process?.running ? `航行模拟器运行中：pid=${status.process.pid}` : status.label ?? '航行模拟器状态已刷新。');
     addLog('SAILING', 'check_sailing_status · checked');
   }
 
   async function runCatalogAction(actionId: string, instruction: string) {
-    if (busy) return;
-    setBusy(true);
+    await runUiAction(actionId, () => executeCatalogAction(actionId, instruction));
+  }
+
+  async function executeCatalogAction(actionId: string, instruction: string) {
     if (topPanelActions[actionId]) {
       await openTopPanel(actionId, instruction);
       return;
@@ -1720,7 +1801,7 @@ export function XiaoyiLinkageHub({
       await checkSailingStatusFromXiaoyi(instruction);
       return;
     }
-    if (['summarize_runtime_state', 'prepare_runtime_handover', 'triage_runtime_alerts', 'explain_runtime_recommendation'].includes(actionId)) {
+    if (['summarize_runtime_state', 'prepare_runtime_handover', 'triage_runtime_alerts', 'explain_runtime_recommendation', 'create_runtime_recommendation'].includes(actionId)) {
       await runRuntimeInsightFromXiaoyi(actionId, instruction);
       return;
     }
@@ -1905,7 +1986,7 @@ export function XiaoyiLinkageHub({
             <span><Bot size={14} />{statusLabel(health, ['summary', 'xiaoyi'], '小懿待检查')}</span>
             <span><Gauge size={14} />{statusLabel(health, ['summary', 'rl'], 'RL待检查')}</span>
             <span><ShipWheel size={14} />{statusLabel(health, ['summary', 'sailing'], '航行模拟器待检查')}</span>
-            <button type="button" onClick={refreshAll}><RotateCw size={14} />刷新</button>
+            <button type="button" disabled={busy} onClick={() => void runUiAction('refresh_linkage_status', refreshAll)}><RotateCw size={14} />刷新</button>
           </div>
 
           <div className={`output-locator ${outputLocator.tone}`}>
@@ -1922,22 +2003,24 @@ export function XiaoyiLinkageHub({
               </div>
               <textarea
                 value={command}
+                disabled={busy}
                 onChange={(event) => {
                   setCommand(event.target.value);
                   setSelectedAction('');
+                  setPendingPacket(null);
                 }}
                 placeholder="例如：小懿，总结实时态势 / 小懿，生成交班摘要"
               />
-              <select value={selectedAction} onChange={(event) => setSelectedAction(event.target.value)}>
+              <select value={selectedAction} disabled={busy} onChange={(event) => { setSelectedAction(event.target.value); setPendingPacket(null); }}>
                 <option value="">自动识别动作 / Auto-detect action</option>
                 {commandCatalog.map((item) => (
                   <option value={item.id} key={item.id}>{item.group} · {item.label}</option>
                 ))}
               </select>
               <div className="linkage-actions">
-                <button id="btnXiaoyiStart" type="button" disabled={busy} onClick={launchXiaoyi}><Bot size={14} />启动小懿 / Start</button>
-                <button type="button" disabled={busy} onClick={() => askXiaoyi()}><Send size={14} />识别并执行 / Run</button>
-                <button type="button" disabled={busy || !pendingPacket} onClick={confirmAction}><Play size={14} />确认执行 / Confirm</button>
+                <button id="btnXiaoyiStart" type="button" disabled={busy} onClick={() => void runUiAction('start_xiaoyi_ai', launchXiaoyi)}><Bot size={14} />启动小懿 / Start</button>
+                <button type="button" disabled={busy} onClick={() => void runUiAction('xiaoyi_intent', () => askXiaoyi())}><Send size={14} />识别并执行 / Run</button>
+                <button type="button" disabled={busy || !pendingPacket} onClick={() => void runUiAction('confirmed_action', confirmAction)}><Play size={14} />确认执行 / Confirm</button>
                 <button type="button" disabled={busy} onClick={clearAssistant}>清空 / Clear</button>
               </div>
               <div className="xiaoyi-command-targets" aria-label="小懿可视化按钮联动区 / Xiaoyi visual action targets">
@@ -2009,7 +2092,7 @@ export function XiaoyiLinkageHub({
                       key={algorithm.id}
                       disabled={trainingParams.data_file === 'port_la_2020_2024_hybrid_rl_hourly' && algorithm.id === 'dqn'}
                       title={trainingParams.data_file === 'port_la_2020_2024_hybrid_rl_hourly' && algorithm.id === 'dqn' ? 'v6 是 16 维连续动作环境，DQN 仅用于历史离散环境' : algorithm.description}
-                      onClick={() => applyAlgorithm(algorithm.id)}
+                      onClick={() => { if (!busy) applyAlgorithm(algorithm.id); }}
                     >
                       <b>{algorithm.label}</b>
                       <small>{algorithm.tag}</small>
@@ -2089,12 +2172,12 @@ export function XiaoyiLinkageHub({
               </div>
               <div className="linkage-actions">
                 <button id="btnOpenTrainingStudio" type="button" disabled={busy} onClick={() => openTrainingStudio(false)}><SlidersHorizontal size={14} />配置参数 / Configure</button>
-                <button id="btnStartTraining" type="button" disabled={busy} onClick={() => startTraining()}><Play size={14} />启动训练 / Start</button>
+                <button id="btnStartTraining" type="button" disabled={busy} onClick={() => void runUiAction('start_rl_training', () => startTraining())}><Play size={14} />启动训练 / Start</button>
                 <button
                   id="btnPauseTraining"
                   type="button"
                   disabled={busy || (!trainingCanPause && !trainingCanResume)}
-                  onClick={() => controlTraining(trainingCanResume ? 'resume' : 'pause')}
+                  onClick={() => void runUiAction(trainingCanResume ? 'resume_rl_training' : 'pause_rl_training', () => controlTraining(trainingCanResume ? 'resume' : 'pause'))}
                 >
                   {trainingCanResume ? <Play size={14} /> : <Pause size={14} />}
                   {trainingCanResume ? '继续训练 / Resume' : '暂停训练 / Pause'}
@@ -2104,12 +2187,12 @@ export function XiaoyiLinkageHub({
                   className="training-stop-action"
                   type="button"
                   disabled={busy || !trainingCanStop}
-                  onClick={() => controlTraining('stop')}
+                  onClick={() => void runUiAction('stop_rl_training', () => controlTraining('stop'))}
                 ><Square size={14} />停止 / Stop</button>
-                <button id="btnTrainingStatus" type="button" disabled={busy} onClick={showTrainingStatus}><Radio size={14} />状态 / Status</button>
+                <button id="btnTrainingStatus" type="button" disabled={busy} onClick={() => void runUiAction('view_rl_training_status', showTrainingStatus)}><Radio size={14} />状态 / Status</button>
                 <button id="btnTrainingHistory" type="button" disabled={busy} onClick={() => void openTrainingHistory()}><Gauge size={14} />历史收敛曲线 / Results</button>
-                <button id="btnPolicyTest" type="button" disabled={busy} onClick={runPolicyTest}><Gauge size={14} />登记测试 / Evidence</button>
-                <button id="btnVerifyPolicy" type="button" disabled={busy} onClick={verifyPolicy}><ShieldCheck size={14} />上线验证 / Dry-run</button>
+                <button id="btnPolicyTest" type="button" disabled={busy} onClick={() => void runUiAction('run_policy_test', runPolicyTest)}><Gauge size={14} />登记测试 / Evidence</button>
+                <button id="btnVerifyPolicy" type="button" disabled={busy} onClick={() => void runUiAction('verify_policy_for_online', verifyPolicy)}><ShieldCheck size={14} />上线验证 / Dry-run</button>
               </div>
               <pre className="mini-log">{(trainingStatus?.logs ?? ['等待训练指令。']).join('\n')}</pre>
             </div>
@@ -2125,10 +2208,10 @@ export function XiaoyiLinkageHub({
                 <span>模式 <b>{sailingStatus?.control_mode ?? 'launch'}</b></span>
               </div>
               <div className="linkage-actions stack">
-                <button id="btnSailingLaunch" type="button" disabled={busy} onClick={launchSailing}><ShipWheel size={14} />启动模拟器 / Launch</button>
-                <button id="btnSailingDemo" type="button" disabled={busy} onClick={() => runSailingAction('start_navigation_demo')}>航线演示 / Route demo</button>
-                <button id="btnShipView" type="button" disabled={busy} onClick={() => runSailingAction('switch_ship_view')}>船舶视角 / Ship view</button>
-                <button id="btnSailingSmoke" type="button" disabled={busy} onClick={() => runSailingAction('run_sailing_rl_smoke_test')}>Smoke test / 测试</button>
+                <button id="btnSailingLaunch" type="button" disabled={busy} onClick={() => void runUiAction('open_sailing_simulator', launchSailing)}><ShipWheel size={14} />启动模拟器 / Launch</button>
+                <button id="btnSailingDemo" type="button" disabled={busy} onClick={() => void runUiAction('start_navigation_demo', () => runSailingAction('start_navigation_demo'))}>航线演示 / Route demo</button>
+                <button id="btnShipView" type="button" disabled={busy} onClick={() => void runUiAction('switch_ship_view', () => runSailingAction('switch_ship_view'))}>船舶视角 / Ship view</button>
+                <button id="btnSailingSmoke" type="button" disabled={busy} onClick={() => void runUiAction('run_sailing_rl_smoke_test', () => runSailingAction('run_sailing_rl_smoke_test'))}>Smoke test / 测试</button>
               </div>
               <div className="command-examples">
                 <b>可说：</b>
@@ -2221,7 +2304,8 @@ export function XiaoyiLinkageHub({
                   <button
                     key={profile.id}
                     type="button"
-                    onClick={() => executeCommandShortcut({
+                    disabled={busy}
+                    onClick={() => void runUiAction('start_rl_training', () => executeCommandShortcut({
                       id: `train_${profile.id}`,
                       label: `训练：${profile.label}`,
                       group: '优化目标训练',
@@ -2230,7 +2314,7 @@ export function XiaoyiLinkageHub({
                       objectiveId: profile.id,
                       badge: resolveAlgorithmProfile(profile.algorithm).label,
                       description: profile.reason,
-                    })}
+                    }))}
                   >
                     {profile.label}
                   </button>
@@ -2251,6 +2335,7 @@ export function XiaoyiLinkageHub({
               </div>
               <button className="icon-btn" type="button" onClick={() => setTrainingHistoryOpen(false)} aria-label="关闭历史训练结果"><X size={18} /></button>
             </div>
+            {trainingHistoryError && <div className="training-history-loading" role="alert">读取失败：{trainingHistoryError} <button type="button" onClick={() => void openTrainingHistory()}>重试读取</button></div>}
             {trainingHistoryLoading && <div className="training-history-loading">正在读取历史训练指标 / Loading training evidence…</div>}
             {trainingHistory && (
               <>
@@ -2301,7 +2386,7 @@ export function XiaoyiLinkageHub({
                       <polyline className="history-entropy" points={historyEntropyPoints} />
                       <polyline className="history-success" points={historySuccessPoints} />
                     </svg>
-                    <footer><span className="entropy">Entropy</span><span className="success">Constraint success</span><em>未记录时显示为 0</em></footer>
+                    <footer><span className="entropy">Entropy</span><span className="success">Constraint success</span><em>未记录的指标不绘制</em></footer>
                   </article>
                   <article className="checkpoint-evidence">
                     <header><span>Checkpoint 选择证据</span><small>evaluation checkpoints</small></header>
@@ -2371,7 +2456,7 @@ export function XiaoyiLinkageHub({
                 <div className="training-config-panel studio-select-grid">
                   <label>
                     <small>优化目标</small>
-                    <select id="trainingObjectiveSelect" value={selectedObjective} onChange={(event) => selectTrainingObjective(event.target.value)}>
+                    <select id="trainingObjectiveSelect" disabled={busy} value={selectedObjective} onChange={(event) => selectTrainingObjective(event.target.value)}>
                       {trainingObjectives.map((item) => (
                         <option value={item.id} key={item.id}>{item.label}</option>
                       ))}
@@ -2380,7 +2465,7 @@ export function XiaoyiLinkageHub({
                   </label>
                   <label>
                     <small>3种v6 RL / 1种历史RL / 1种控制基线</small>
-                    <select id="trainingAlgorithmSelect" value={trainingParams.algorithm} onChange={(event) => applyAlgorithm(event.target.value)}>
+                    <select id="trainingAlgorithmSelect" disabled={busy} value={trainingParams.algorithm} onChange={(event) => applyAlgorithm(event.target.value)}>
                       {rlAlgorithms.map((item) => (
                         <option
                           value={item.id}
@@ -2395,9 +2480,11 @@ export function XiaoyiLinkageHub({
                     <small>训练数据文件</small>
                       <input
                         id="trainingDataSelect"
+                        disabled={busy}
                         list="trainingDataOptions"
                         value={trainingParams.data_file}
                         onChange={(event) => {
+                          setTrainingReviewOpen(false);
                           const value = event.target.value;
                           const dataFile = trainingDataFiles.find((item) => item.path === value);
                           setTrainingParams((current) => ({
@@ -2424,14 +2511,14 @@ export function XiaoyiLinkageHub({
                     <small>仿真场景</small>
                     <input
                       value={trainingParams.scenario}
-                      onChange={(event) => setTrainingParams((current) => ({ ...current, scenario: event.target.value }))}
+                      disabled={busy} onChange={(event) => { setTrainingReviewOpen(false); setTrainingParams((current) => ({ ...current, scenario: event.target.value })); }}
                     />
                   </label>
                   <label>
                     <small>资产组</small>
                     <input
                       value={trainingParams.asset_group}
-                      onChange={(event) => setTrainingParams((current) => ({ ...current, asset_group: event.target.value }))}
+                      disabled={busy} onChange={(event) => { setTrainingReviewOpen(false); setTrainingParams((current) => ({ ...current, asset_group: event.target.value })); }}
                     />
                   </label>
                   <label>
@@ -2448,6 +2535,7 @@ export function XiaoyiLinkageHub({
                       <small>{field.label}</small>
                       <input
                         type="number"
+                        disabled={busy}
                         min={field.min}
                         max={field.max}
                         step={field.step}
@@ -2473,6 +2561,7 @@ export function XiaoyiLinkageHub({
                       <small>{label}</small>
                       <input
                         type="number"
+                        disabled={busy}
                         min="0"
                         max="1"
                         step="0.01"
@@ -2551,8 +2640,8 @@ export function XiaoyiLinkageHub({
                     setAutomationStepIndex(3);
                     setStageModal(null);
                   }}>继续调整参数</button>
-                  <button type="button" onClick={() => startTraining()}><ShieldCheck size={14} />生成确认面板</button>
-                  <button id="btnConfirmTraining" type="button" disabled={!trainingReviewOpen} onClick={confirmStartTraining}><Play size={14} />确认开始训练</button>
+                  <button type="button" onClick={() => void runUiAction('start_rl_training', () => startTraining())}><ShieldCheck size={14} />生成确认面板</button>
+                  <button id="btnConfirmTraining" type="button" disabled={busy || !trainingReviewOpen} onClick={() => void runUiAction('start_rl_training', confirmStartTraining)}><Play size={14} />确认开始训练</button>
                 </div>
               </aside>
             </div>
@@ -2608,8 +2697,8 @@ export function XiaoyiLinkageHub({
                       <p title={profile.reason}>{profile.reason}</p>
                       <div className="command-card-actions" aria-label={`${profile.label} 指令操作`}>
                         <button type="button" title={`填入：${profile.command}`} onClick={() => applyCommandShortcut(shortcut)}><SlidersHorizontal size={13} />填入</button>
-                        <button type="button" title={`判断：${profile.command}`} onClick={() => judgeCommandShortcut(shortcut)}><Bot size={13} />判断</button>
-                        <button type="button" title={`执行：${profile.command}`} onClick={() => executeCommandShortcut(shortcut)}><Play size={13} />执行</button>
+                        <button type="button" title={`判断：${profile.command}`} onClick={() => void runUiAction(shortcut.actionId, () => judgeCommandShortcut(shortcut))}><Bot size={13} />判断</button>
+                        <button type="button" title={`执行：${profile.command}`} onClick={() => void runUiAction(shortcut.actionId, () => executeCommandShortcut(shortcut))}><Play size={13} />执行</button>
                       </div>
                     </article>
                   );
@@ -2634,8 +2723,8 @@ export function XiaoyiLinkageHub({
                       <p title={shortcut.description}>{shortcut.description}</p>
                       <div className="command-card-actions" aria-label={`${shortcut.label} 指令操作`}>
                         <button type="button" title={`填入：${shortcut.command}`} onClick={() => applyCommandShortcut(shortcut)}><SlidersHorizontal size={13} />填入</button>
-                        <button type="button" title={`判断：${shortcut.command}`} onClick={() => judgeCommandShortcut(shortcut)}><Bot size={13} />判断</button>
-                        <button type="button" title={`执行：${shortcut.command}`} onClick={() => executeCommandShortcut(shortcut)}><Play size={13} />执行</button>
+                        <button type="button" title={`判断：${shortcut.command}`} onClick={() => void runUiAction(shortcut.actionId, () => judgeCommandShortcut(shortcut))}><Bot size={13} />判断</button>
+                        <button type="button" title={`执行：${shortcut.command}`} onClick={() => void runUiAction(shortcut.actionId, () => executeCommandShortcut(shortcut))}><Play size={13} />执行</button>
                       </div>
                     </article>
                   ))
@@ -2689,7 +2778,7 @@ export function XiaoyiLinkageHub({
                     setTrainingReviewOpen(false);
                     setAutomationStepIndex(3);
                   }}>返回修改参数</button>
-                  <button id="btnStageConfirmTraining" type="button" onClick={confirmStartTraining}><Play size={14} />确认无误，开始训练</button>
+                  <button id="btnStageConfirmTraining" type="button" disabled={busy || !trainingReviewOpen} onClick={() => void runUiAction('start_rl_training', confirmStartTraining)}><Play size={14} />确认无误，开始训练</button>
                 </>
               ) : stageModal.kind === 'done' ? (
                 <button type="button" onClick={() => setStageModal(null)}><CheckCircle2 size={14} />知道了</button>

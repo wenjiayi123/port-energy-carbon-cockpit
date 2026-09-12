@@ -77,7 +77,7 @@ const statusCopies: Record<string, BilingualCopy> = {
 };
 
 function fmt(value: number | undefined, digits = 1) {
-  if (typeof value !== 'number' || Number.isNaN(value)) return '--';
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '--';
   return new Intl.NumberFormat('en-US', {
     maximumFractionDigits: digits,
     minimumFractionDigits: digits,
@@ -162,7 +162,7 @@ export function PortCommandCenter({
     item.time,
     item.shore_power_connected ? 'Shore power' : 'Dispatch',
   ]);
-  const recommendationRows: Recommendation[] = trajectory.slice(0, 7).map((item) => ({
+  const recommendationRows: Recommendation[] = trajectory.map((item) => ({
     zh: `${item.time} · ${item.berth_id} 资源动作`,
     en: `${item.time} ${item.berth_id} policy action`,
     tag: { zh: item.shore_power_connected ? '岸电接入' : '资源调度', en: item.event },
@@ -188,15 +188,13 @@ export function PortCommandCenter({
   const clockText = clock.toLocaleTimeString('en-GB', { hour12: false });
   const dateText = clock.toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' });
   const orderedRecommendations = recommendationTab === 'recommended'
-    ? recommendationRows.map((item, index) => ({ item, index }))
-    : [...recommendationRows.slice(2), ...recommendationRows.slice(0, 2)].map((item) => ({ item, index: recommendationRows.indexOf(item) }));
+    ? recommendationRows.slice(0, 7).map((item, index) => ({ item, index }))
+    : recommendationRows.map((item, index) => ({ item, index }));
   const savingPct = (baseline: number | undefined, optimized: number | undefined) => {
-    if (!baseline || optimized === undefined) return '0.0%';
+    if (!baseline || optimized === undefined) return '--';
     return `${(((optimized - baseline) / Math.abs(baseline)) * 100).toFixed(1)}%`;
   };
-  const scenarioOutput = scenarioMode === 'baseline'
-    ? ['0.0%', '0.0%', '0.0%']
-    : [
+  const scenarioOutput = !snapshot ? ['--', '--', '--'] : [
       savingPct(traditional?.total_energy_kwh, marl?.total_energy_kwh),
       savingPct(traditional?.total_carbon_kg, marl?.total_carbon_kg),
       savingPct(traditional?.total_cost_cny, marl?.total_cost_cny),
@@ -204,7 +202,7 @@ export function PortCommandCenter({
   const activeLiveEvent = operationState?.latestEvent ?? point?.decision_reason ?? '等待测试集轨迹';
   const runtimeTemperature = runtimeSnapshot?.signals?.['weather.ambient_temperature_c'];
   const runtimeWind = runtimeSnapshot?.signals?.['weather.wind_speed_m_s'];
-  const runtimeScenario = runtimeSnapshot?.active_scenario?.scenario_id ?? 'normal';
+  const runtimeScenario = runtimeSnapshot?.active_scenario?.scenario_id ?? '等待数据';
   const craneWorking = point?.crane_count ?? 0;
   const craneIdle = 0;
   const craneUtilization = craneWorking > 0 ? 100 : 0;
@@ -238,8 +236,8 @@ export function PortCommandCenter({
   const latestEnergyPoint = energyActualCoordinates[energyActualCoordinates.length - 1];
   const latestCarbonPoint = carbonActualCoordinates[carbonActualCoordinates.length - 1];
   const mixRows = [
-    { zh: '电网', en: 'Grid', value: 100, className: 'mix-3' },
-    { zh: '其他来源', en: 'Not provided', value: 0, className: 'mix-4' },
+    { zh: '电网', en: 'Grid', value: null, className: 'mix-3' },
+    { zh: '其他来源', en: 'Not provided', value: null, className: 'mix-4' },
   ];
 
   const kpis = useMemo(() => [
@@ -251,7 +249,7 @@ export function PortCommandCenter({
     { zh: '累计能耗', en: 'Energy consumption', value: fmt((marl?.total_energy_kwh ?? 0) / 1000, 1), unit: 'MWh', delta: { zh: `差值 ${fmt(energySaving / 1000, 1)} MWh`, en: 'vs baseline' }, icon: <BatteryCharging size={18} />, action: 'energy-load' },
     { zh: '碳排放', en: 'Carbon emissions', value: fmt((marl?.total_carbon_kg ?? 0) / 1000, 1), unit: 'tCO2e', delta: { zh: `差值 ${fmt(carbonSaving / 1000, 1)} t`, en: 'vs baseline' }, icon: <Leaf size={18} />, action: 'carbon-market' },
     { zh: '碳强度', en: 'Carbon intensity', value: fmt(marl?.carbon_intensity_kg_per_teu ?? 0, 2), unit: 'kgCO2e/TEU', delta: { zh: '环境计量结果', en: 'environment metric' }, icon: <Leaf size={18} />, action: 'carbon-market' },
-    { zh: '数据质量', en: 'Data quality', value: String(evidenceCoverage), unit: '%', delta: { zh: `离线 ${snapshot?.data_quality.grade ?? '--'} · 落地 ${snapshot?.data_quality.landing_readiness?.landing_grade ?? '--'}`, en: 'offline quality · landing grade' }, icon: <RefreshCw size={18} />, action: 'renewable-mix' },
+    { zh: '数据质量', en: 'Data quality', value: String(evidenceCoverage), unit: '%', delta: { zh: `离线 ${snapshot?.data_quality.grade ?? '--'} · 落地 ${snapshot?.data_quality.landing_readiness?.landing_grade ?? '--'}`, en: 'offline quality · landing grade' }, icon: <RefreshCw size={18} />, action: 'data-boundary' },
     { zh: '综合成本', en: 'Operating cost', value: fmt((marl?.total_cost_cny ?? 0) / 10000, 1), unit: '¥10K', delta: { zh: `差值 ¥${fmt(costSaving / 1000, 1)}K`, en: 'vs baseline' }, icon: <DollarSign size={18} />, action: 'cost-analysis' },
   ], [carbonSaving, costSaving, energyLoad, energySaving, evidenceCoverage, handledTeu, marl, point?.crane_count, point?.time, snapshot?.data_quality.grade, snapshot?.data_quality.landing_readiness?.landing_grade, trajectory]);
 
@@ -282,7 +280,7 @@ export function PortCommandCenter({
     <div className="command-center-screen">
       <header className="command-header">
         <div className="command-live-block">
-          <button className="command-live" type="button" title="打开实时数据、预测、审批与执行闭环 / Open realtime closed loop" onClick={() => void onOpenPanel('runtime')}><i /><Bi zh={runtimeSnapshot?.simulator_state === 'running' ? '公开数据校准实时模拟' : '实时模拟器失败关闭'} en={runtimeSnapshot?.simulator_state === 'running' ? 'CALIBRATED REALTIME SIMULATION' : 'RUNTIME FAIL-CLOSED'} /></button>
+          <button className="command-live" type="button" title="打开实时数据、预测、审批与执行闭环 / Open realtime closed loop" onClick={() => void onOpenPanel('runtime')}><i /><Bi zh={!runtimeSnapshot ? '正在读取实时模拟状态' : runtimeSnapshot.simulator_state === 'running' ? '公开数据校准实时模拟' : runtimeSnapshot.simulator_state === 'stopped' ? '实时模拟器已停止' : '实时模拟器失败关闭'} en={!runtimeSnapshot ? 'LOADING RUNTIME STATE' : runtimeSnapshot.simulator_state === 'running' ? 'CALIBRATED REALTIME SIMULATION' : runtimeSnapshot.simulator_state === 'stopped' ? 'RUNTIME STOPPED' : 'RUNTIME FAIL-CLOSED'} /></button>
           <b>{clockText}</b>
           <small>{dateText}</small>
         </div>
@@ -317,8 +315,8 @@ export function PortCommandCenter({
             <span className={`command-kpi-icon tone-${index % 4}`}>{item.icon}</span>
             <div>
               <Bi zh={item.zh} en={item.en} className="kpi-label" />
-              <b>{item.value}<em>{item.unit}</em></b>
-              <i><Bi zh={item.delta.zh} en={item.delta.en} /></i>
+              <b>{snapshot ? item.value : '--'}<em>{item.unit}</em></b>
+              <i><Bi zh={snapshot ? item.delta.zh : '等待测试快照'} en={snapshot ? item.delta.en : 'Waiting for snapshot'} /></i>
             </div>
             {(index === 0 || index > 6) && <ChevronDown size={12} />}
           </button>
@@ -428,7 +426,7 @@ export function PortCommandCenter({
               <b>{point?.vessel_id ?? '等待测试集'} <em>→</em> {point?.berth_id ?? 'B--'}</b>
               <small>{point?.time ?? '--:--'} · STEP {point?.step ?? 0}　岸桥 {point?.crane_count ?? 0}　集卡 {point?.yard_truck_count ?? 0}</small>
             </button>
-            <button className="twin-data-boundary" type="button" title="查看数据边界 / View data boundary" onClick={() => onOpenAction('berth-b04')}><b>DATA</b><Bi zh="公开测试集 · 非实时港口" en="PUBLIC TEST SPLIT · NOT LIVE" /></button>
+            <button className="twin-data-boundary" type="button" title="查看数据边界 / View data boundary" onClick={() => onOpenAction('data-boundary')}><b>DATA</b><Bi zh="公开测试集 · 非实时港口" en="PUBLIC TEST SPLIT · NOT LIVE" /></button>
             <div className="twin-legend" aria-label="港区图层控制 / Port layer controls">
               <button className={layerVisibility.vessel ? 'active' : ''} type="button" aria-pressed={layerVisibility.vessel} title="显示或隐藏归一化测试航迹 / Toggle normalized test route" onClick={() => toggleLayer('vessel')}><i className="route vessel" /><Bi zh="测试航迹" en="TEST ROUTE" /></button>
               <span><Anchor size={12} /><Bi zh={`${point?.berth_id ?? 'B--'} 泊位`} en="CURRENT BERTH" /></span>
@@ -479,7 +477,7 @@ export function PortCommandCenter({
 
           <section className="command-analytics-grid">
             <button className="mini-command-panel chart-action load-curve-panel" type="button" title="查看测试轨迹能耗与电网负荷 / View test energy and grid load" onClick={() => onOpenAction('energy-load')}>
-              <div className="mini-command-title"><b><Bi zh="测试轨迹能耗" en="TEST ENERGY LOAD (MW)" /></b><span><Bi zh="轨迹峰值" en="Peak" /><strong>{fmt(energyPeak, 1)} MW</strong></span></div>
+              <div className="mini-command-title"><b><Bi zh="测试轨迹能耗" en="STEP ENERGY (MWh)" /></b><span><Bi zh="轨迹峰值" en="Peak" /><strong>{snapshot ? fmt(energyPeak, 1) : '--'} MWh</strong></span></div>
               <svg viewBox="0 0 250 105" role="img" aria-label="测试轨迹能耗曲线 / Test energy load curve">
                 <path className="chart-grid" d="M20 18H240M20 45H240M20 72H240M20 99H240M20 15V99M75 15V99M130 15V99M185 15V99M240 15V99" />
                 <polyline className="chart-line blue chart-line-live" points={pointsFrom(energyActualCoordinates)} />
@@ -489,7 +487,7 @@ export function PortCommandCenter({
             </button>
             <button className="mini-command-panel chart-action energy-mix-panel" type="button" title="查看可再生与岸电结构 / View renewable and shore-power mix" onClick={() => onOpenAction('renewable-mix')}>
               <div className="mini-command-title"><b><Bi zh="能源结构" en="ENERGY SOURCE MIX" /></b></div>
-              <div className="energy-mix-body"><div className="mix-donut"><b>N/A</b><small><Bi zh="来源结构" en="SOURCE MIX" /></small></div><div>{mixRows.map((row) => <span key={row.en}><i className={row.className} /><Bi zh={row.zh} en={row.en} /><b>{row.value}%</b></span>)}</div></div>
+              <div className="energy-mix-body"><div className="mix-donut"><b>N/A</b><small><Bi zh="来源结构" en="SOURCE MIX" /></small></div><div>{mixRows.map((row) => <span key={row.en}><i className={row.className} /><Bi zh={row.zh} en={row.en} /><b>{row.value === null ? '未提供' : `${row.value}%`}</b></span>)}</div></div>
             </button>
             <button className="mini-command-panel chart-action emission-chart-panel" type="button" title="查看碳核算与配额 / View carbon accounting and quota" onClick={() => void onOpenPanel('carbon')}>
               <div className="mini-command-title"><b><Bi zh="碳排放趋势" en="CARBON EMISSIONS (tCO2e)" /></b></div>
@@ -498,24 +496,24 @@ export function PortCommandCenter({
             <button className="mini-command-panel chart-action baseline-panel" type="button" title="查看控制基线与优化策略对比 / View strategy comparison" onClick={() => onOpenAction('strategy-comparison')}>
               <div className="mini-command-title"><b><Bi zh="基线与优化对比" en="BASELINE VS OPTIMIZED" /></b><small><Bi zh="测试集" en="Held-out" /></small></div>
               <div className="bar-comparison">{[
-                ['能耗', 'Energy', 90, 90 * (marl?.total_energy_kwh ?? 0) / Math.max(1, traditional?.total_energy_kwh ?? 0), fmt(traditional?.total_energy_kwh ?? 0, 0), fmt(marl?.total_energy_kwh ?? 0, 0)],
-                ['碳排', 'Carbon', 90, 90 * (marl?.total_carbon_kg ?? 0) / Math.max(1, traditional?.total_carbon_kg ?? 0), fmt((traditional?.total_carbon_kg ?? 0) / 100, 0), fmt((marl?.total_carbon_kg ?? 0) / 100, 0)],
-                ['成本', 'Cost', 90, 90 * (marl?.total_cost_cny ?? 0) / Math.max(1, traditional?.total_cost_cny ?? 0), fmt((traditional?.total_cost_cny ?? 0) / 1000, 0), fmt((marl?.total_cost_cny ?? 0) / 1000, 0)],
-              ].map((row) => <span key={String(row[1])}><i style={{ height: `${row[2]}%` }}><small>{row[4]}</small></i><i className="optimized" style={{ height: `${row[3]}%` }}><small>{row[5]}</small></i><b><Bi zh={String(row[0])} en={String(row[1])} /></b></span>)}</div>
+                ['能耗(kWh)', 'Energy (kWh)', 90, 90 * (marl?.total_energy_kwh ?? 0) / Math.max(1, traditional?.total_energy_kwh ?? 0), fmt(traditional?.total_energy_kwh ?? 0, 0), fmt(marl?.total_energy_kwh ?? 0, 0)],
+                ['碳排(t)', 'Carbon (t)', 90, 90 * (marl?.total_carbon_kg ?? 0) / Math.max(1, traditional?.total_carbon_kg ?? 0), fmt((traditional?.total_carbon_kg ?? 0) / 1000, 0), fmt((marl?.total_carbon_kg ?? 0) / 1000, 0)],
+                ['成本(千元)', 'Cost (kCNY)', 90, 90 * (marl?.total_cost_cny ?? 0) / Math.max(1, traditional?.total_cost_cny ?? 0), fmt((traditional?.total_cost_cny ?? 0) / 1000, 0), fmt((marl?.total_cost_cny ?? 0) / 1000, 0)],
+              ].map((row) => <span key={String(row[1])}><i style={{ height: `${row[2]}%` }}><small>{row[4]}</small></i><i className="optimized" style={{ height: `${Math.min(100, Number(row[3]))}%` }}><small>{row[5]}</small></i><b><Bi zh={String(row[0])} en={String(row[1])} /></b></span>)}</div>
             </button>
           </section>
 
           <section className="command-panel forecast-panel">
             <div className="command-panel-title"><b><Bi zh="24 小时测试轨迹摘要" en="24-HOUR TEST ROLLOUT" /></b></div>
             <div>{[
-              ['处理量', 'Throughput', fmt(handledTeu, 0), '测试集'], ['本步能耗', 'Energy load', fmt(energyLoad, 1), point?.time ?? '--'], ['累计碳排', 'Carbon emissions', fmt(carbonBase, 1), '测试轨迹'], ['数据来源', 'Data source', 'POLA+eGRID', snapshot?.carbon_model.dataset_sha256.slice(0, 8) ?? '--'], ['碳价情景', 'Carbon price', `¥${carbonPrice.toFixed(1)}`, '用户输入'],
-            ].map((row) => <button type="button" key={String(row[1])} title={`查看${row[0]} / View ${row[1]}`} onClick={() => onOpenAction(row[1] === 'Carbon price' || row[1] === 'Carbon emissions' ? 'carbon-market' : row[1] === 'Energy load' ? 'energy-load' : row[1] === 'Renewable share' ? 'renewable-mix' : 'throughput')}><Bi zh={String(row[0])} en={String(row[1])} /><b>{row[2]}</b><em>{row[3]}</em></button>)}</div>
+              ['处理量', 'Throughput', snapshot ? `${fmt(handledTeu, 0)} TEU` : '--', '测试集'], ['本步能耗', 'Energy load', snapshot ? `${fmt(energyLoad, 1)} MWh` : '--', point?.time ?? '--'], ['累计碳排', 'Carbon emissions', snapshot ? `${fmt(carbonBase, 1)} t` : '--', '测试轨迹'], ['数据来源', 'Data source', 'POLA+eGRID', snapshot?.carbon_model.dataset_sha256.slice(0, 8) ?? '--'], ['碳价情景', 'Carbon price', `¥${carbonPrice.toFixed(1)}`, '用户输入'],
+            ].map((row) => <button type="button" key={String(row[1])} title={`查看${row[0]} / View ${row[1]}`} onClick={() => onOpenAction(row[1] === 'Carbon price' || row[1] === 'Carbon emissions' ? 'carbon-market' : row[1] === 'Energy load' ? 'energy-load' : row[1] === 'Data source' ? 'data-boundary' : 'throughput')}><Bi zh={String(row[0])} en={String(row[1])} /><b>{row[2]}</b><em>{row[3]}</em></button>)}</div>
           </section>
 
           <section className="command-panel scenario-panel">
             <div className="command-panel-title"><b><Bi zh="场景推演" en="SCENARIO SIMULATION" /></b></div>
             <div className="scenario-controls"><div>{(['baseline', 'optimized', 'low-carbon'] as const).map((mode) => {
-              const copy = mode === 'baseline' ? { zh: '基线方案', en: 'Baseline' } : mode === 'optimized' ? { zh: '综合优化', en: 'Optimized' } : { zh: '低碳优先', en: 'Low-carbon' };
+              const copy = mode === 'baseline' ? { zh: '效率优先', en: 'Efficiency' } : mode === 'optimized' ? { zh: '综合优化', en: 'Optimized' } : { zh: '低碳优先', en: 'Low-carbon' };
               return <button className={scenarioMode === mode ? 'active' : ''} type="button" key={mode} aria-pressed={scenarioMode === mode} onClick={() => { setScenarioMode(mode); void onSetScenarioMode(mode); }}><Bi {...copy} /></button>;
             })}</div><button type="button" onClick={onRefreshSimulation}><Bi zh="运行推演" en="Run simulation" /> →</button></div>
             <div className="scenario-deltas"><span><Bi zh="能耗" en="Energy" /> <b>{scenarioOutput[0]}</b></span><span><Bi zh="碳排" en="Carbon" /> <b>{scenarioOutput[1]}</b></span><span><Bi zh="成本" en="Cost" /> <b>{scenarioOutput[2]}</b></span><span><Bi zh="数据分区" en="Split" /> <b>TEST</b></span><span><Bi zh="对照基线" en="Baseline" /> <b>{traditional?.strategy ?? '--'}</b></span><span><Bi zh="当前策略" en="Policy" /> <b>{marl?.strategy ?? '--'}</b></span></div>

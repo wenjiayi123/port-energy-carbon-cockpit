@@ -122,7 +122,10 @@ class RuntimeDecisionService:
         temperature = self._signal(snapshot, "battery.temperature_c")
         battery_min = -5_000.0 if soc < 89.0 else 0.0
         battery_max = 5_000.0 if soc > 11.0 else 0.0
-        if temperature >= 46.0:
+        if (
+            temperature >= 46.0
+            or snapshot.get("active_scenario", {}).get("scenario_id") == "battery_overtemperature"
+        ):
             battery_min = max(battery_min, -900.0)
             battery_max = min(battery_max, 900.0)
         battery = projected(
@@ -550,7 +553,12 @@ class RuntimeDecisionService:
                 record["record_sha256"] = self._record_hash(record)
                 self._persist()
                 return json.loads(json.dumps(record))
-            result = self.simulator.apply_action(record["projected_action"])
+            # Approval can outlive the snapshot used to recommend an action.
+            # Reapply current equipment limits before sending the simulation command.
+            execution_action, execution_constraints = self._project_action(
+                current, record["projected_action"]
+            )
+            result = self.simulator.apply_action(execution_action)
             before_kpi = result["before"]["kpis"]["current"]
             after_kpi = result["after"]["kpis"]["current"]
             kpi_delta = {
@@ -578,9 +586,10 @@ class RuntimeDecisionService:
                 "executed_at": iso_z(utc_now()),
                 "mode": "simulation_only",
                 "production_dispatch": False,
-                "input_snapshot_sha256": current["snapshot_sha256"],
+                "input_snapshot_sha256": result["before"]["snapshot_sha256"],
                 "result_snapshot_sha256": result["after"]["snapshot_sha256"],
-                "applied_action": record["projected_action"],
+                "applied_action": execution_action,
+                "execution_safety_projection": execution_constraints,
                 "kpi_before": before_kpi,
                 "kpi_after": after_kpi,
                 "kpi_delta": kpi_delta,

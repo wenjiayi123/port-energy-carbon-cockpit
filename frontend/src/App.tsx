@@ -30,7 +30,7 @@ import {
   RuntimeClosedLoopPanel,
   type RuntimeSnapshot,
 } from './components/RuntimeClosedLoopPanel';
-import { recomputeDashboard } from './lib/api';
+import { fetchJson, recomputeDashboard } from './lib/api';
 import type { DashboardSnapshot, RlRewardTracePoint } from './types/dashboard';
 
 type TopPanelId = 'runtime' | 'simulation' | 'marl' | 'carbon' | 'shore' | 'api';
@@ -42,7 +42,7 @@ interface TopPanelMeta {
   icon: JSX.Element;
 }
 
-type OperationalMode = 'refresh' | 'vessel' | 'berth' | 'crane' | 'yard' | 'agv' | 'shore' | 'peak' | 'renewable' | 'traffic' | 'twin' | 'schedule' | 'carbon' | 'comparison' | 'health';
+type OperationalMode = 'refresh' | 'vessel' | 'berth' | 'crane' | 'yard' | 'agv' | 'shore' | 'peak' | 'renewable' | 'traffic' | 'twin' | 'schedule' | 'carbon' | 'comparison' | 'health' | 'data';
 
 interface OperationalDefinition {
   zh: string;
@@ -83,6 +83,7 @@ const vesselOperationalDefinitions = Object.fromEntries(vesselOperationContexts.
 ])) as Record<string, OperationalDefinition>;
 
 const operationalDefinitions: Record<string, OperationalDefinition> = {
+  'data-boundary': { zh: '数据来源、质量与使用边界', en: 'Data provenance, quality and boundaries', scopeZh: '当前快照、公开基准与现场接入门禁', scopeEn: 'Current snapshot, public benchmark and field integration gates', descriptionZh: '核对数据来源、质量检测、漂移与治理状态，再查看登记证据。公开数据校准模拟不等于生产实测。', descriptionEn: 'Review provenance, quality, drift and governance before opening registered evidence. Calibrated simulation is not field measurement.', primaryZh: '查看相关证据', primaryEn: 'Open related evidence', mode: 'data' },
   throughput: { zh: '测试分区吞吐量详情', en: 'Test-split throughput detail', scopeZh: '公开月度数据映射的测试轨迹', scopeEn: 'Held-out rollout mapped from public monthly data', descriptionZh: '查看测试分区处理量与轨迹变化；刷新会重新计算离线快照。', descriptionEn: 'Review held-out throughput and recompute the offline snapshot.', primaryZh: '刷新测试数据', primaryEn: 'Refresh test data', mode: 'refresh' },
   'vessel-ops': { zh: '测试步作业详情', en: 'Test-step operation detail', scopeZh: '环境生成的抽象作业步', scopeEn: 'Abstract environment operation steps', descriptionZh: '定位当前测试步，并重放留出集轨迹。', descriptionEn: 'Focus a held-out step and replay the test trajectory.', primaryZh: '定位测试步', primaryEn: 'Focus test step', mode: 'vessel' },
   ...vesselOperationalDefinitions,
@@ -113,7 +114,7 @@ const operationalDefinitions: Record<string, OperationalDefinition> = {
 };
 
 function formatNumber(value: number | undefined, digits = 1) {
-  if (typeof value !== 'number' || Number.isNaN(value)) return '--';
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '--';
   return new Intl.NumberFormat('zh-CN', {
     maximumFractionDigits: digits,
     minimumFractionDigits: digits,
@@ -163,23 +164,12 @@ function buildSvgSeries(values: number[], maxValue: number, width = 460, height 
   }));
 }
 
-async function fetchJson(path: string, options: RequestInit = {}) {
-  const response = await fetch(path, {
-    ...options,
-    headers: options.body ? { 'Content-Type': 'application/json', ...options.headers } : options.headers,
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.detail || response.statusText);
-  }
-  return data;
-}
-
 export function App() {
   const [greenPreference, setGreenPreference] = useState(0.5);
   const [carbonPrice, setCarbonPrice] = useState(85);
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<TopPanelId | null>(null);
   const [panelBusy, setPanelBusy] = useState(false);
   const [panelNotice, setPanelNotice] = useState('等待操作。');
@@ -211,7 +201,19 @@ export function App() {
   const [runtimeDecision, setRuntimeDecision] = useState<Record<string, any> | null>(null);
   const [runtimeHistory, setRuntimeHistory] = useState<Record<string, any> | null>(null);
   const [runtimeBusy, setRuntimeBusy] = useState(false);
+  const runtimeBusyRef = useRef(runtimeBusy);
+  runtimeBusyRef.current = runtimeBusy;
   const impactRunToken = useRef(0);
+  const snapshotRef = useRef<DashboardSnapshot | null>(null);
+  const dashboardParameters = useRef({ greenPreference, carbonPrice });
+  dashboardParameters.current = { greenPreference, carbonPrice };
+  const dashboardRequest = useRef<{
+    key: string;
+    controller: AbortController;
+    promise: Promise<DashboardSnapshot>;
+  } | null>(null);
+  const runtimeRequestVersion = useRef(0);
+  const trainingRequestVersion = useRef(0);
 
   const panelMeta: Record<TopPanelId, TopPanelMeta> = {
     runtime: { id: 'runtime', label: '实时闭环', en: 'Realtime closed loop', icon: <Radio size={16} /> },
@@ -219,7 +221,7 @@ export function App() {
     marl: { id: 'marl', label: 'RL 策略', en: 'RL policy', icon: <ShipWheel size={16} /> },
     carbon: { id: 'carbon', label: '低碳优先', en: 'Low-carbon priority', icon: <Leaf size={16} /> },
     shore: { id: 'shore', label: '岸电联动', en: 'Shore-power linkage', icon: <BatteryCharging size={16} /> },
-    api: { id: 'api', label: isRefreshing ? '重算中' : 'API 已同步', en: isRefreshing ? 'Recomputing' : 'API synchronized', icon: <ServerCog size={16} /> },
+    api: { id: 'api', label: isRefreshing ? '重算中' : dashboardError ? '快照同步失败' : snapshot ? 'API 已同步' : '等待快照', en: isRefreshing ? 'Recomputing' : dashboardError ? 'Snapshot unavailable' : snapshot ? 'API synchronized' : 'Waiting for snapshot', icon: <ServerCog size={16} /> },
   };
   const panelHeading: Record<TopPanelId, { zh: string; en: string }> = {
     runtime: { zh: '公开数据校准模拟、预测、审批、执行与审计', en: 'Calibrated simulation, forecast, approval, execution and audit' },
@@ -549,7 +551,7 @@ export function App() {
   const onlineRouteCount = routeEntries.filter(([, online]) => online).length;
   const systemHealthyCount = topologyNodes.filter((node) => node.online).length;
   const activePreference = preferenceLabel(greenPreference);
-  const currentRlAlgorithm = String(rlStatus?.config?.algorithm ?? marl?.strategy ?? 'MPC').toUpperCase();
+  const currentRlAlgorithm = String(marl?.strategy ?? '等待策略快照').toUpperCase();
   const latestRegisteredPolicy = Array.isArray(modelRegistry?.policies) ? modelRegistry.policies[0] : null;
   const policyTestRegisteredPolicy = Array.isArray(modelRegistry?.policies)
     ? modelRegistry.policies.find((policy: Record<string, any>) => policy.policy_id === policyTest?.policy?.policy_id) ?? latestRegisteredPolicy
@@ -593,49 +595,64 @@ export function App() {
 
   function recommendationTabImpact(tab: 'recommended' | 'all'): DecisionImpactReport {
     const allOptions = tab === 'all';
+    const shownCount = allOptions ? marlTrajectory.length : Math.min(7, marlTrajectory.length);
     return {
       id: `recommendation-tab-${tab}-${Date.now()}`,
-      eyebrow: allOptions ? 'CANDIDATE POLICY SPACE' : 'PRIORITY POLICY RANKING',
-      title: allOptions ? '7 条可选调度路径已展开' : '推荐动作优先级已重新计算',
-      subtitle: allOptions
-        ? '系统保留泊位、岸桥、AGV、削峰、能源结构和集卡等替代路径，供值班人员比较。'
-        : 'SAC 策略输出经过安全、船期、电网容量与经营成本约束评分后，形成当前推荐顺序。',
-      algorithm: `${currentRlAlgorithm} + 多目标约束评分`,
-      algorithmDetail: 'RL 负责连续调度偏好，规则层负责安全、船期、泊位兼容和变电站容量硬约束；这里展示排序结果，不会自动生产下发。',
-      objective: allOptions ? '保留可选路径与人工判断空间' : '碳排、延误、能耗与成本综合最优',
-      scope: allOptions ? '7 条候选方案 · 船/机/车/电/场' : 'Top 3 推荐动作 · 当前班次',
+      eyebrow: 'HELD-OUT TRAJECTORY FILTER',
+      title: allOptions ? `${shownCount} 条测试轨迹动作已展开` : `${shownCount} 条测试轨迹动作已筛选`,
+      subtitle: '本次操作只切换当前快照的动作列表显示范围；未重新运行策略或重新计算动作评分。',
+      algorithm: currentRlAlgorithm,
+      algorithmDetail: '动作来自当前登记策略或控制基线的离线轨迹；训练任务的算法不会替换这份轨迹的来源标签。',
+      objective: '核对当前测试轨迹的资源动作与环境计量结果',
+      scope: `${snapshot?.scenario_id ?? '等待快照'} · ${shownCount} 条可见动作`,
       phases: [
-        { label: '读取状态', detail: '正在读取船期、泊位、岸桥、AGV、堆场与用电峰值。' },
-        { label: '生成候选', detail: '正在展开可行动作并剔除违反安全边界的组合。' },
-        { label: '多目标评分', detail: '正在计算碳排、延误、能耗、成本和岸电收益。' },
-        { label: '人工可读', detail: '正在把策略输出翻译成对象、时间窗口和预期影响。' },
+        { label: '读取快照', detail: '读取已经载入的测试轨迹。' },
+        { label: '切换列表', detail: '按所选页签展示动作，保留原始时间步索引。' },
       ],
-      actions: allOptions
-        ? ['展开泊位/岸桥/AGV/削峰/能源/集卡 7 条路径', '保留每条路径的作用对象、窗口和预期影响', '不改变任何生产状态']
-        : ['按硬约束过滤不可执行路径', '按综合收益和置信度重排优先级', '把岸电窗口与业务对象绑定'],
+      actions: [`显示 ${shownCount} 条轨迹动作`, '保留原始时间、泊位与计量结果', '点击动作可定位对应测试步'],
       risks: [
-        { level: 'guard', label: '安全硬约束', detail: '风速、吃水、设备与电网边界不可突破' },
-        { level: 'watch', label: '推荐不等于执行', detail: '值班人员仍需打开详情并人工确认' },
+        { level: 'watch', label: '现场数据边界', detail: '生产船期、设备告警、AGV 遥测与分时能源结构尚未接入' },
+        { level: 'guard', label: '离线展示', detail: '页签切换不产生生产指令' },
       ],
-      recommendations: ['先比较全部路径，再回到推荐动作核对优先级', '执行前重点复核变电站峰值与岸电兼容性'],
+      recommendations: ['点击具体动作并核对对应时间步', '算法效果需以登记留出集证据为准'],
       results: [
-        { label: '候选方案', value: allOptions ? '7' : 'TOP 3', detail: allOptions ? '完整保留' : '综合排序', tone: 'blue' },
-        { label: '硬约束', value: '4 类', detail: '安全/船期/泊位/电网', tone: 'amber' },
-        { label: '策略引擎', value: currentRlAlgorithm, detail: 'Continuous RL', tone: 'green' },
-        { label: '生产下发', value: '0', detail: '等待人工确认', tone: 'blue' },
+        { label: '可见动作', value: String(shownCount), detail: allOptions ? '完整轨迹' : '列表筛选', tone: 'blue' },
+        { label: '轨迹总步数', value: String(marlTrajectory.length), detail: '当前快照', tone: 'amber' },
+        { label: '轨迹策略', value: currentRlAlgorithm, detail: '快照登记来源', tone: 'green' },
+        { label: '生产下发', value: '0', detail: '未产生指令', tone: 'blue' },
       ],
     };
   }
 
-  function operationalImpact(actionId: string, executing: boolean): DecisionImpactReport {
+  function resolveOperationalDefinition(actionId: string): OperationalDefinition {
+    const match = /^(?:vessel|recommendation)-(\d+)$/.exec(actionId);
+    const point = match ? marlTrajectory[Number(match[1])] : undefined;
+    if (point) {
+      return {
+        zh: `${point.time} · ${point.berth_id} 测试步详情`,
+        en: `${point.time} · ${point.berth_id} test-step detail`,
+        scopeZh: `${point.vessel_id} · STEP ${point.step}`,
+        scopeEn: `${point.vessel_id} · STEP ${point.step}`,
+        descriptionZh: `${point.decision_reason}；查看该步岸桥、车辆、岸电与环境计量结果。`,
+        descriptionEn: 'Inspect this held-out step and its resource actions and measured results.',
+        primaryZh: `定位 STEP ${point.step}`,
+        primaryEn: `Focus STEP ${point.step}`,
+        mode: 'vessel',
+      };
+    }
     const definition = operationalDefinitions[actionId] ?? operationalDefinitions['twin-map'];
+    return /^berth-b0[1-4]$/.test(actionId) ? { ...definition, mode: 'vessel' } : definition;
+  }
+
+  function operationalImpact(actionId: string, executing: boolean): DecisionImpactReport {
+    const definition = resolveOperationalDefinition(actionId);
     const isShore = definition.mode === 'shore';
     const algorithm = ['shore', 'carbon', 'renewable', 'peak'].includes(definition.mode)
-      ? `${currentRlAlgorithm} · Continuous RL`
+      ? `${currentRlAlgorithm} · 离线情景计算`
       : definition.mode === 'comparison'
         ? `${currentRlAlgorithm} · Held-out policy evaluation`
       : ['berth', 'crane', 'yard', 'agv', 'traffic'].includes(definition.mode)
-        ? 'RL Policy · PortEnergyDispatchEnv'
+        ? `${currentRlAlgorithm} · PortEnergyDispatchEnv`
         : '约束规则引擎 · 离线快照';
     const verb = executing ? '离线计算与回放' : '建议作用域解析';
     const shoreReduction = (snapshot?.carbon_model.shore_power_reduction_kg ?? 0) / 1000;
@@ -648,7 +665,7 @@ export function App() {
         : '系统已解析作用对象、时间窗口、模型依据与执行边界；当前仍是待确认状态。',
       algorithm,
       algorithmDetail: isShore
-        ? 'SAC 适合连续权重调度：提高岸电奖励，同时保留峰值负荷、延误、泊位互斥和人工确认护栏。'
+        ? '调整绿色偏好参数并重算当前离线轨迹；具体策略以快照登记来源为准，生产设备兼容与现场电网接入仍需独立验收。'
         : definition.mode === 'comparison'
           ? '从策略登记表读取已通过完整性、数据漂移与安全门禁的留出集评估，不重复运行、不覆盖原证据。'
           : 'Gymnasium adapter 将策略动作转换为统一的泊位、岸桥、车辆、能源与堆场事件，再由约束层校验。',
@@ -657,7 +674,7 @@ export function App() {
       phases: executing
         ? [
           { label: '锁定对象', detail: `正在锁定 ${definition.scopeZh}，避免作用域漂移。` },
-          { label: '安全校验', detail: '正在校验风速、吃水、泊位互斥、设备与变电站容量。' },
+          { label: '边界核对', detail: '核对离线环境约束；生产风速、吃水与设备可用性尚未接入。' },
           { label: '离线计算', detail: `正在分析：${definition.primaryZh}。` },
           { label: 'KPI 快照', detail: '正在从环境轨迹重算能耗、碳强度、延误与成本。' },
         ]
@@ -673,7 +690,7 @@ export function App() {
       risks: [
         { level: 'guard', label: '人工确认边界', detail: executing ? '已确认运行离线分析，未改变生产计划' : '当前仍为待确认，未改变生产计划' },
         { level: 'watch', label: isShore ? '变电站峰值' : '资源冲突', detail: isShore ? '岸电、岸桥、冷藏箱与 AGV 充电可能叠加' : '需持续监控船期、设备和场内交通变化' },
-        { level: 'guard', label: '安全越界', detail: `${policyTest?.metrics?.safety_violations ?? 0} · 超限时拒绝下发` },
+        { level: 'guard', label: '安全越界', detail: `${policyTest?.metrics?.safety_violations ?? '未读取登记评测'} · 超限时拒绝下发` },
       ],
       recommendations: isShore
         ? ['保留燃油待机作为兼容性或峰值异常时的回退路径', '执行后同时检查总碳排、峰值容量和综合成本']
@@ -682,7 +699,7 @@ export function App() {
         { label: executing ? '分析状态' : '当前状态', value: executing ? '已计算' : '待确认', detail: executing ? '离线快照' : '未生产下发', tone: executing ? 'green' : 'amber' },
         { label: '轨迹指标', value: operationalMetric(actionId), detail: definition.scopeZh, tone: 'blue' },
         { label: isShore ? '岸电替代减排' : '策略引擎', value: isShore ? `${formatNumber(shoreReduction, 2)} t` : algorithm.split(' · ')[0], detail: isShore ? '当前仿真快照' : '当前策略', tone: 'green' },
-        { label: '安全越界', value: String(policyTest?.metrics?.safety_violations ?? 0), detail: '硬约束保持', tone: 'amber' },
+        { label: '安全越界', value: String(policyTest?.metrics?.safety_violations ?? '--'), detail: '登记留出集评测', tone: 'amber' },
       ],
     };
   }
@@ -690,22 +707,20 @@ export function App() {
   function scenarioImpact(mode: 'baseline' | 'optimized' | 'low-carbon'): DecisionImpactReport {
     const isLowCarbon = mode === 'low-carbon';
     const targetPreference = mode === 'baseline' ? 0.25 : mode === 'optimized' ? 0.5 : 0.82;
-    const scenarioLabel = mode === 'baseline' ? '基线方案' : mode === 'optimized' ? '综合优化' : '低碳优先';
+    const scenarioLabel = mode === 'baseline' ? '效率优先' : mode === 'optimized' ? '综合优化' : '低碳优先';
     return {
       id: `scenario-${mode}-${Date.now()}`,
       eyebrow: 'MULTI-OBJECTIVE SCENARIO SWITCH',
       title: `${scenarioLabel}权重已装载`,
-      subtitle: `调度偏好切换到 ${targetPreference.toFixed(2)}，安全、船期、设备和电网约束继续作为不可突破的硬边界。`,
-      algorithm: isLowCarbon ? 'SAC · Carbon-Min Continuous RL' : `${currentRlAlgorithm} · Multi-objective Policy`,
-      algorithmDetail: isLowCarbon
-        ? 'SAC 提高碳排、岸电与可再生时段的奖励权重，在连续动作空间中调节资源偏好。'
-        : '同一策略环境下调整奖励权重，用于比较传统效率优先与多目标平衡路径。',
+      subtitle: `调度偏好切换到 ${targetPreference.toFixed(2)}，重新计算离线快照；具体约束结果由测试环境返回。`,
+      algorithm: `${currentRlAlgorithm} · 离线情景计算`,
+      algorithmDetail: '在相同测试数据上调整绿色偏好参数。当前轨迹策略以快照为准，效率优先仍是参数情景，独立控制基线保持作为对照。',
       objective: isLowCarbon ? '碳排最小化，兼顾延误、成本与安全' : '能耗、碳排、成本与时延综合权衡',
       scope: `全港调度 · 权重 ${targetPreference.toFixed(2)}`,
       phases: [
-        { label: '冻结基线', detail: '正在保存当前班次、设备与能源状态作为对照。' },
+        { label: '读取基准', detail: '正在读取公开基准的同一测试分区作为对照。' },
         { label: '注入偏好', detail: `正在把 ${scenarioLabel} 权重 ${targetPreference.toFixed(2)} 注入策略环境。` },
-        { label: '约束校验', detail: '正在校验船期、安全、泊位和电网容量硬约束。' },
+        { label: '环境约束', detail: '正在计算测试环境的峰值与延误约束。' },
         { label: '重算快照', detail: '正在更新碳排、能耗、成本与岸电利用结果。' },
       ],
       actions: ['更新绿色调度偏好', '保留船期、安全、设备与电网硬约束', '为下一次场景推演准备统一初始状态'],
@@ -723,34 +738,37 @@ export function App() {
     };
   }
 
-  function simulationImpact(): DecisionImpactReport {
+  function simulationImpact(sourceSnapshot = snapshot): DecisionImpactReport {
+    const baseline = sourceSnapshot?.strategies[0];
+    const optimized = sourceSnapshot?.strategies[1];
+    const stepCount = optimized?.trajectory.length ?? 0;
     return {
       id: `simulation-run-${Date.now()}`,
       autoCloseMs: 4800,
       eyebrow: 'DIGITAL TWIN POLICY ROLLOUT',
-      title: '低碳场景推演已完成',
+      title: '离线场景推演已完成',
       subtitle: '同一测试集下完成控制基线与优化策略双轨迹回放。',
-      algorithm: `${currentRlAlgorithm} Policy + Gymnasium Adapter`,
+      algorithm: `${String(optimized?.strategy ?? currentRlAlgorithm).toUpperCase()} Policy + Gymnasium Adapter`,
       algorithmDetail: '策略通过 Gymnasium reset/step 事件流输出调度动作；驾驶舱将每一步映射为船舶、泊位、岸桥、车辆、岸电、能耗、碳排与延误。',
       objective: '验证低碳策略相对传统基线的累计收益',
-      scope: `${snapshot?.scenario_id ?? 'port_la_2025_public_benchmark'} · ${replaySteps.length} 个时序节点`,
+      scope: `${sourceSnapshot?.scenario_id ?? 'port_la_2025_public_benchmark'} · ${stepCount} 个时序节点`,
       phases: [
         { label: '环境 Reset', detail: '正在恢复统一船期、泊位、设备与能源初始状态。' },
         { label: '策略 Rollout', detail: '正在逐步生成岸电、岸桥、换窗与堆场动作。' },
         { label: '基线对照', detail: '正在与先到先服务和固定资源顺序进行同场景比较。' },
         { label: '孪生回写', detail: '正在生成累计曲线、节点原因和业务 KPI。' },
       ],
-      actions: ['重放每个环境 step 及资源动作', '同步控制基线/RL 累计碳排曲线', '将奖励项、单步减排和延误写入节点详情'],
+      actions: ['重放每个环境 step 及资源动作', '同步控制基线与当前策略累计碳排曲线', '将奖励项、单步减排和延误写入节点详情'],
       risks: [
         { level: 'guard', label: '仿真隔离', detail: '本次推演不直接改变生产计划' },
         { level: 'watch', label: '模型偏差', detail: '实际 TOS、天气与设备状态变化时需重算' },
       ],
       recommendations: ['点击第 2 与第 5 个节点核对调度因果链', '关注累计减排是否来自多次真实动作而非终值修饰'],
       results: [
-        { label: '累计减排', value: `${formatNumber(((traditional?.total_carbon_kg ?? 0) - (marl?.total_carbon_kg ?? 0)) / 1000, 2)} t`, detail: '优化策略 vs 控制基线', tone: 'green' },
-        { label: '能耗差异', value: `${formatNumber(((traditional?.total_energy_kwh ?? 0) - (marl?.total_energy_kwh ?? 0)) / 1000, 2)} MWh`, detail: '同场景对照', tone: 'blue' },
-        { label: '岸电提升', value: `${formatNumber(shorePowerGain, 1)} pp`, detail: '百分点', tone: 'green' },
-        { label: '时序节点', value: String(replaySteps.length), detail: '可逐步解释', tone: 'amber' },
+        { label: '累计减排', value: `${formatNumber(((baseline?.total_carbon_kg ?? 0) - (optimized?.total_carbon_kg ?? 0)) / 1000, 2)} t`, detail: '优化策略 vs 控制基线', tone: 'green' },
+        { label: '能耗差异', value: `${formatNumber(((baseline?.total_energy_kwh ?? 0) - (optimized?.total_energy_kwh ?? 0)) / 1000, 2)} MWh`, detail: '同场景对照', tone: 'blue' },
+        { label: '岸电提升', value: `${formatNumber((optimized?.shore_power_usage_rate ?? 0) - (baseline?.shore_power_usage_rate ?? 0), 1)} pp`, detail: '百分点', tone: 'green' },
+        { label: '时序节点', value: String(stepCount), detail: '可逐步解释', tone: 'amber' },
       ],
     };
   }
@@ -795,36 +813,67 @@ export function App() {
     };
   }
 
+  async function requestDashboardSnapshot(preference: number, price = carbonPrice) {
+    const key = `${preference}:${price}`;
+    if (dashboardRequest.current?.key === key) return dashboardRequest.current.promise;
+    dashboardRequest.current?.controller.abort();
+    const controller = new AbortController();
+    setIsRefreshing(true);
+    setDashboardError(null);
+    const promise = recomputeDashboard({
+      green_preference: preference,
+      carbon_price_cny_per_ton: price,
+    }, controller.signal).then((nextSnapshot) => {
+      const current = dashboardParameters.current;
+      if (controller.signal.aborted || current.greenPreference !== preference || current.carbonPrice !== price) {
+        throw new DOMException('参数已变化，已丢弃旧快照。', 'AbortError');
+      }
+      snapshotRef.current = nextSnapshot;
+      setSnapshot(nextSnapshot);
+      return nextSnapshot;
+    }).catch((error: unknown) => {
+      if (dashboardRequest.current?.controller === controller
+        && !controller.signal.aborted
+        && !(error instanceof DOMException && error.name === 'AbortError')) {
+        const message = `快照同步失败：${String(error)}`;
+        setDashboardError(message);
+        setPanelNotice(message);
+      }
+      throw error;
+    }).finally(() => {
+      if (dashboardRequest.current?.controller === controller) {
+        dashboardRequest.current = null;
+        setIsRefreshing(false);
+      }
+    });
+    dashboardRequest.current = { key, controller, promise };
+    return promise;
+  }
+
   useEffect(() => {
-    let active = true;
     setIsRefreshing(true);
     const timer = window.setTimeout(() => {
-      recomputeDashboard({
-        green_preference: greenPreference,
-        carbon_price_cny_per_ton: carbonPrice,
-      })
-        .then((nextSnapshot) => {
-          if (active) {
-            setSnapshot(nextSnapshot);
-          }
-        })
-        .finally(() => {
-          if (active) {
-            setIsRefreshing(false);
-          }
-        });
+      const currentSnapshot = snapshotRef.current;
+      if (currentSnapshot?.green_preference === greenPreference
+        && currentSnapshot.carbon_market.carbon_price_cny_per_ton === carbonPrice) {
+        setIsRefreshing(false);
+        return;
+      }
+      void requestDashboardSnapshot(greenPreference, carbonPrice).catch(() => undefined);
     }, 180);
-
-    return () => {
-      active = false;
-      window.clearTimeout(timer);
-    };
+    return () => window.clearTimeout(timer);
   }, [greenPreference, carbonPrice]);
+
+  useEffect(() => () => dashboardRequest.current?.controller.abort(), []);
 
   useEffect(() => {
     let active = true;
+    let inFlight = false;
 
     async function refreshEngineeringSignals() {
+      if (inFlight) return;
+      inFlight = true;
+      const trainingVersion = trainingRequestVersion.current;
       const [health, linkage, rl, capabilities, sailing, registry, integration, audit, evidence, historyEvidence, hybrid] = await Promise.all([
         fetchJson('/api/health').catch(() => null),
         fetchJson('/api/linkage/health').catch(() => null),
@@ -838,9 +887,10 @@ export function App() {
         fetchJson('/api/evidence/history').catch(() => null),
         fetchJson('/api/rl/hybrid-evidence').catch(() => null),
       ]);
+      inFlight = false;
       if (!active) return;
       setApiHealth({ health, linkage, rl, sailing, registry });
-      if (rl) setRlStatus(rl);
+      if (trainingVersion === trainingRequestVersion.current) setRlStatus(rl);
       if (capabilities) setRlCapabilities(capabilities);
       if (sailing) setSailingStatus(sailing);
       if (registry) setModelRegistry(registry);
@@ -861,14 +911,19 @@ export function App() {
 
   useEffect(() => {
     let active = true;
+    let inFlight = false;
     async function pollRuntime() {
+      if (inFlight || runtimeBusyRef.current) return;
+      inFlight = true;
+      const version = runtimeRequestVersion.current;
       const [nextSnapshot, nextForecast, nextHistory] = await Promise.all([
         fetchJson('/api/runtime/snapshot').catch(() => null),
         fetchJson('/api/runtime/forecast').catch(() => null),
         fetchJson('/api/runtime/history?limit=48').catch(() => null),
       ]);
-      if (!active) return;
-      if (nextSnapshot) setRuntimeSnapshot(nextSnapshot as RuntimeSnapshot);
+      inFlight = false;
+      if (!active || runtimeBusyRef.current || version !== runtimeRequestVersion.current) return;
+      setRuntimeSnapshot(nextSnapshot as RuntimeSnapshot | null);
       setRuntimeForecast(nextForecast);
       if (nextHistory) setRuntimeHistory(nextHistory);
     }
@@ -881,7 +936,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!replayPlaying || (activePanel !== 'simulation' && activePanel !== 'shore') || replaySteps.length <= 1) {
+    if (!replayPlaying || (activePanel !== null && activePanel !== 'simulation' && activePanel !== 'shore') || replaySteps.length <= 1) {
       return undefined;
     }
     const timer = window.setInterval(() => {
@@ -900,28 +955,24 @@ export function App() {
     return () => window.clearInterval(timer);
   }, [activePanel, rlStatus?.status]);
 
-  async function syncDashboard(reason = '仪表盘已重新同步。') {
-    setIsRefreshing(true);
+  async function syncDashboard(reason = '仪表盘已重新同步。', propagateError = false) {
     setPanelBusy(true);
     try {
-      const nextSnapshot = await recomputeDashboard({
-        green_preference: greenPreference,
-        carbon_price_cny_per_ton: carbonPrice,
-      });
-      setSnapshot(nextSnapshot);
+      const nextSnapshot = await requestDashboardSnapshot(greenPreference);
       setPanelNotice(reason);
+      return nextSnapshot;
     } catch (error) {
       setPanelNotice(`同步失败：${String(error)}`);
+      if (propagateError) throw error;
     } finally {
       setPanelBusy(false);
-      setIsRefreshing(false);
     }
   }
 
   function openOperationalAction(actionId: string) {
-    const definition = operationalDefinitions[actionId] ?? operationalDefinitions['twin-map'];
+    const definition = resolveOperationalDefinition(actionId);
     setActivePanel(null);
-    setActiveOperation(actionId in operationalDefinitions ? actionId : 'twin-map');
+    setActiveOperation(actionId in operationalDefinitions || /^recommendation-\d+$/.test(actionId) ? actionId : 'twin-map');
     setPanelNotice(`${definition.zh}已打开，等待确认运行离线分析。`);
     if (actionId.startsWith('recommendation-')) {
       void runDecisionImpact(operationalImpact(actionId, false), undefined, false);
@@ -929,17 +980,9 @@ export function App() {
   }
 
   async function recomputeOperationalSnapshot(preference: number, reason: string) {
-    setIsRefreshing(true);
-    try {
-      const nextSnapshot = await recomputeDashboard({
-        green_preference: preference,
-        carbon_price_cny_per_ton: carbonPrice,
-      });
-      setSnapshot(nextSnapshot);
-      setPanelNotice(reason);
-    } finally {
-      setIsRefreshing(false);
-    }
+    const nextSnapshot = await requestDashboardSnapshot(preference);
+    setPanelNotice(reason);
+    return nextSnapshot;
   }
 
   function commitOperationalState(actionId: string, definition: OperationalDefinition, notice: string) {
@@ -951,8 +994,8 @@ export function App() {
   }
 
   async function executeOperationalAction(actionId: string) {
-    const definition = operationalDefinitions[actionId] ?? operationalDefinitions['twin-map'];
-    const activeActionId = actionId in operationalDefinitions ? actionId : 'twin-map';
+    const definition = resolveOperationalDefinition(actionId);
+    const activeActionId = actionId in operationalDefinitions || /^recommendation-\d+$/.test(actionId) ? actionId : 'twin-map';
     const firstConnectedIndex = shoreWindowCards.findIndex((point) => point.shore_power_connected);
     let nextPreference = greenPreference;
     let notice = `${definition.zh}离线分析已完成。`;
@@ -962,29 +1005,33 @@ export function App() {
     setActivePanel(null);
     try {
       switch (definition.mode) {
-        case 'vessel':
-          setReplayStep(activeActionId === 'berth-b03' ? 2 : 0);
-          setReplayPlaying(true);
-          notice = `${definition.zh}已定位，留出集轨迹回放已启用。`;
-          await recomputeOperationalSnapshot(nextPreference, notice);
+        case 'vessel': {
+          const matchedIndex = /^(?:vessel|recommendation)-(\d+)$/.exec(activeActionId);
+          const vesselIndex = matchedIndex ? Number(matchedIndex[1]) : -1;
+          const matchedBerth = /^berth-b0([1-4])$/.exec(activeActionId);
+          const berthId = matchedBerth ? `B${matchedBerth[1]}` : null;
+          const berthIndex = berthId ? marlTrajectory.findIndex((point) => point.berth_id === berthId) : -1;
+          const targetIndex = vesselIndex >= 0 ? vesselIndex : berthIndex >= 0 ? berthIndex : activeActionId === 'vessel-ops' ? activeReplayIndex : 0;
+          setReplayStep(Math.min(targetIndex, Math.max(0, replaySteps.length - 1)));
+          setReplayPlaying(false);
+          setActivePanel('simulation');
+          notice = `${definition.zh}已定位至 STEP ${targetIndex + 1}，回放已暂停以便复核。`;
           break;
+        }
         case 'berth':
           setReplayStep(activeActionId === 'berth-b02' || activeActionId === 'recommendation-0' ? 1 : 0);
           setReplayPlaying(true);
           notice = `${definition.zh}已定位到现有测试轨迹；公开数据不含生产泊位计划，未改写业务状态。`;
           break;
         case 'crane':
-          setReplayStep(2);
-          setReplayPlaying(true);
+          setReplayPlaying(false);
+          setActivePanel('simulation');
           notice = `${definition.zh}已定位当前策略的岸桥投入；未伪造生产节拍。`;
           break;
         case 'yard':
-          setReplayStep(3);
           notice = '当前公开数据集不含堆场占用快照，该模块已明确标记为未接入。';
           break;
         case 'agv':
-          setReplayStep(4);
-          setReplayPlaying(true);
           notice = '当前轨迹只包含场内车辆投入数，不包含车辆电量，因此未生成虚假充电指令。';
           break;
         case 'shore':
@@ -1003,13 +1050,9 @@ export function App() {
           await recomputeOperationalSnapshot(nextPreference, notice);
           break;
         case 'renewable':
-          nextPreference = 0.82;
-          setGreenPreference(nextPreference);
-          setReplayPlaying(true);
           notice = '当前数据只有 eGRID 综合排放因子，没有分时能源结构，未生成虚假光伏/风电比例。';
           break;
         case 'traffic':
-          setReplayPlaying(true);
           notice = '公开基准不包含外集卡到港明细，当前只展示环境输出的场内车辆动作。';
           break;
         case 'twin':
@@ -1079,6 +1122,10 @@ export function App() {
           setPanelNotice(notice);
           break;
         }
+        case 'data':
+          await openPanel('marl');
+          notice = '已打开登记策略与历史证据；数据来源、质量和生产边界可逐项核对。';
+          break;
         case 'refresh':
         default:
           notice = `${definition.zh}已刷新，当前驾驶舱快照已重新计算。`;
@@ -1089,6 +1136,7 @@ export function App() {
         [activeActionId]: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
       }));
       setOperationResults((results) => ({ ...results, [activeActionId]: notice }));
+      setPanelNotice(notice);
       commitOperationalState(activeActionId, definition, notice);
     } catch (error) {
       setPanelNotice(`${definition.zh}执行失败：${String(error)}`);
@@ -1113,15 +1161,22 @@ export function App() {
           { label: '相对固定资源基线成本', value: `${formatNumber(metrics.fixed_baseline_cost_saving_pct, 1)}%`, detail: '统一测试分区', tone: 'blue' },
           { label: '安全越界', value: String(metrics.safety_violations ?? 0), detail: '未通过门禁的候选不上线', tone: 'amber' },
         ];
+      } else if (snapshotRef.current && ['shore', 'peak', 'carbon', 'refresh', 'twin', 'schedule'].includes(operationalDefinitions[actionId]?.mode)) {
+        report.results = simulationImpact(snapshotRef.current).results;
+        report.algorithm = `${String(snapshotRef.current.strategies[1]?.strategy ?? currentRlAlgorithm).toUpperCase()} · 离线情景计算`;
       }
       setActiveOperation(null);
     });
   }
 
   function operationalMetric(actionId: string) {
+    if (actionId === 'data-boundary') return snapshot ? `${snapshot.scenario_id} · 质量 ${snapshot.data_quality?.score ?? '--'}/100` : '等待快照数据';
     if (['throughput'].includes(actionId)) return `${formatNumber(snapshot?.carbon_model.handled_teu, 0)} TEU`;
-    const vesselContext = vesselOperationContexts.find((vessel) => vessel.id === actionId);
-    if (vesselContext) return `${vesselContext.name} · ${vesselContext.berth} · ${vesselContext.status}`;
+    const matchedStep = /^(?:vessel|recommendation)-(\d+)$/.exec(actionId);
+    const matchedBerth = /^berth-b0([1-4])$/.exec(actionId);
+    const point = matchedStep ? marlTrajectory[Number(matchedStep[1])]
+      : matchedBerth ? marlTrajectory.find((item) => item.berth_id === `B${matchedBerth[1]}`) : undefined;
+    if (point) return `${point.vessel_id} · ${point.berth_id} · ${point.time} · ${formatNumber(point.carbon_kg, 0)} kgCO2e`;
     if (['vessel-ops', 'vessel-queue', 'berth-b01'].includes(actionId)) return `${activeMarlPoint?.vessel_id ?? '待测试轨迹'} · ${activeMarlPoint?.berth_id ?? '--'}`;
     if (['berth-plan', 'berth-b02', 'recommendation-0'].includes(actionId)) return `${shoreConnectedCount}/${shoreWindowCards.length || 0} 个岸电窗口`;
     if (['crane-plan', 'berth-b03', 'recommendation-2'].includes(actionId)) return `${formatNumber(activeMarlPoint?.crane_count, 0)} 台活跃岸桥`;
@@ -1140,11 +1195,13 @@ export function App() {
   }
 
   async function refreshSimulationReplay() {
-    await runDecisionImpact(simulationImpact(), async () => {
+    const report = simulationImpact();
+    await runDecisionImpact(report, async () => {
       setActivePanel('simulation');
       setReplayStep(0);
       setReplayPlaying(true);
-      await syncDashboard('仿真数据已刷新，回放时间轴已从 STEP 1 重新播放。');
+      const nextSnapshot = await syncDashboard('仿真数据已刷新，回放时间轴已从 STEP 1 重新播放。', true);
+      if (nextSnapshot) Object.assign(report, simulationImpact(nextSnapshot), { id: report.id });
     });
   }
 
@@ -1154,12 +1211,6 @@ export function App() {
       setReplayStep(index);
       setReplayPlaying(false);
     });
-    const nodeRunToken = impactRunToken.current;
-    window.setTimeout(() => {
-      if (impactRunToken.current === nodeRunToken) {
-        setReplayPlaying(true);
-      }
-    }, 2500 + (report.autoCloseMs ?? 0) + 120);
   }
 
   function toggleReplayWithImpact() {
@@ -1190,6 +1241,7 @@ export function App() {
   }
 
   async function openPanel(panel: TopPanelId) {
+    setActiveOperation(null);
     setActivePanel(panel);
     setPanelNotice(`${panelMeta[panel].label} 面板已打开。`);
     if (panel === 'api') {
@@ -1207,6 +1259,7 @@ export function App() {
   }
 
   async function refreshRuntime() {
+    runtimeRequestVersion.current += 1;
     setRuntimeBusy(true);
     try {
       const nextSnapshot = await fetchJson('/api/runtime/snapshot');
@@ -1228,6 +1281,7 @@ export function App() {
   }
 
   async function createRuntimeDecision() {
+    runtimeRequestVersion.current += 1;
     setRuntimeBusy(true);
     try {
       const objective = greenPreference >= 0.72 ? 'carbon' : 'balanced';
@@ -1251,6 +1305,7 @@ export function App() {
 
   async function approveRuntimeDecision(approverId: string) {
     if (!runtimeDecision?.decision_id) return;
+    runtimeRequestVersion.current += 1;
     setRuntimeBusy(true);
     try {
       const data = await fetchJson(`/api/runtime/decisions/${runtimeDecision.decision_id}/approve`, {
@@ -1273,6 +1328,7 @@ export function App() {
 
   async function executeRuntimeDecision() {
     if (!runtimeDecision?.decision_id) return;
+    runtimeRequestVersion.current += 1;
     setRuntimeBusy(true);
     try {
       const data = await fetchJson(`/api/runtime/decisions/${runtimeDecision.decision_id}/execute`, {
@@ -1294,6 +1350,7 @@ export function App() {
 
   async function rollbackRuntimeDecision() {
     if (!runtimeDecision?.decision_id) return;
+    runtimeRequestVersion.current += 1;
     setRuntimeBusy(true);
     try {
       const data = await fetchJson(`/api/runtime/decisions/${runtimeDecision.decision_id}/rollback`, {
@@ -1315,6 +1372,7 @@ export function App() {
   }
 
   async function injectRuntimeScenario(scenarioId: string) {
+    runtimeRequestVersion.current += 1;
     setRuntimeBusy(true);
     try {
       const data = await fetchJson('/api/runtime/scenarios/inject', {
@@ -1337,6 +1395,7 @@ export function App() {
   }
 
   async function controlRuntime(action: 'start' | 'stop' | 'reset') {
+    runtimeRequestVersion.current += 1;
     setRuntimeBusy(true);
     try {
       const data = await fetchJson('/api/runtime/control', {
@@ -1379,6 +1438,7 @@ export function App() {
   }
 
   async function refreshRlStatus(silent = false) {
+    const version = ++trainingRequestVersion.current;
     if (!silent) {
       setPanelBusy(true);
     }
@@ -1387,6 +1447,7 @@ export function App() {
         .then((payload) => setRlCapabilities(payload))
         .catch(() => undefined);
       const data = await fetchJson('/api/rl/train/status');
+      if (version !== trainingRequestVersion.current) return;
       setRlStatus(data);
       await capabilitiesPromise;
       if (!silent) {
@@ -1412,6 +1473,7 @@ export function App() {
   }
 
   async function controlMarlTraining(action: 'pause' | 'resume' | 'stop') {
+    trainingRequestVersion.current += 1;
     setActivePanel('marl');
     setPanelBusy(true);
     try {
@@ -1494,9 +1556,14 @@ export function App() {
       optimized: { value: 0.5, label: '均衡调度', panel: 'marl' as const },
       'low-carbon': { value: 0.82, label: '低碳优先', panel: 'carbon' as const },
     }[mode];
-    await runDecisionImpact(scenarioImpact(mode), async () => {
+    const report = scenarioImpact(mode);
+    await runDecisionImpact(report, async () => {
       applyDashboardPreference(scenario.value, scenario.label, scenario.panel);
-      await recomputeOperationalSnapshot(scenario.value, `${scenario.label}已应用，驾驶舱快照已按新权重重算。`);
+      const nextSnapshot = await recomputeOperationalSnapshot(scenario.value, `${scenario.label}已应用，驾驶舱快照已按新权重重算。`);
+      const optimized = nextSnapshot.strategies[1];
+      report.algorithm = `${String(optimized?.strategy ?? currentRlAlgorithm).toUpperCase()} · 离线情景计算`;
+      report.results[1] = { label: '情景碳排', value: `${formatNumber((optimized?.total_carbon_kg ?? 0) / 1000, 1)} t`, detail: '本次重算快照', tone: 'blue' };
+      report.results[2] = { label: '岸电使用', value: `${formatNumber(optimized?.shore_power_usage_rate, 1)}%`, detail: '本次重算轨迹', tone: 'green' };
     });
   }
 
@@ -1565,15 +1632,15 @@ export function App() {
   }
 
   const selectedOperationalDefinition = activeOperation
-    ? operationalDefinitions[activeOperation] ?? operationalDefinitions['twin-map']
+    ? resolveOperationalDefinition(activeOperation)
     : null;
   const selectedOperationalModel = selectedOperationalDefinition
     ? ['shore', 'carbon', 'renewable', 'peak'].includes(selectedOperationalDefinition.mode)
-      ? `${currentRlAlgorithm} · Continuous RL`
+      ? `${currentRlAlgorithm} · 离线情景计算`
       : selectedOperationalDefinition.mode === 'comparison'
         ? `${currentRlAlgorithm} · 已登记留出集评估`
       : ['berth', 'crane', 'yard', 'agv', 'traffic'].includes(selectedOperationalDefinition.mode)
-        ? 'RL Policy · PortEnergyDispatchEnv'
+        ? `${currentRlAlgorithm} · PortEnergyDispatchEnv`
         : '约束规则引擎 · Offline Snapshot'
     : '';
   const selectedOperationalBehavior = selectedOperationalDefinition
@@ -1590,6 +1657,13 @@ export function App() {
 
   return (
     <main className="port-command-shell">
+      {dashboardError && (
+        <div className="dashboard-sync-alert" role="alert">
+          <CircleAlert size={16} />
+          <span>{dashboardError}<small>{snapshot ? '当前显示上次成功快照，尚未反映新参数。' : '尚未取得快照，请重试。'}</small></span>
+          <button type="button" disabled={isRefreshing} onClick={() => void syncDashboard('快照重试同步成功。')}>{isRefreshing ? '重试中' : '重试同步'}</button>
+        </div>
+      )}
       <PortCommandCenter
         snapshot={snapshot}
         runtimeSnapshot={runtimeSnapshot}
@@ -1639,6 +1713,20 @@ export function App() {
             <span className="risk"><small>风险护栏 / Risk guard</small><b>{selectedOperationalRisk}</b></span>
             <span className="advice"><small>值班建议 / Advice</small><b>{selectedOperationalAdvice}</b></span>
           </div>
+          {activeOperation === 'data-boundary' && (
+            <div className="operation-data-evidence">
+              <span><small>数据来源</small><b>{snapshot?.carbon_model.data_source ?? '等待快照'}</b></span>
+              <span><small>数据集</small><b>{snapshot?.rl_environment.dataset_id ?? '--'}</b></span>
+              <span><small>数据质量</small><b>{snapshot ? `${snapshot.data_quality.status ?? '--'} · ${snapshot.data_quality.score ?? '--'}/100 · ${snapshot.data_quality.grade ?? '--'}` : '--'}</b></span>
+              <span><small>漂移状态</small><b>{snapshot?.data_drift.status ?? '--'}</b></span>
+              <span><small>证据 SHA-256</small><b>{snapshot?.carbon_model.dataset_sha256 ?? '--'}</b></span>
+              <span><small>策略依据</small><b>{snapshot?.governance.policy_evidence ?? '--'} · {snapshot?.governance.policy_stage ?? '--'}</b></span>
+              <span><small>现场只读接入</small><b>{integrationStatus?.ready_adapter_count ?? 0}/{integrationStatus?.required_adapter_count ?? 6} · {integrationStatus?.read_only_shadow_ready ? '已就绪' : '未就绪'}</b></span>
+              <span><small>生产下发</small><b>{snapshot?.governance.production_dispatch_enabled ? '已启用' : '已禁用'}</b></span>
+              {Array.isArray(snapshot?.data_quality.warnings) && snapshot.data_quality.warnings.map((warning: string, index: number) => <p key={`${index}-${warning}`}>{warning}</p>)}
+              <p>公开基准提供离线能耗、碳排与抽象资源动作；生产船期、AGV 遥测、堆场占用与分时能源结构尚未接入。</p>
+            </div>
+          )}
           <div className="operation-detail-actions">
             <button className="operation-primary" type="button" disabled={operationBusy} onClick={() => void executeOperationalActionWithImpact(activeOperation)}>
               {operationBusy ? <RefreshCw size={15} /> : <Zap size={15} />}{operationBusy ? '执行中 / Running' : <><span>{selectedOperationalDefinition.primaryZh}</span><small>{selectedOperationalDefinition.primaryEn}</small></>}
@@ -2180,7 +2268,7 @@ export function App() {
                       <span>固定资源基线减排 <b>{policyMetrics ? `${formatNumber(policyMetrics.fixed_baseline_carbon_reduction_pct ?? policyMetrics.carbon_reduction_pct, 1)}%` : '--'}</b></span>
                       <span>固定资源基线成本 <b>{policyMetrics ? `${formatNumber(policyMetrics.fixed_baseline_cost_saving_pct ?? policyMetrics.cost_saving_pct, 1)}%` : '--'}</b></span>
                       <span>岸电提升 <b>{policyMetrics ? `${formatNumber(policyMetrics.shore_power_gain_pct, 1)}%` : '--'}</b></span>
-                      <span>安全越界 <b>{policyMetrics?.safety_violations ?? 0}</b></span>
+                      <span>安全越界 <b>{policyMetrics?.safety_violations ?? '--'}</b></span>
                       <span>制品完整性 <b>{policyTestRegisteredPolicy?.artifact_integrity ?? '--'}</b></span>
                       <span>数据一致性 <b>{policyTestRegisteredPolicy?.dataset_status ?? '--'}</b></span>
                       <span>数据偏移 <b>{policyTestRegisteredPolicy?.drift?.status ?? '--'}</b></span>
@@ -2780,7 +2868,7 @@ export function App() {
         onSetGreenPreference={(value, label) => {
           applyDashboardPreference(value, label, value >= 0.86 ? 'shore' : 'carbon');
         }}
-        onSyncDashboard={syncDashboard}
+        onSyncDashboard={async (reason) => { await syncDashboard(reason, true); }}
         onOpenTopPanel={openPanel}
         onRunApiCheck={runApiCheck}
       />

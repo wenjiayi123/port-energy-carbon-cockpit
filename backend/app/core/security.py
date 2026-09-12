@@ -141,7 +141,10 @@ def _constant_time_match(provided: str, configured: str) -> bool:
 
 def _base64url_decode(value: str) -> bytes:
     padding = "=" * (-len(value) % 4)
-    return base64.urlsafe_b64decode(value + padding)
+    decoded = base64.b64decode(value + padding, altchars=b"-_", validate=True)
+    if base64.urlsafe_b64encode(decoded).decode("ascii").rstrip("=") != value:
+        raise ValueError("noncanonical_base64url")
+    return decoded
 
 
 def _oidc_identity(request: Request) -> IdentityContext:
