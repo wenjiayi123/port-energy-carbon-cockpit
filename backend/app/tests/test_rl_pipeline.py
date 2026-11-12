@@ -9,6 +9,7 @@ import pytest
 import app.rl.dataset as dataset_module
 import app.rl.policy_selection as policy_selection
 import app.rl.training as training_module
+import app.services.dispatch_simulator as dispatch_simulator_module
 from app.rl.benchmark import select_validation_static_reference
 from app.rl.dataset import PortDataset
 from app.rl.catalog import ALGORITHM_CATALOG
@@ -819,6 +820,177 @@ def test_training_history_skips_newer_control_run_without_callback_metrics(
     assert history["algorithm"] == "PPO"
     assert history["series"][0]["reward"] == pytest.approx(1.25)
 
+    cache_path = tmp_path / ".history_summary_cache.json"
+    assert cache_path.exists()
+    restarted_service = TrainingService()
+    monkeypatch.setattr(
+        restarted_service,
+        "_build_history",
+        lambda: pytest.fail("restart should reuse the persisted history cache"),
+    )
+    assert restarted_service.history()["run_id"] == "rl-20260825-143526-aaaaaa"
+
+
+def test_capabilities_and_registry_reuse_restart_safe_caches(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setattr(training_module, "RUNS_DIR", tmp_path)
+    service = TrainingService()
+    monkeypatch.setattr(service, "_build_capabilities", lambda: {"runtime": {"available": True}})
+    monkeypatch.setattr(service, "_build_registry", lambda: {"count": 3, "policies": []})
+
+    assert service.capabilities()["runtime"]["available"] is True
+    assert service.registry()["count"] == 3
+    assert (tmp_path / ".capabilities_cache.json").exists()
+    assert (tmp_path / ".registry_summary_cache.json").exists()
+
+    restarted = TrainingService()
+    monkeypatch.setattr(
+        restarted,
+        "_build_capabilities",
+        lambda: pytest.fail("restart should reuse capabilities cache"),
+    )
+    monkeypatch.setattr(
+        restarted,
+        "_build_registry",
+        lambda: pytest.fail("restart should reuse registry cache"),
+    )
+    assert restarted.capabilities()["runtime"]["available"] is True
+    assert restarted.registry()["count"] == 3
+
+
+def test_training_history_prefers_richest_trace_and_keeps_business_evidence_separate(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setattr(training_module, "RUNS_DIR", tmp_path)
+    run_specs = (
+        ("rl-20260827-161613-a1b2c3", "dqn", 4),
+        ("rl-20261015-194108-d4e5f6", "mpc", 1),
+    )
+    for run_id, algorithm, metric_count in run_specs:
+        run_dir = tmp_path / run_id
+        run_dir.mkdir()
+        artifact = run_dir / ("model.zip" if algorithm == "dqn" else "mpc_policy.json")
+        artifact.write_text("evidence", encoding="utf-8")
+        manifest = {
+            "job_id": run_id,
+            "policy_version": f"{algorithm}-{run_id}",
+            "status": "completed",
+            "step": metric_count * 100,
+            "started_at": "2026-08-25T06:00:00Z",
+            "completed_at": "2026-08-25T06:01:00Z",
+            "duration_sec": 60,
+            "run_dir": str(run_dir),
+            "artifact_path": str(artifact),
+            "artifact_sha256": "recorded",
+            "config": {
+                "algorithm": algorithm,
+                "objective_id": "carbon_min",
+                "dataset_id": "test_dataset",
+                "dataset_sha256": "dataset-sha",
+                "data_file": "test_dataset",
+                "environment_id": "PortEnergyDispatchEnv-v2",
+                "seed": 7,
+            },
+        }
+        (run_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+        (run_dir / "metrics.jsonl").write_text(
+            "\n".join(
+                json.dumps({"step": (index + 1) * 100, "reward": float(index)})
+                for index in range(metric_count)
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        if algorithm == "mpc":
+            (run_dir / "evaluation.json").write_text(
+                json.dumps(
+                    {
+                        "status": "tested",
+                        "policy": {
+                            "policy_version": f"mpc-{run_id}",
+                            "algorithm": "mpc",
+                            "dataset_id": "test_dataset",
+                            "dataset_sha256": "dataset-sha",
+                        },
+                        "metrics": {
+                            "fixed_baseline_carbon_reduction_pct": 8.649,
+                            "fixed_baseline_cost_saving_pct": 7.74,
+                            "safety_violations": 0,
+                        },
+                        "uncertainty": {
+                            "fixed_baseline_carbon_reduction_ci95": {
+                                "ci95_low_pct": 7.579,
+                                "ci95_high_pct": 9.647,
+                            }
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+    history = TrainingService().history()
+    assert history["run_id"] == "rl-20260827-161613-a1b2c3"
+    assert history["recorded_callback_points"] == 4
+    assert history["business_evidence"]["strategy_id"] == "rl-20261015-194108-d4e5f6"
+    assert history["business_evidence"]["metrics"][
+        "fixed_baseline_carbon_reduction_pct"
+    ] == pytest.approx(8.649)
+    assert history["objective_training_runs"][0]["objective_id"] == "carbon_min"
+    assert len(history["objective_training_runs"][0]["series"]) == 4
+
+
+def test_objective_business_history_builds_five_grounded_business_lenses() -> None:
+    policy_rows = [
+        {
+            "period": "2025-01",
+            "carbon_kg": 90.0,
+            "cost": 180.0,
+            "peak_kw": 900.0,
+            "shore_power_kwh": 80.0,
+            "shore_power_opportunity_kwh": 100.0,
+            "safety_violations": 0,
+        },
+        {
+            "period": "2025-02",
+            "carbon_kg": 80.0,
+            "cost": 170.0,
+            "peak_kw": 850.0,
+            "shore_power_kwh": 90.0,
+            "shore_power_opportunity_kwh": 100.0,
+            "safety_violations": 0,
+        },
+    ]
+    fixed_rows = [
+        {"period": "2025-01", "carbon_kg": 100.0, "cost": 200.0, "peak_kw": 1000.0},
+        {"period": "2025-02", "carbon_kg": 100.0, "cost": 200.0, "peak_kw": 1000.0},
+    ]
+    result = training_module.objective_business_history(
+        policy_rows,
+        fixed_rows,
+        {
+            "fixed_baseline_carbon_reduction_pct": 15.0,
+            "fixed_baseline_cost_saving_pct": 12.5,
+            "fixed_baseline_peak_change_pct": -12.5,
+            "constraint_success_rate_pct": 100.0,
+            "safety_violations": 0,
+            "test_episodes": 2,
+        },
+        {"shore_power_kwh": 170.0, "shore_power_opportunity_kwh": 200.0},
+    )
+
+    assert [item["id"] for item in result] == [
+        "carbon_min",
+        "cost_carbon_balance",
+        "shore_power_priority",
+        "peak_smoothing",
+        "low_risk_validation",
+    ]
+    assert result[0]["series"][0]["value"] == pytest.approx(10.0)
+    assert result[2]["value"] == pytest.approx(85.0)
+    assert result[3]["value"] == pytest.approx(12.5)
+    assert result[4]["series"][1]["value"] == pytest.approx(100.0)
+
 
 def test_auto_strategy_selection_skips_smoke_and_blocked_runs(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(policy_selection, "RUNS_DIR", tmp_path)
@@ -905,6 +1077,67 @@ def test_dashboard_admission_rejects_safe_but_underperforming_policy() -> None:
 
     assert not DispatchSimulator._dashboard_policy_admitted(rejected)
     assert DispatchSimulator._dashboard_policy_admitted(admitted)
+
+
+def test_dashboard_policy_selection_reuses_persisted_candidate(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setattr(dispatch_simulator_module, "RUNS_DIR", tmp_path)
+    older = tmp_path / "rl-20260825-120000-aaaaaa"
+    newer = tmp_path / "rl-20260826-120000-bbbbbb"
+    for run_dir in (older, newer):
+        run_dir.mkdir()
+        (run_dir / "manifest.json").write_text("{}", encoding="utf-8")
+        (run_dir / "evaluation.json").write_text("{}", encoding="utf-8")
+
+    calls: list[str] = []
+
+    def validate(path):
+        calls.append(path.parent.name)
+        return {"selected": path.parent.name} if path.parent == older else None
+
+    monkeypatch.setattr(
+        DispatchSimulator,
+        "_validated_evaluation",
+        staticmethod(validate),
+    )
+    DispatchSimulator._latest_evaluation_for_signature.cache_clear()
+    first = DispatchSimulator._latest_evaluation()
+    assert first == {"selected": older.name}
+    assert calls == [newer.name, older.name]
+    assert (tmp_path / ".dashboard_policy_cache.json").exists()
+
+    calls.clear()
+    DispatchSimulator._latest_evaluation_for_signature.cache_clear()
+    second = DispatchSimulator._latest_evaluation()
+    assert second == first
+    assert calls == [older.name]
+
+
+def test_dashboard_policy_selection_caches_no_admitted_policy(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setattr(dispatch_simulator_module, "RUNS_DIR", tmp_path)
+    run_dir = tmp_path / "rl-20260826-120000-bbbbbb"
+    run_dir.mkdir()
+    (run_dir / "manifest.json").write_text("{}", encoding="utf-8")
+    (run_dir / "evaluation.json").write_text("{}", encoding="utf-8")
+
+    DispatchSimulator._latest_evaluation_for_signature.cache_clear()
+    monkeypatch.setattr(
+        DispatchSimulator,
+        "_validated_evaluation",
+        staticmethod(lambda path: None),
+    )
+    assert DispatchSimulator._latest_evaluation() is None
+
+    DispatchSimulator._latest_evaluation_for_signature.cache_clear()
+    monkeypatch.setattr(
+        DispatchSimulator,
+        "_validated_evaluation",
+        staticmethod(lambda path: pytest.fail("negative cache should skip rescanning")),
+    )
+    assert DispatchSimulator._latest_evaluation() is None
 
 
 @pytest.mark.parametrize("algorithm", ["ppo", "sac", "td3", "dqn"])

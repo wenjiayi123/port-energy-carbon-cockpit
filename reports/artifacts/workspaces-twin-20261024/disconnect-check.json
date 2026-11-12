@@ -1,0 +1,7 @@
+{
+  "assetList": "港区变配电站\n— kW\n屋顶光伏阵列\n— kW\n储能电池站\n— kW\n岸电与靠泊区\n— kW\n冷藏箱作业区\n— kW\nAGV 充电区\n— kW\n港区综合楼\n— kW",
+  "assetValue": "—kW\n失联 · 物理模拟",
+  "kpis": "电网输入\n—MW\n光伏可用\n—MW\n储能 SOC\n—%\n本步碳排\n—tCO₂e\n岸电接船\n—艘",
+  "scenario": "communications_loss",
+  "sourceMix": "电网 —% · 光伏 —% · 储能放电 —%\n储能充电 — kW，单列为负荷"
+}

@@ -93,7 +93,7 @@ try {
   results.push('PASS: starting process stays RUNNING until a later health refresh verifies online');
 
   const runButton = page.getByRole('button', { name: '识别并执行 / Run', exact: true });
-  await page.locator('.assistant-card textarea').fill('小懿，总结实时态势');
+  await page.locator('.assistant-card textarea').fill('小鸥，总结实时态势');
   await runButton.click();
   await until(() => actualExecutions === 1, 'slow mapped execution');
   await new Promise(resolve => setTimeout(resolve, 1_100));
@@ -106,7 +106,7 @@ try {
   assert(await runButton.isEnabled());
   results.push('PASS: slow automatic execution stays pending; HTTP-200 blocked receipt never becomes done');
 
-  await page.locator('.assistant-card textarea').fill('小懿，再次总结实时态势');
+  await page.locator('.assistant-card textarea').fill('小鸥，再次总结实时态势');
   await runButton.click();
   await until(() => actualExecutions === 2, 'second mapped execution');
   await new Promise(resolve => setTimeout(resolve, 1_100));

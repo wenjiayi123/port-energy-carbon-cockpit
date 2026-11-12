@@ -186,7 +186,7 @@ ACTION_REGISTRY: list[dict[str, Any]] = [
         "id": "create_runtime_recommendation",
         "label": "生成当前运行建议",
         "category": "runtime_closed_loop",
-        "description": "经人工确认后调用运行 MPC 生成建议；小懿不能审批、执行或绕过质量门禁。",
+        "description": "经人工确认后调用运行 MPC 生成建议；舷鸥不能审批、执行或绕过质量门禁。",
         "intent_aliases": ["create_runtime_recommendation", "生成当前运行建议", "生成实时建议"],
         "keywords": ["生成建议", "运行建议", "实时推荐", "生成推荐", "mcp建议"],
         "button_selector": "#btnRuntimeCreateDecision",
@@ -210,13 +210,13 @@ ACTION_REGISTRY: list[dict[str, Any]] = [
     },
     {
         "id": "start_xiaoyi_ai",
-        "label": "启动小懿AI",
+        "label": "启动舷鸥 · GullMate",
         "category": "assistant_linkage",
-        "description": "启动桌面小懿AI本地服务，并让 /health 与 /api/chat 可用。",
-        "intent_aliases": ["start_xiaoyi_ai", "start_xiaoyi", "启动小懿", "打开小懿AI", "启动小懿AI"],
-        "keywords": ["启动小懿", "打开小懿", "启动小懿ai", "打开小懿ai", "小懿服务", "拉起小懿"],
+        "description": "启动桌面舷鸥 · GullMate本地服务，并让 /health 与 /api/chat 可用。",
+        "intent_aliases": ["start_xiaoyi_ai", "start_xiaoyi", "启动舷鸥", "打开舷鸥 · GullMate", "启动舷鸥 · GullMate"],
+        "keywords": ["启动舷鸥", "打开舷鸥", "启动舷鸥 · GullMate", "打开舷鸥 · GullMate", "舷鸥服务", "拉起舷鸥"],
         "button_selector": "#btnXiaoyiStart",
-        "button_label": "启动小懿AI",
+        "button_label": "启动舷鸥 · GullMate",
         "backend_request": {"method": "POST", "path": "/api/xiaoyi/launch", "body": {"confirm": True}},
         "linked_system": "xiaoyi_ai",
         "requires_human_confirm": True,
@@ -303,9 +303,9 @@ ACTION_REGISTRY: list[dict[str, Any]] = [
         "id": "run_linkage_health_check",
         "label": "联动健康检查",
         "category": "top_ai_panel",
-        "description": "检查驾驶舱、小懿、RL 接口和航行模拟器联动状态。",
+        "description": "检查驾驶舱、舷鸥、RL 接口和航行模拟器联动状态。",
         "intent_aliases": ["run_linkage_health_check", "健康检查", "检查联动状态"],
-        "keywords": ["健康检查", "检查接口", "联动状态", "api健康", "系统状态", "小懿状态", "接口状态"],
+        "keywords": ["健康检查", "检查接口", "联动状态", "api健康", "系统状态", "舷鸥状态", "接口状态"],
         "button_selector": "#btnXiaoyiHealthCheck",
         "button_label": "健康检查",
         "backend_request": {"method": "GET", "path": "/api/linkage/health"},
@@ -621,9 +621,9 @@ def xiaoyi_status() -> dict[str, Any]:
     return {
         "ok": bool(probe["ok"]),
         "updated_at": _utc_now(),
-        "name": "小懿AI",
+        "name": "舷鸥 · GullMate",
         "online": bool(probe["ok"]),
-        "label": "小懿在线" if probe["ok"] else ("小懿可启动" if XIAOYI_PROJECT.exists() else "小懿不可启动"),
+        "label": "舷鸥在线" if probe["ok"] else ("舷鸥可启动" if XIAOYI_PROJECT.exists() else "舷鸥不可启动"),
         "base_url": XIAOYI_BASE_URL,
         "health_url": health_url,
         "chat_url": f"{XIAOYI_BASE_URL}/api/chat",
@@ -651,11 +651,13 @@ def launch_xiaoyi(payload: dict[str, Any] | None = None, dry_run: bool = False) 
         packet.update({"status": "already_online", "health": status})
         return packet
     if not XIAOYI_PROJECT.exists():
-        packet.update({"status": "failed", "error": "小懿AI项目目录不存在", "health": status})
+        packet.update({"status": "failed", "error": "舷鸥 · GullMate项目目录不存在", "health": status})
         return packet
     if dry_run:
         packet["status"] = "ready_to_launch"
         return packet
+    if os.getenv("PORTAI_DESKTOP_OWNS_WINDOWS") == "1":
+        return {**packet, "status": "desktop_managed", "message": "请在港航演示中心打开舷鸥 · GullMate。"}
     running = _process_state(_xiaoyi_process)
     if running["running"]:
         return {**packet, "status": "starting", "pid": running["pid"], "health": status}
@@ -673,7 +675,7 @@ def launch_xiaoyi(payload: dict[str, Any] | None = None, dry_run: bool = False) 
             },
         )
     except OSError:
-        logger.exception("Xiaoyi process could not be started")
+        logger.exception("GullMate process could not be started")
         packet.update({"status": "failed", "error": "xiaoyi_launch_failed"})
         _append_log("start_xiaoyi_ai", "failed", packet)
         return packet
@@ -706,7 +708,7 @@ def sailing_status() -> dict[str, Any]:
         "name": "航行模拟器",
         "launchable": launchable,
         "label": "航行模拟器可启动" if launchable else "航行模拟器不可启动",
-        "control_mode": "launch_and_preset_scene",
+        "control_mode": "desktop_center" if os.getenv("PORTAI_DESKTOP_OWNS_WINDOWS") == "1" else "launch_and_preset_scene",
         "project_root": {"path": _public_path_ref(SAILING_PROJECT), "exists": SAILING_PROJECT.exists()},
         "project_file": {"path": _public_path_ref(project_file), "exists": project_file.exists()},
         "godot_executable": {"name": GODOT_EXECUTABLE.name, "exists": GODOT_EXECUTABLE.exists()},
@@ -737,6 +739,8 @@ def launch_sailing(payload: dict[str, Any] | None = None, dry_run: bool = False)
     if dry_run:
         packet["status"] = "ready_to_launch"
         return packet
+    if os.getenv("PORTAI_DESKTOP_OWNS_WINDOWS") == "1":
+        return {**packet, "status": "desktop_managed", "message": "请在港航演示中心打开航行模拟器。"}
     running = _process_state(_sailing_process)
     if running["running"] and not payload.get("force_new"):
         packet.update({"status": "already_running", "pid": running["pid"]})
@@ -770,7 +774,10 @@ def launch_sailing(payload: dict[str, Any] | None = None, dry_run: bool = False)
 
 def run_sailing_smoke(payload: dict[str, Any] | None = None, dry_run: bool = False) -> dict[str, Any]:
     payload = payload or {}
-    command = [str(GODOT_EXECUTABLE), "--headless", "--path", str(SAILING_PROJECT), "--script", SMOKE_SCRIPT]
+    headless = ["--headless"]
+    if os.name == "nt":
+        headless += ["--single-threaded-scene", "--rendering-method", "gl_compatibility", "--audio-driver", "Dummy"]
+    command = [str(GODOT_EXECUTABLE), *headless, "--path", str(SAILING_PROJECT), "--script", SMOKE_SCRIPT]
     packet = {"type": "godot_headless_smoke_test", "dry_run": dry_run, "launcher": "configured-local-integration", "script": SMOKE_SCRIPT}
     status = sailing_status()
     if not status["launchable"]:
@@ -1227,7 +1234,7 @@ def _runtime_recommendation_explanation() -> dict[str, Any]:
             "production_authority": False,
             "dispatch_allowed": False,
         },
-        "operator_note": "小懿只解释建议，不具备审批、生产下发或绕过质量门禁的权限。",
+        "operator_note": "舷鸥只解释建议，不具备审批、生产下发或绕过质量门禁的权限。",
     }
 
 
@@ -1600,13 +1607,13 @@ def post_xiaoyi_chat(payload: dict[str, Any] = Body(default={})) -> JSONResponse
         result = _post_json(f"{XIAOYI_BASE_URL}/api/chat", {"question": question, "mode": payload.get("mode") or "brief", "top_k": int(payload.get("top_k") or 5)})
         return JSONResponse({"ok": True, "engine": "xiaoyi_ai", "result": result})
     except Exception:
-        logger.exception("Xiaoyi chat request failed")
+        logger.exception("GullMate chat request failed")
         return JSONResponse(
             {
                 "ok": False,
                 "engine": "local_fallback",
                 "answer": (
-                    f"小懿暂不可达，能碳驾驶舱本地判断：{question} "
+                    f"舷鸥暂不可达，能碳驾驶舱本地判断：{question} "
                     "可先进入联动中枢确认动作，再执行 dry-run。"
                 ),
                 "error": "xiaoyi_unreachable",
@@ -1637,7 +1644,7 @@ def assistant_execute(payload: dict[str, Any] = Body(default={})) -> dict[str, A
             "updated_at": _utc_now(),
             "input": {"instruction": instruction, "action_id": action_id},
             "candidates": [],
-            "message": "未匹配到可执行动作，可作为普通问答交给小懿。",
+            "message": "未匹配到可执行动作，可作为普通问答交给舷鸥。",
         }
     if action["id"] == "start_rl_training":
         config = _build_training_config(instruction, payload)

@@ -11,12 +11,12 @@ real terminal.
 | --- | --- | --- |
 | `frontend/public/assets/fictional-port-operations.jpg` | command-center terminal backdrop | fictional container terminal; four berths; shore-power points; no logos, flags, text, real port identity, or vessel livery |
 | `frontend/public/assets/energy-carbon-digital-twin.jpg` | dark analytical background | abstract harbor grid, energy-flow and carbon-accounting geometry; no text, trademarks, or identifiable port |
-| `frontend/public/assets/xiaoyi-ai-copilot.jpg` | unused legacy portrait | fictional non-identifiable adult character; retained for history but not used as Xiaoyi in the current interface |
-| `frontend/public/assets/xiaoyi-maritime-officer.png` | current Xiaoyi identity | project-designated Q-style Xiaoyi maritime officer; transparent-background master committed with the verified baseline |
+| `frontend/public/assets/xiaoyi-ai-copilot.jpg` | unused legacy portrait | fictional non-identifiable adult character; retained for history but not used as GullMate in the current interface |
+| `frontend/public/assets/xiaoyi-maritime-officer.png` | current GullMate identity | project-designated Q-style GullMate maritime officer; transparent-background master committed with the verified baseline |
 | `docs/assets/cockpit-overview.jpg` | README interface evidence | clean-clone offline benchmark after API data loaded; no historical run artifacts |
-| `docs/assets/cockpit-overview-verified.png` | current cockpit overview | browser capture of enhanced-dataset held-out replay with the low-carbon panel opened through Xiaoyi linkage |
+| `docs/assets/cockpit-overview-verified.png` | current cockpit overview | browser capture of enhanced-dataset held-out replay with the low-carbon panel opened through GullMate linkage |
 | `docs/assets/cockpit-training-matrix.png` | five-algorithm evidence | browser capture of PPO/SAC/TD3/DQN/MPC, dataset, observation/action and train/test-render boundaries |
-| `docs/assets/xiaoyi-system-linkage.png` | button/backend linkage | browser capture after the Xiaoyi low-carbon action gateway returned `front_end_panel_opened` |
+| `docs/assets/xiaoyi-system-linkage.png` | button/backend linkage | browser capture after the GullMate low-carbon action gateway returned `front_end_panel_opened` |
 | `docs/assets/governance-panel.jpg` | README governance evidence | clean-clone integration state with production dispatch disabled |
 | `docs/assets/social-preview.png` | GitHub social preview | rendered from `social-preview-source.html` and the original abstract background |
 

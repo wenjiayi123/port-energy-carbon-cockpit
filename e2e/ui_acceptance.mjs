@@ -49,7 +49,7 @@ async function finishImpact(allowError = false) {
 }
 async function closePanels() {
   await finishImpact();
-  for (const label of ['关闭业务动作详情','关闭顶部功能面板','关闭小懿联动面板']) {
+  for (const label of ['关闭业务动作详情','关闭顶部功能面板','关闭舷鸥联动面板']) {
     const button = page.getByRole('button', { name: label, exact: true });
     if (await button.isVisible()) await button.click();
   }
@@ -148,14 +148,14 @@ try {
   }
   if (mode === 'hub') {
     await openHub();
-    await check('小懿面板按钮盘点',async()=>await page.locator('.linkage-drawer button').evaluateAll(bs=>bs.map(b=>({id:b.id,label:b.textContent,disabled:b.disabled}))));
+    await check('舷鸥面板按钮盘点',async()=>await page.locator('.linkage-drawer button').evaluateAll(bs=>bs.map(b=>({id:b.id,label:b.textContent,disabled:b.disabled}))));
     for(const id of ['btnXiaoyiRuntimeSummary','btnXiaoyiRuntimeHandover','btnXiaoyiRuntimeTriage','btnXiaoyiRuntimeRecommend','btnXiaoyiRuntimeExplain','btnXiaoyiRefreshDashboard','btnXiaoyiHealthCheck','btnXiaoyiCheckSailingStatus','btnXiaoyiPreferenceEfficiency','btnXiaoyiPreferenceBalanced','btnXiaoyiPreferenceLowCarbon','btnXiaoyiPreferenceShorePower','btnTrainingStatus','btnPolicyTest','btnVerifyPolicy']) await check(id,async()=>{const result=await hubClick(id);if(result.panel) { await closePanels(); await openHub(); return result.panel; } return result.execution;});
     for(const id of ['btnXiaoyiStart','btnSailingLaunch','btnSailingDemo','btnShipView','btnSailingSmoke']) await check(`${id}-未配置的明确失败`,async()=>{const result=await hubClick(id,true);return result.execution ?? result.panel;});
     for(const [id,label] of [['btnXiaoyiOpenRuntimePanel','实时闭环功能面板'],['btnXiaoyiOpenSimulationPanel','离线仿真功能面板'],['btnXiaoyiOpenMarlPanel','RL 策略功能面板'],['btnXiaoyiOpenCarbonPanel','低碳优先功能面板'],['btnXiaoyiOpenShorePanel','岸电联动功能面板'],['btnXiaoyiOpenApiPanel','API 已同步功能面板']]) {
       await check(id,async()=>{await page.locator('#'+id).click();await page.locator('.top-action-panel').waitFor();const text=await page.locator('.top-action-panel').innerText();await closePanels();await openHub();return {label,text:text.slice(0,220)};});
     }
     await check('历史收敛曲线',async()=>{await page.locator('#btnTrainingHistory').click();await page.locator('.training-history-modal').waitFor();const text=await page.locator('.training-history-modal').innerText();assert(!text.includes('NaN'));await page.getByRole('button',{name:'关闭历史训练结果',exact:true}).click();return text.slice(0,1200);});
-    await check('指令中心过滤与搜索',async()=>{await page.locator('#btnOpenCommandCenter').click();const groups=await page.locator('.command-center-tabs button').all();const counts=[];for(const b of groups){await b.click();assert.match(await b.getAttribute('class'),/active/);counts.push({group:await b.innerText(),rows:await page.locator('.command-center-row').count()});}await groups[0].click();const search=page.locator('.command-center-toolbar input');await search.fill('没有这条命令-xyz');assert(await page.locator('.command-empty-state').isVisible());await search.fill('');const total=await page.locator('.command-center-row').count();assert(total>=35);await page.getByRole('button',{name:'关闭小懿指令中心',exact:true}).click();return {counts,total};});
+    await check('指令中心过滤与搜索',async()=>{await page.locator('#btnOpenCommandCenter').click();const groups=await page.locator('.command-center-tabs button').all();const counts=[];for(const b of groups){await b.click();assert.match(await b.getAttribute('class'),/active/);counts.push({group:await b.innerText(),rows:await page.locator('.command-center-row').count()});}await groups[0].click();const search=page.locator('.command-center-toolbar input');await search.fill('没有这条命令-xyz');assert(await page.locator('.command-empty-state').isVisible());await search.fill('');const total=await page.locator('.command-center-row').count();assert(total>=35);await page.getByRole('button',{name:'关闭舷鸥指令中心',exact:true}).click();return {counts,total};});
     await check('指令填入与判断不改变运行状态',async()=>{await page.locator('#btnOpenCommandCenter').click();await page.locator('.command-center-row').filter({hasText:'健康检查'}).first().getByRole('button',{name:'填入',exact:true}).click();assert((await page.locator('.xiaoyi-card textarea, .module-xiaoyi textarea, .linkage-drawer textarea').first().inputValue()).includes('健康'));await page.locator('#btnOpenCommandCenter').click();await page.locator('.command-center-row').filter({hasText:'健康检查'}).first().getByRole('button',{name:'判断',exact:true}).click();await page.locator('#btnXiaoyiHealthCheck:enabled').waitFor({timeout:60000});return await page.locator('.execution-state').innerText();});
     await page.screenshot({path:path.join(output,'xiaoyi-hub.png'),fullPage:true});
   }

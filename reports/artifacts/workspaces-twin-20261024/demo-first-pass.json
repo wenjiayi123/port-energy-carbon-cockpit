@@ -1,0 +1,197 @@
+[
+  {
+    "asset": "港区变配电站",
+    "current": "进入 3D 孪生大屏",
+    "executed": true,
+    "index": 0,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/twin",
+    "scenario": "normal"
+  },
+  {
+    "asset": "储能电池站",
+    "current": "检查储能电池站",
+    "executed": true,
+    "index": 1,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步已点击：检查储能电池站",
+    "route": "#/twin",
+    "scenario": "normal"
+  },
+  {
+    "asset": "储能电池站",
+    "current": "演示电池过温",
+    "executed": true,
+    "index": 2,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/twin",
+    "scenario": "battery_overtemperature",
+    "risk": "battery_temperature_high\n\n储能电池站：电池温度 ≥ 40°C"
+  },
+  {
+    "asset": "储能电池站",
+    "current": "恢复模拟",
+    "executed": true,
+    "index": 3,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/twin",
+    "scenario": "normal"
+  },
+  {
+    "asset": "储能电池站",
+    "current": "场景算法与数据清单",
+    "executed": true,
+    "index": 4,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/twin",
+    "scenario": "normal"
+  },
+  {
+    "current": "DATA 数据边界",
+    "executed": true,
+    "index": 5,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步已点击：DATA 数据边界",
+    "route": "#/operations"
+  },
+  {
+    "current": "基线与优化对比",
+    "executed": true,
+    "index": 6,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步已点击：基线与优化对比",
+    "route": "#/operations"
+  },
+  {
+    "current": "小懿联动 / AI COPILOT",
+    "executed": true,
+    "index": 7,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步已打开小懿联动中枢。",
+    "route": "#/overview"
+  },
+  {
+    "current": "低碳 / Carbon",
+    "executed": true,
+    "index": 8,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/carbon",
+    "topic": "情景与趋势"
+  },
+  {
+    "current": "岸电 / Shore",
+    "executed": true,
+    "index": 9,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/shore"
+  },
+  {
+    "current": "填入“岸电优先目标”",
+    "executed": true,
+    "index": 10,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步已填入岸电优先训练任务。",
+    "route": "#/overview"
+  },
+  {
+    "current": "训练契约 / MDP",
+    "executed": true,
+    "index": 11,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步已点击：训练契约 / MDP",
+    "route": "#/overview"
+  },
+  {
+    "current": "识别并执行 / Run",
+    "executed": true,
+    "index": 12,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/overview"
+  },
+  {
+    "current": "确认执行 / Confirm",
+    "executed": true,
+    "index": 13,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/overview"
+  },
+  {
+    "current": "确认无误，开始训练",
+    "executed": true,
+    "index": 14,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/overview"
+  },
+  {
+    "current": "状态 / Status",
+    "executed": true,
+    "index": 15,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/overview"
+  },
+  {
+    "current": "历史收敛曲线 / Results",
+    "executed": true,
+    "index": 16,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/overview"
+  },
+  {
+    "current": "上线验证 / Dry-run",
+    "executed": true,
+    "index": 17,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/overview"
+  },
+  {
+    "current": "实时 / Runtime",
+    "decision": "not_created",
+    "executed": true,
+    "index": 18,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/runtime"
+  },
+  {
+    "current": "启动模拟",
+    "decision": "not_created",
+    "executed": true,
+    "index": 19,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/runtime"
+  },
+  {
+    "current": "生成当前推荐",
+    "decision": "awaiting_approval",
+    "executed": true,
+    "index": 20,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/runtime"
+  },
+  {
+    "current": "班组长审批",
+    "decision": "awaiting_approval",
+    "executed": true,
+    "index": 21,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/runtime"
+  },
+  {
+    "current": "能源经理审批",
+    "decision": "approved",
+    "executed": true,
+    "index": 22,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/runtime"
+  },
+  {
+    "current": "模拟执行",
+    "decision": "executed_simulation",
+    "executed": true,
+    "index": 23,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/runtime",
+    "receipt": "推荐动作 / Recommended\nbattery_power_kw\n3,200.0\nhvac_setpoint_c\n26.0\nshore_power_limit_kw\n4,200.0\nagv_charging_limit_kw\n1,200.0\n安全投影后 / Projected\nbattery_power_kw\n3,200.0\nhvac_setpoint_c\n26.0\nshore_power_limit_kw\n4,200.0\nagv_charging_limit_kw\n1,200.0\n触发约束 0 条\n执行回执 / Receipt\nACK\nack-af705762…b01081\n模式\nsimulation_only\n生产下发\nFALSE\n失败原因\nnone\nKPI 变化 / Delta\n能耗\n-827.7 kWh\n碳排\n-338.8 kg\n成本\n¥-992.9\n服务\n0.00 pp"
+  },
+  {
+    "current": "回滚",
+    "decision": "rolled_back_simulation",
+    "executed": true,
+    "index": 24,
+    "notice": "本步已执行，台词保持显示；讲完后进入下一步真实功能已完成，台词保持在本步。",
+    "route": "#/runtime"
+  }
+]

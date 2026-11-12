@@ -16,6 +16,9 @@ from app.rl.environment import (
 from app.rl.training import RUNS_DIR
 
 
+DASHBOARD_POLICY_CACHE_VERSION = 1
+
+
 class DispatchSimulator:
     """Build dashboard snapshots from executable policies and held-out public data."""
 
@@ -145,32 +148,121 @@ class DispatchSimulator:
 
     @staticmethod
     def _latest_evaluation() -> dict[str, Any] | None:
-        for path in sorted(RUNS_DIR.glob("*/evaluation.json"), reverse=True):
-            try:
-                manifest = json.loads((path.parent / "manifest.json").read_text(encoding="utf-8"))
-                # Tiny runs are useful dependency smoke tests but must never
-                # silently become the dashboard's selected operational policy.
-                if int(manifest.get("step") or 0) < 5_000:
+        signature = DispatchSimulator._policy_source_signature()
+        return DispatchSimulator._latest_evaluation_for_signature(signature)
+
+    @staticmethod
+    def _policy_source_signature() -> str:
+        entries = [
+            f"dashboard-policy-v{DASHBOARD_POLICY_CACHE_VERSION}",
+            str(RUNS_DIR.resolve()),
+        ]
+        for pattern in (
+            "*/manifest.json",
+            "*/evaluation.json",
+            "*/model.zip",
+            "*/mpc_policy.json",
+        ):
+            for path in sorted(RUNS_DIR.glob(pattern)):
+                try:
+                    stat = path.stat()
+                except OSError:
                     continue
-                config = manifest["config"]
-                dataset = PortDataset.load(config["data_file"])
-                if dataset.package_sha256 != config.get("dataset_sha256"):
-                    continue
-                artifact = Path(str(manifest.get("artifact_path") or ""))
-                recorded_artifact_sha256 = manifest.get("artifact_sha256")
-                if not artifact.is_file() or not recorded_artifact_sha256:
-                    continue
-                if hashlib.sha256(artifact.read_bytes()).hexdigest() != recorded_artifact_sha256:
-                    continue
-                evaluation = json.loads(path.read_text(encoding="utf-8"))
-                if evaluation.get("policy", {}).get("artifact_sha256") != recorded_artifact_sha256:
-                    continue
-                if not DispatchSimulator._dashboard_policy_admitted(evaluation):
-                    continue
-                return evaluation
-            except Exception:
+                entries.append(
+                    f"{path.relative_to(RUNS_DIR)}:{stat.st_mtime_ns}:{stat.st_size}"
+                )
+        for path in sorted((RUNS_DIR.parent / "datasets").glob("*")):
+            if not path.is_file():
                 continue
+            try:
+                stat = path.stat()
+            except OSError:
+                continue
+            entries.append(f"dataset/{path.name}:{stat.st_mtime_ns}:{stat.st_size}")
+        return hashlib.sha256("\n".join(entries).encode("utf-8")).hexdigest()
+
+    @staticmethod
+    @lru_cache(maxsize=8)
+    def _latest_evaluation_for_signature(signature: str) -> dict[str, Any] | None:
+        cache_path = RUNS_DIR / ".dashboard_policy_cache.json"
+        try:
+            cached = json.loads(cache_path.read_text(encoding="utf-8"))
+            relative_path = cached.get("evaluation_path")
+            if (
+                cached.get("version") == DASHBOARD_POLICY_CACHE_VERSION
+                and cached.get("signature") == signature
+            ):
+                if relative_path is None:
+                    return None
+                if not isinstance(relative_path, str):
+                    raise ValueError("invalid cached evaluation path")
+                candidate = (RUNS_DIR / relative_path).resolve()
+                candidate.relative_to(RUNS_DIR.resolve())
+                evaluation = DispatchSimulator._validated_evaluation(candidate)
+                if evaluation is not None:
+                    return evaluation
+        except (OSError, ValueError, TypeError):
+            pass
+
+        for path in sorted(RUNS_DIR.glob("*/evaluation.json"), reverse=True):
+            evaluation = DispatchSimulator._validated_evaluation(path)
+            if evaluation is None:
+                continue
+            payload = {
+                "version": DASHBOARD_POLICY_CACHE_VERSION,
+                "signature": signature,
+                "evaluation_path": path.relative_to(RUNS_DIR).as_posix(),
+            }
+            try:
+                temp_path = RUNS_DIR / ".dashboard_policy_cache.tmp"
+                temp_path.write_text(json.dumps(payload), encoding="utf-8")
+                temp_path.replace(cache_path)
+            except OSError:
+                pass
+            return evaluation
+        try:
+            temp_path = RUNS_DIR / ".dashboard_policy_cache.tmp"
+            temp_path.write_text(
+                json.dumps(
+                    {
+                        "version": DASHBOARD_POLICY_CACHE_VERSION,
+                        "signature": signature,
+                        "evaluation_path": None,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            temp_path.replace(cache_path)
+        except OSError:
+            pass
         return None
+
+    @staticmethod
+    def _validated_evaluation(path: Path) -> dict[str, Any] | None:
+        try:
+            manifest = json.loads((path.parent / "manifest.json").read_text(encoding="utf-8"))
+            # Tiny runs are useful dependency smoke tests but must never
+            # silently become the dashboard's selected operational policy.
+            if int(manifest.get("step") or 0) < 5_000:
+                return None
+            config = manifest["config"]
+            dataset = PortDataset.load(config["data_file"])
+            if dataset.package_sha256 != config.get("dataset_sha256"):
+                return None
+            artifact = Path(str(manifest.get("artifact_path") or ""))
+            recorded_artifact_sha256 = manifest.get("artifact_sha256")
+            if not artifact.is_file() or not recorded_artifact_sha256:
+                return None
+            if hashlib.sha256(artifact.read_bytes()).hexdigest() != recorded_artifact_sha256:
+                return None
+            evaluation = json.loads(path.read_text(encoding="utf-8"))
+            if evaluation.get("policy", {}).get("artifact_sha256") != recorded_artifact_sha256:
+                return None
+            if not DispatchSimulator._dashboard_policy_admitted(evaluation):
+                return None
+            return evaluation
+        except Exception:
+            return None
 
     @staticmethod
     def _dashboard_policy_admitted(evaluation: dict[str, Any]) -> bool:

@@ -1,0 +1,3773 @@
+{
+  "schema": "gullmate.energy-policy-release.v1",
+  "scope": "historical_simulation",
+  "production_authority": false,
+  "dataset_sha256": "c26b38eaa39a428bee24ca0e8fbd829de895cd84233c9f10310e16e64dd925e6",
+  "scenarios": {
+    "evaluate": {
+      "starts": [
+        0,
+        744,
+        1488,
+        2232,
+        3168,
+        3912,
+        4656,
+        5400,
+        6312,
+        7056,
+        7800,
+        8736
+      ],
+      "policies": {
+        "fixed": {
+          "mean": {
+            "cost": 639563.0250905348,
+            "carbon_kg": 94044.4788573642,
+            "delay_minutes": 0.0,
+            "processed_teu": 28060.61396513667,
+            "peak_kw": 14119.847978383017,
+            "safety_violations": 0.0,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 611657.5291430148,
+                "carbon_kg": 128882.61038469947,
+                "delay_minutes": 0.0,
+                "processed_teu": 29814.354838720003,
+                "peak_kw": 14180.4618353336,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 532918.6079445007,
+                "carbon_kg": 117781.54573098735,
+                "delay_minutes": 0.0,
+                "processed_teu": 28621.357142860004,
+                "peak_kw": 14139.2287245766,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 613335.9562281895,
+                "carbon_kg": 99273.85533933743,
+                "delay_minutes": 0.0,
+                "processed_teu": 25086.264405739996,
+                "peak_kw": 14017.0467028738,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 598342.8923371753,
+                "carbon_kg": 56534.69307706268,
+                "delay_minutes": 0.0,
+                "processed_teu": 28093.55500002,
+                "peak_kw": 14120.9865064328,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 609375.186124797,
+                "carbon_kg": 50365.69944447247,
+                "delay_minutes": 0.0,
+                "processed_teu": 23116.729032239997,
+                "peak_kw": 13948.9744253848,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 694767.6048793915,
+                "carbon_kg": 59560.42038671993,
+                "delay_minutes": 0.0,
+                "processed_teu": 29744.658333329997,
+                "peak_kw": 14178.0529423958,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 734056.371831158,
+                "carbon_kg": 97033.70469047912,
+                "delay_minutes": 0.0,
+                "processed_teu": 32897.97741937,
+                "peak_kw": 14287.0398713556,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 765946.193172912,
+                "carbon_kg": 81750.13795022278,
+                "delay_minutes": 0.0,
+                "processed_teu": 30914.68225807,
+                "peak_kw": 14218.4920197232,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 603293.9249820343,
+                "carbon_kg": 95019.60256622091,
+                "delay_minutes": 0.0,
+                "processed_teu": 29435.108333310003,
+                "peak_kw": 14167.354087335,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 686207.8507401294,
+                "carbon_kg": 127372.96214853674,
+                "delay_minutes": 0.0,
+                "processed_teu": 27368.749999990003,
+                "peak_kw": 14095.9353559152,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 539696.3660847677,
+                "carbon_kg": 134864.44893666587,
+                "delay_minutes": 0.0,
+                "processed_teu": 26098.84210829,
+                "peak_kw": 14052.0440282724,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 685157.8176183475,
+                "carbon_kg": 80094.06563296569,
+                "delay_minutes": 0.0,
+                "processed_teu": 25535.088709700005,
+                "peak_kw": 14032.5592409974,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "mpc2": {
+          "mean": {
+            "cost": 594309.7267596765,
+            "carbon_kg": 85914.20292544909,
+            "delay_minutes": 2.4949527787574186,
+            "processed_teu": 28053.240113327498,
+            "peak_kw": 16094.26657281757,
+            "safety_violations": 0.0,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 576376.8576720955,
+                "carbon_kg": 118282.78092532128,
+                "delay_minutes": 3.5462373835200975,
+                "processed_teu": 29814.35483872,
+                "peak_kw": 16587.7910806154,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 488638.53632671037,
+                "carbon_kg": 106896.6281220791,
+                "delay_minutes": 3.436216447972977,
+                "processed_teu": 28579.46679736,
+                "peak_kw": 15816.547368421052,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 560944.9756300589,
+                "carbon_kg": 88971.69028917521,
+                "delay_minutes": 1.3452106855636132,
+                "processed_teu": 25086.264405739996,
+                "peak_kw": 15861.101605305,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 553471.9055285599,
+                "carbon_kg": 51643.950600784716,
+                "delay_minutes": 1.6093689733783834,
+                "processed_teu": 28093.55500002,
+                "peak_kw": 16582.558251029,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 548981.8988407471,
+                "carbon_kg": 45087.11054335893,
+                "delay_minutes": 2.0207231483058603,
+                "processed_teu": 23116.729032239997,
+                "peak_kw": 15821.9744253848,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 650855.7420687906,
+                "carbon_kg": 54750.00361932814,
+                "delay_minutes": 6.309378090945955,
+                "processed_teu": 29744.658333329997,
+                "peak_kw": 16944.0572874514,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 707719.4112911118,
+                "carbon_kg": 91193.48115915034,
+                "delay_minutes": 2.7100215132300622,
+                "processed_teu": 32897.97741937,
+                "peak_kw": 16990.0398713556,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 730324.1852856894,
+                "carbon_kg": 75888.28728975987,
+                "delay_minutes": 2.967701496990772,
+                "processed_teu": 30914.682258069995,
+                "peak_kw": 16921.4920197232,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 557094.0411056932,
+                "carbon_kg": 87408.44032009384,
+                "delay_minutes": 0.45587106344100814,
+                "processed_teu": 29434.214644060005,
+                "peak_kw": 13916.8,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 638582.1570522912,
+                "carbon_kg": 115033.69882707426,
+                "delay_minutes": 1.8527913632432458,
+                "processed_teu": 27323.047813030003,
+                "peak_kw": 15940.6,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 487435.21634902916,
+                "carbon_kg": 122922.11697313008,
+                "delay_minutes": 1.7576698379564957,
+                "processed_teu": 26098.842108289995,
+                "peak_kw": 15883.411226963799,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 631291.7939653405,
+                "carbon_kg": 72892.24643613327,
+                "delay_minutes": 1.928243340540551,
+                "processed_teu": 25535.088709700005,
+                "peak_kw": 15864.8257375616,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "cost_only-17-8192": {
+          "mean": {
+            "cost": 596706.6847531208,
+            "carbon_kg": 85030.7651265316,
+            "delay_minutes": 731.3706195298649,
+            "processed_teu": 26066.370863871576,
+            "peak_kw": 15307.52803725861,
+            "safety_violations": 1.0,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 576635.3531455256,
+                "carbon_kg": 116112.8297991148,
+                "delay_minutes": 1100.205230712434,
+                "processed_teu": 27323.051627985227,
+                "peak_kw": 15303.356578715146,
+                "safety_violations": 1.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 491499.6374941218,
+                "carbon_kg": 105532.96425520777,
+                "delay_minutes": 832.018259256687,
+                "processed_teu": 26647.945569517105,
+                "peak_kw": 15300.977678789197,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 564263.9650330729,
+                "carbon_kg": 89958.11571812104,
+                "delay_minutes": 184.9542287629702,
+                "processed_teu": 24641.630271021604,
+                "peak_kw": 15294.402148473262,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 560130.0017468912,
+                "carbon_kg": 51104.22258267771,
+                "delay_minutes": 659.5779599294458,
+                "processed_teu": 25988.240598404656,
+                "peak_kw": 15302.502584572136,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 561079.7820767781,
+                "carbon_kg": 45882.51453365289,
+                "delay_minutes": 13.982104322989237,
+                "processed_teu": 22962.790755480215,
+                "peak_kw": 15300.157095767558,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 652910.8993936804,
+                "carbon_kg": 54055.717208388785,
+                "delay_minutes": 977.9485936720184,
+                "processed_teu": 26854.10756856187,
+                "peak_kw": 15312.000930838287,
+                "safety_violations": 2.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 708415.8014639164,
+                "carbon_kg": 87829.78702958259,
+                "delay_minutes": 1804.6266827661475,
+                "processed_teu": 28350.039438964282,
+                "peak_kw": 15325.36484401077,
+                "safety_violations": 5.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 721843.2904247618,
+                "carbon_kg": 73847.19867105172,
+                "delay_minutes": 1241.0249249683493,
+                "processed_teu": 27446.309502300785,
+                "peak_kw": 15321.499447196722,
+                "safety_violations": 3.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 564848.8145622975,
+                "carbon_kg": 85936.69543125776,
+                "delay_minutes": 895.1719118046087,
+                "processed_teu": 26723.192431256728,
+                "peak_kw": 15317.090494708717,
+                "safety_violations": 1.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 638434.5695428832,
+                "carbon_kg": 114844.34006687162,
+                "delay_minutes": 512.4948011419284,
+                "processed_teu": 25648.024996087286,
+                "peak_kw": 15308.066579739749,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 489742.0104508956,
+                "carbon_kg": 122429.1721613858,
+                "delay_minutes": 325.6081369406829,
+                "processed_teu": 25257.25432041202,
+                "peak_kw": 15301.823958827554,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 630676.0917026245,
+                "carbon_kg": 72835.62406106661,
+                "delay_minutes": 228.83460008011787,
+                "processed_teu": 24953.863286467153,
+                "peak_kw": 15303.09410546422,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "cost_only-37-8192": {
+          "mean": {
+            "cost": 589100.6146026521,
+            "carbon_kg": 84208.72314431478,
+            "delay_minutes": 606.9801607592264,
+            "processed_teu": 26313.53013187655,
+            "peak_kw": 15193.878741797806,
+            "safety_violations": 0.6666666666666666,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 568411.8161149954,
+                "carbon_kg": 114916.3443032386,
+                "delay_minutes": 950.0176405404338,
+                "processed_teu": 27541.471259704816,
+                "peak_kw": 15177.386334741115,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 484290.91835673375,
+                "carbon_kg": 104466.44892372124,
+                "delay_minutes": 694.7628586397286,
+                "processed_teu": 26873.22864926049,
+                "peak_kw": 15175.949226737022,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 557655.2344808213,
+                "carbon_kg": 89081.61549823477,
+                "delay_minutes": 106.00479422234059,
+                "processed_teu": 24874.296185914754,
+                "peak_kw": 15183.819134116173,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 552966.8378525125,
+                "carbon_kg": 50635.565671573735,
+                "delay_minutes": 528.7580559563221,
+                "processed_teu": 26291.451088154565,
+                "peak_kw": 15195.446194362641,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 555956.2292762533,
+                "carbon_kg": 45467.85188103217,
+                "delay_minutes": 5.580258716607988,
+                "processed_teu": 23031.925237625524,
+                "peak_kw": 15206.259235167503,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 644682.1241746309,
+                "carbon_kg": 53583.47927289398,
+                "delay_minutes": 813.1352151367223,
+                "processed_teu": 27176.990328132946,
+                "peak_kw": 15210.136786699295,
+                "safety_violations": 1.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 698287.0929587572,
+                "carbon_kg": 87033.13523925604,
+                "delay_minutes": 1570.5722830207437,
+                "processed_teu": 28662.324239970603,
+                "peak_kw": 15207.399119627476,
+                "safety_violations": 4.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 712399.1239075542,
+                "carbon_kg": 73177.50904739335,
+                "delay_minutes": 1051.5815150948442,
+                "processed_teu": 27767.641157683895,
+                "peak_kw": 15211.990909981727,
+                "safety_violations": 2.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 557325.5520432933,
+                "carbon_kg": 85116.28462634655,
+                "delay_minutes": 763.8368614724158,
+                "processed_teu": 26984.593349025203,
+                "peak_kw": 15198.095644903184,
+                "safety_violations": 1.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 630647.0517984533,
+                "carbon_kg": 113713.31809525535,
+                "delay_minutes": 408.559377469035,
+                "processed_teu": 25911.669769451353,
+                "peak_kw": 15190.978418564795,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 483261.544976624,
+                "carbon_kg": 121201.23525076741,
+                "delay_minutes": 234.5337930154488,
+                "processed_teu": 25481.1330449069,
+                "peak_kw": 15179.456284213065,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 623323.8492911974,
+                "carbon_kg": 72111.88992206407,
+                "delay_minutes": 156.41927582607275,
+                "processed_teu": 25165.637272687512,
+                "peak_kw": 15189.627612459659,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "cost_only-59-8192": {
+          "mean": {
+            "cost": 590387.9147211789,
+            "carbon_kg": 82916.01339120511,
+            "delay_minutes": 1197.694749674247,
+            "processed_teu": 25288.656294459324,
+            "peak_kw": 14961.157195868096,
+            "safety_violations": 2.3333333333333335,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 572781.1914771978,
+                "carbon_kg": 113267.49105157831,
+                "delay_minutes": 1658.6457175945943,
+                "processed_teu": 26608.067075209998,
+                "peak_kw": 14959.284841370583,
+                "safety_violations": 3.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 487662.9326948982,
+                "carbon_kg": 102950.99753504715,
+                "delay_minutes": 1278.2426968762165,
+                "processed_teu": 25987.52410561,
+                "peak_kw": 14959.2209004879,
+                "safety_violations": 2.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 555103.7234357113,
+                "carbon_kg": 87793.74729475967,
+                "delay_minutes": 443.9685111945945,
+                "processed_teu": 24028.41125622,
+                "peak_kw": 14959.247782182694,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 553261.4241253305,
+                "carbon_kg": 49848.27276179425,
+                "delay_minutes": 1036.9032088237836,
+                "processed_teu": 25255.200310910004,
+                "peak_kw": 14960.264995050431,
+                "safety_violations": 2.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 549314.9898155006,
+                "carbon_kg": 44781.15430714361,
+                "delay_minutes": 101.39032243081061,
+                "processed_teu": 22708.166101349998,
+                "peak_kw": 14961.249753189088,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 646017.7031154381,
+                "carbon_kg": 52727.458911253445,
+                "delay_minutes": 1488.5505908762168,
+                "processed_teu": 26023.66422598,
+                "peak_kw": 14962.121843647958,
+                "safety_violations": 4.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 713231.8088318619,
+                "carbon_kg": 85476.11766612528,
+                "delay_minutes": 3070.0480755302706,
+                "processed_teu": 26640.0,
+                "peak_kw": 14963.553204488755,
+                "safety_violations": 8.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 714774.5365185229,
+                "carbon_kg": 71994.37736722338,
+                "delay_minutes": 1846.3296815262395,
+                "processed_teu": 26568.157047805355,
+                "peak_kw": 14963.44031329155,
+                "safety_violations": 5.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 560010.3982027491,
+                "carbon_kg": 83779.2165298732,
+                "delay_minutes": 1397.0747050858056,
+                "processed_teu": 25880.05377771656,
+                "peak_kw": 14962.742760133744,
+                "safety_violations": 3.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 628975.6007504589,
+                "carbon_kg": 111985.00472363792,
+                "delay_minutes": 871.5912567805406,
+                "processed_teu": 24890.00053601,
+                "peak_kw": 14961.617305231095,
+                "safety_violations": 1.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 483284.9180594216,
+                "carbon_kg": 119375.92071115522,
+                "delay_minutes": 649.298481301081,
+                "processed_teu": 24595.05529645,
+                "peak_kw": 14960.405632209779,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 620235.7496270557,
+                "carbon_kg": 71012.40183486993,
+                "delay_minutes": 530.2937480708108,
+                "processed_teu": 24279.57580025,
+                "peak_kw": 14960.737019133569,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "joint-17-8192": {
+          "mean": {
+            "cost": 633268.4697727222,
+            "carbon_kg": 91645.0863124161,
+            "delay_minutes": 0.3622579018375592,
+            "processed_teu": 28053.40736346369,
+            "peak_kw": 16503.810767331568,
+            "safety_violations": 0.0,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 606882.7912130508,
+                "carbon_kg": 125298.99729523389,
+                "delay_minutes": 0.0,
+                "processed_teu": 29814.354838720003,
+                "peak_kw": 16547.94529630038,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 519596.1930118228,
+                "carbon_kg": 114014.47933233417,
+                "delay_minutes": 0.0,
+                "processed_teu": 28621.357142860004,
+                "peak_kw": 16501.223574695363,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 608241.1112386917,
+                "carbon_kg": 96334.58020726568,
+                "delay_minutes": 0.0,
+                "processed_teu": 25086.264405739996,
+                "peak_kw": 16388.652670657328,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 594944.221807273,
+                "carbon_kg": 55078.143436665465,
+                "delay_minutes": 0.0,
+                "processed_teu": 28093.55500002,
+                "peak_kw": 16529.14057281664,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 605306.2771160483,
+                "carbon_kg": 49419.013242213514,
+                "delay_minutes": 0.0,
+                "processed_teu": 23116.729032239997,
+                "peak_kw": 16347.541711995404,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 690423.7132208897,
+                "carbon_kg": 58264.82678374841,
+                "delay_minutes": 0.0,
+                "processed_teu": 29744.658333329997,
+                "peak_kw": 16584.47232168972,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 733879.7344228327,
+                "carbon_kg": 94831.29362953079,
+                "delay_minutes": 4.34709482205071,
+                "processed_teu": 32811.49819929429,
+                "peak_kw": 16649.029345047475,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 760974.2550535646,
+                "carbon_kg": 79695.09130345385,
+                "delay_minutes": 0.0,
+                "processed_teu": 30914.68225807,
+                "peak_kw": 16624.79176951482,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 592630.9005485264,
+                "carbon_kg": 92578.82440006046,
+                "delay_minutes": 0.0,
+                "processed_teu": 29435.108333310003,
+                "peak_kw": 16568.354273718724,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 681945.0588521239,
+                "carbon_kg": 123621.41522931674,
+                "delay_minutes": 0.0,
+                "processed_teu": 27368.749999990003,
+                "peak_kw": 16500.675410701406,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 525732.3692783589,
+                "carbon_kg": 132144.89307750735,
+                "delay_minutes": 0.0,
+                "processed_teu": 26098.84210829,
+                "peak_kw": 16410.552195405762,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 678665.0115094836,
+                "carbon_kg": 78459.47781166292,
+                "delay_minutes": 0.0,
+                "processed_teu": 25535.088709700005,
+                "peak_kw": 16393.350065435785,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "joint-37-8192": {
+          "mean": {
+            "cost": 634457.0715974563,
+            "carbon_kg": 92310.33133330129,
+            "delay_minutes": 0.15620122774316142,
+            "processed_teu": 28055.984217235073,
+            "peak_kw": 16581.66112187241,
+            "safety_violations": 0.0,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 607840.2929760723,
+                "carbon_kg": 126379.38153681143,
+                "delay_minutes": 0.0,
+                "processed_teu": 29814.354838720003,
+                "peak_kw": 16629.823930097547,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 519899.64021271706,
+                "carbon_kg": 114767.41578689904,
+                "delay_minutes": 0.0,
+                "processed_teu": 28621.357142860004,
+                "peak_kw": 16582.297682878747,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 608733.2048280735,
+                "carbon_kg": 97424.63181766625,
+                "delay_minutes": 0.0,
+                "processed_teu": 25086.264405739996,
+                "peak_kw": 16460.639194822004,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 595645.0978064777,
+                "carbon_kg": 55460.20598425516,
+                "delay_minutes": 0.0,
+                "processed_teu": 28093.55500002,
+                "peak_kw": 16597.81695362976,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 605674.7686384943,
+                "carbon_kg": 49590.97006575098,
+                "delay_minutes": 0.0,
+                "processed_teu": 23116.729032239997,
+                "peak_kw": 16411.046532461445,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 690784.8618120109,
+                "carbon_kg": 58632.85542490148,
+                "delay_minutes": 0.0,
+                "processed_teu": 29744.658333329997,
+                "peak_kw": 16650.565714359873,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 737118.1954789003,
+                "carbon_kg": 95488.56297891488,
+                "delay_minutes": 1.874414732917937,
+                "processed_teu": 32842.42044455087,
+                "peak_kw": 16736.189620369674,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 761923.0436603371,
+                "carbon_kg": 80225.18624121319,
+                "delay_minutes": 0.0,
+                "processed_teu": 30914.68225807,
+                "peak_kw": 16700.353409181378,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 596057.9650365632,
+                "carbon_kg": 93283.66084640849,
+                "delay_minutes": 0.0,
+                "processed_teu": 29435.108333310003,
+                "peak_kw": 16646.108581107983,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 683552.7960974077,
+                "carbon_kg": 124671.43466558705,
+                "delay_minutes": 0.0,
+                "processed_teu": 27368.749999990003,
+                "peak_kw": 16585.941147579324,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 526224.9757154981,
+                "carbon_kg": 132838.38356928263,
+                "delay_minutes": 0.0,
+                "processed_teu": 26098.84210829,
+                "peak_kw": 16496.816611981194,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 680030.0169069243,
+                "carbon_kg": 78961.28708192494,
+                "delay_minutes": 0.0,
+                "processed_teu": 25535.088709700005,
+                "peak_kw": 16482.33408400001,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "joint-59-8192": {
+          "mean": {
+            "cost": 631565.2586474207,
+            "carbon_kg": 91764.0520383209,
+            "delay_minutes": 0.1511875465817647,
+            "processed_teu": 28056.128459407515,
+            "peak_kw": 16528.019274483966,
+            "safety_violations": 0.0,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 603423.3998444799,
+                "carbon_kg": 125296.79895991289,
+                "delay_minutes": 0.0,
+                "processed_teu": 29814.354838720003,
+                "peak_kw": 16539.83817679974,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 515920.9966423486,
+                "carbon_kg": 113737.33343064394,
+                "delay_minutes": 0.0,
+                "processed_teu": 28621.357142860004,
+                "peak_kw": 16478.17452412583,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 604538.8482122076,
+                "carbon_kg": 96607.85304746471,
+                "delay_minutes": 0.0,
+                "processed_teu": 25086.264405739996,
+                "peak_kw": 16376.81917754381,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 592965.1113612119,
+                "carbon_kg": 55171.025960658946,
+                "delay_minutes": 0.0,
+                "processed_teu": 28093.55500002,
+                "peak_kw": 16559.32027098587,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 603450.6887085328,
+                "carbon_kg": 49398.817728535185,
+                "delay_minutes": 0.0,
+                "processed_teu": 23116.729032239997,
+                "peak_kw": 16381.857580611508,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 689748.7950216929,
+                "carbon_kg": 58514.289967712575,
+                "delay_minutes": 0.0,
+                "processed_teu": 29744.658333329997,
+                "peak_kw": 16645.20202231466,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 736039.0421110375,
+                "carbon_kg": 95299.92977467725,
+                "delay_minutes": 1.8142505589811764,
+                "processed_teu": 32844.15135062016,
+                "peak_kw": 16725.19272623062,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 760530.4605754042,
+                "carbon_kg": 80043.99920693749,
+                "delay_minutes": 0.0,
+                "processed_teu": 30914.68225807,
+                "peak_kw": 16685.929476450227,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 593995.5352324587,
+                "carbon_kg": 92931.32050363794,
+                "delay_minutes": 0.0,
+                "processed_teu": 29435.108333310003,
+                "peak_kw": 16609.823982995877,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 679954.5710295342,
+                "carbon_kg": 123934.52283030898,
+                "delay_minutes": 0.0,
+                "processed_teu": 27368.749999990003,
+                "peak_kw": 16526.212301625383,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 522738.74631096073,
+                "carbon_kg": 131866.2571948628,
+                "delay_minutes": 0.0,
+                "processed_teu": 26098.84210829,
+                "peak_kw": 16401.04185203294,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 675476.9087191789,
+                "carbon_kg": 78366.47585449812,
+                "delay_minutes": 0.0,
+                "processed_teu": 25535.088709700005,
+                "peak_kw": 16406.819202091116,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "storage-17-8192": {
+          "mean": {
+            "cost": 645748.4596574944,
+            "carbon_kg": 94042.72643921047,
+            "delay_minutes": 0.0,
+            "processed_teu": 28060.61396513667,
+            "peak_kw": 16804.881284027866,
+            "safety_violations": 0.0,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 617320.373390678,
+                "carbon_kg": 128570.39270103736,
+                "delay_minutes": 0.0,
+                "processed_teu": 29814.354838720003,
+                "peak_kw": 16835.9020583162,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 528423.5895178902,
+                "carbon_kg": 116871.50643814683,
+                "delay_minutes": 0.0,
+                "processed_teu": 28621.357142860004,
+                "peak_kw": 16796.57201421,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 619035.5728743158,
+                "carbon_kg": 99305.53172620217,
+                "delay_minutes": 0.0,
+                "processed_teu": 25086.264405739996,
+                "peak_kw": 16680.0291627404,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 606730.6664349018,
+                "carbon_kg": 56551.534977110576,
+                "delay_minutes": 0.0,
+                "processed_teu": 28093.55500002,
+                "peak_kw": 16823.9865064328,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 617927.2241397444,
+                "carbon_kg": 50607.05800397825,
+                "delay_minutes": 0.0,
+                "processed_teu": 23116.729032239997,
+                "peak_kw": 16651.9744253848,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 704067.3781164652,
+                "carbon_kg": 59823.89536242309,
+                "delay_minutes": 0.0,
+                "processed_teu": 29744.658333329997,
+                "peak_kw": 16881.0529423958,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 750585.8044738737,
+                "carbon_kg": 97373.96828136647,
+                "delay_minutes": 0.0,
+                "processed_teu": 32897.97741937,
+                "peak_kw": 16990.0398713556,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 775916.1531567435,
+                "carbon_kg": 81781.5743776775,
+                "delay_minutes": 0.0,
+                "processed_teu": 30914.68225807,
+                "peak_kw": 16921.4920197232,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 607224.6740411079,
+                "carbon_kg": 95092.12135022247,
+                "delay_minutes": 0.0,
+                "processed_teu": 29435.108333310003,
+                "peak_kw": 16870.354087335,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 695455.5632577925,
+                "carbon_kg": 126981.62196529355,
+                "delay_minutes": 0.0,
+                "processed_teu": 27368.749999990003,
+                "peak_kw": 16798.9353559152,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 535076.6104863889,
+                "carbon_kg": 135186.69635890957,
+                "delay_minutes": 0.0,
+                "processed_teu": 26098.84210829,
+                "peak_kw": 16713.4112269638,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 691217.9060000317,
+                "carbon_kg": 80366.81572815779,
+                "delay_minutes": 0.0,
+                "processed_teu": 25535.088709700005,
+                "peak_kw": 16694.8257375616,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "storage-37-8192": {
+          "mean": {
+            "cost": 645748.4596574944,
+            "carbon_kg": 94042.72643921047,
+            "delay_minutes": 0.0,
+            "processed_teu": 28060.61396513667,
+            "peak_kw": 16804.881284027866,
+            "safety_violations": 0.0,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 617320.373390678,
+                "carbon_kg": 128570.39270103736,
+                "delay_minutes": 0.0,
+                "processed_teu": 29814.354838720003,
+                "peak_kw": 16835.9020583162,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 528423.5895178902,
+                "carbon_kg": 116871.50643814683,
+                "delay_minutes": 0.0,
+                "processed_teu": 28621.357142860004,
+                "peak_kw": 16796.57201421,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 619035.5728743158,
+                "carbon_kg": 99305.53172620217,
+                "delay_minutes": 0.0,
+                "processed_teu": 25086.264405739996,
+                "peak_kw": 16680.0291627404,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 606730.6664349018,
+                "carbon_kg": 56551.534977110576,
+                "delay_minutes": 0.0,
+                "processed_teu": 28093.55500002,
+                "peak_kw": 16823.9865064328,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 617927.2241397444,
+                "carbon_kg": 50607.05800397825,
+                "delay_minutes": 0.0,
+                "processed_teu": 23116.729032239997,
+                "peak_kw": 16651.9744253848,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 704067.3781164652,
+                "carbon_kg": 59823.89536242309,
+                "delay_minutes": 0.0,
+                "processed_teu": 29744.658333329997,
+                "peak_kw": 16881.0529423958,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 750585.8044738737,
+                "carbon_kg": 97373.96828136647,
+                "delay_minutes": 0.0,
+                "processed_teu": 32897.97741937,
+                "peak_kw": 16990.0398713556,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 775916.1531567435,
+                "carbon_kg": 81781.5743776775,
+                "delay_minutes": 0.0,
+                "processed_teu": 30914.68225807,
+                "peak_kw": 16921.4920197232,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 607224.6740411079,
+                "carbon_kg": 95092.12135022247,
+                "delay_minutes": 0.0,
+                "processed_teu": 29435.108333310003,
+                "peak_kw": 16870.354087335,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 695455.5632577925,
+                "carbon_kg": 126981.62196529355,
+                "delay_minutes": 0.0,
+                "processed_teu": 27368.749999990003,
+                "peak_kw": 16798.9353559152,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 535076.6104863889,
+                "carbon_kg": 135186.69635890957,
+                "delay_minutes": 0.0,
+                "processed_teu": 26098.84210829,
+                "peak_kw": 16713.4112269638,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 691217.9060000317,
+                "carbon_kg": 80366.81572815779,
+                "delay_minutes": 0.0,
+                "processed_teu": 25535.088709700005,
+                "peak_kw": 16694.8257375616,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "storage-59-8192": {
+          "mean": {
+            "cost": 645748.4596574944,
+            "carbon_kg": 94042.72643921047,
+            "delay_minutes": 0.0,
+            "processed_teu": 28060.61396513667,
+            "peak_kw": 16804.881284027866,
+            "safety_violations": 0.0,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 617320.373390678,
+                "carbon_kg": 128570.39270103736,
+                "delay_minutes": 0.0,
+                "processed_teu": 29814.354838720003,
+                "peak_kw": 16835.9020583162,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 528423.5895178902,
+                "carbon_kg": 116871.50643814683,
+                "delay_minutes": 0.0,
+                "processed_teu": 28621.357142860004,
+                "peak_kw": 16796.57201421,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 619035.5728743158,
+                "carbon_kg": 99305.53172620217,
+                "delay_minutes": 0.0,
+                "processed_teu": 25086.264405739996,
+                "peak_kw": 16680.0291627404,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 606730.6664349018,
+                "carbon_kg": 56551.534977110576,
+                "delay_minutes": 0.0,
+                "processed_teu": 28093.55500002,
+                "peak_kw": 16823.9865064328,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 617927.2241397444,
+                "carbon_kg": 50607.05800397825,
+                "delay_minutes": 0.0,
+                "processed_teu": 23116.729032239997,
+                "peak_kw": 16651.9744253848,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 704067.3781164652,
+                "carbon_kg": 59823.89536242309,
+                "delay_minutes": 0.0,
+                "processed_teu": 29744.658333329997,
+                "peak_kw": 16881.0529423958,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 750585.8044738737,
+                "carbon_kg": 97373.96828136647,
+                "delay_minutes": 0.0,
+                "processed_teu": 32897.97741937,
+                "peak_kw": 16990.0398713556,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 775916.1531567435,
+                "carbon_kg": 81781.5743776775,
+                "delay_minutes": 0.0,
+                "processed_teu": 30914.68225807,
+                "peak_kw": 16921.4920197232,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 607224.6740411079,
+                "carbon_kg": 95092.12135022247,
+                "delay_minutes": 0.0,
+                "processed_teu": 29435.108333310003,
+                "peak_kw": 16870.354087335,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 695455.5632577925,
+                "carbon_kg": 126981.62196529355,
+                "delay_minutes": 0.0,
+                "processed_teu": 27368.749999990003,
+                "peak_kw": 16798.9353559152,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 535076.6104863889,
+                "carbon_kg": 135186.69635890957,
+                "delay_minutes": 0.0,
+                "processed_teu": 26098.84210829,
+                "peak_kw": 16713.4112269638,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 691217.9060000317,
+                "carbon_kg": 80366.81572815779,
+                "delay_minutes": 0.0,
+                "processed_teu": 25535.088709700005,
+                "peak_kw": 16694.8257375616,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        }
+      }
+    },
+    "stress": {
+      "starts": [
+        0,
+        744,
+        1488,
+        2232,
+        3168,
+        3912,
+        4656,
+        5400,
+        6312,
+        7056,
+        7800,
+        8736
+      ],
+      "policies": {
+        "fixed": {
+          "mean": {
+            "cost": 648591.3768679093,
+            "carbon_kg": 95215.6025881008,
+            "delay_minutes": 49.101540536689186,
+            "processed_teu": 34770.553932031245,
+            "peak_kw": 14274.106708075875,
+            "safety_violations": 0.0,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 621096.6660875931,
+                "carbon_kg": 130619.0226064929,
+                "delay_minutes": 52.08003371513512,
+                "processed_teu": 37132.477660062505,
+                "peak_kw": 14297.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 540376.9070833144,
+                "carbon_kg": 119322.20534283308,
+                "delay_minutes": 17.566590726486513,
+                "processed_teu": 35724.3334967,
+                "peak_kw": 14297.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 620835.8587294868,
+                "carbon_kg": 100413.0195270468,
+                "delay_minutes": 0.0,
+                "processed_teu": 31357.830507175,
+                "peak_kw": 14233.80837859225,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 606382.4282849065,
+                "carbon_kg": 57250.647769869116,
+                "delay_minutes": 5.660693147027049,
+                "processed_teu": 34992.027921337496,
+                "peak_kw": 14297.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 616268.1070882463,
+                "carbon_kg": 50911.6108539656,
+                "delay_minutes": 0.0,
+                "processed_teu": 28895.9112903,
+                "peak_kw": 14148.718031731,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 704770.7221627524,
+                "carbon_kg": 60324.02785869769,
+                "delay_minutes": 34.889944254324305,
+                "processed_teu": 36831.110643575004,
+                "peak_kw": 14297.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 748377.4829058059,
+                "carbon_kg": 98181.677273588,
+                "delay_minutes": 340.73702942391895,
+                "processed_teu": 39219.941824487505,
+                "peak_kw": 14297.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 777994.9336979152,
+                "carbon_kg": 82794.76413899248,
+                "delay_minutes": 110.86525872567556,
+                "processed_teu": 37910.472414837495,
+                "peak_kw": 14297.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 611654.2267309721,
+                "carbon_kg": 96246.97032028763,
+                "delay_minutes": 25.56614508445948,
+                "processed_teu": 36486.318137124996,
+                "peak_kw": 14297.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 695245.7020049006,
+                "carbon_kg": 128942.38586102179,
+                "delay_minutes": 1.8527913632432476,
+                "processed_teu": 34153.8097662875,
+                "peak_kw": 14297.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 546415.0872400848,
+                "carbon_kg": 136521.98404933233,
+                "delay_minutes": 0.0,
+                "processed_teu": 32623.552635362492,
+                "peak_kw": 14277.5550353405,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 693678.4003989344,
+                "carbon_kg": 81058.91545508211,
+                "delay_minutes": 0.0,
+                "processed_teu": 31918.860887124996,
+                "peak_kw": 14253.19905124675,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "mpc2": {
+          "mean": {
+            "cost": 626318.7431379077,
+            "carbon_kg": 90292.68354505496,
+            "delay_minutes": 50.79992300712699,
+            "processed_teu": 34770.55393203125,
+            "peak_kw": 16718.332972742024,
+            "safety_violations": 0.0,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 610647.4282910561,
+                "carbon_kg": 125035.67039203082,
+                "delay_minutes": 52.08003371513512,
+                "processed_teu": 37132.477660062505,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 517061.905335004,
+                "carbon_kg": 112951.16141921203,
+                "delay_minutes": 17.566590726486513,
+                "processed_teu": 35724.3334967,
+                "peak_kw": 16875.947368421053,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 588271.9985780055,
+                "carbon_kg": 93145.67568776486,
+                "delay_minutes": 3.6009342082934945,
+                "processed_teu": 31357.830507175,
+                "peak_kw": 16936.27700663125,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 585939.3507419203,
+                "carbon_kg": 54491.80625669327,
+                "delay_minutes": 6.497768972027044,
+                "processed_teu": 34992.027921337496,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 575151.1931966506,
+                "carbon_kg": 47058.754908638264,
+                "delay_minutes": 0.0,
+                "processed_teu": 28895.9112903,
+                "peak_kw": 16601.718031730998,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 693236.8087826148,
+                "carbon_kg": 57762.25094076552,
+                "delay_minutes": 35.64855571479728,
+                "processed_teu": 36831.110643575004,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 741243.3468403028,
+                "carbon_kg": 95110.58943773924,
+                "delay_minutes": 341.74111346175675,
+                "processed_teu": 39219.9418244875,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 767542.4412888692,
+                "carbon_kg": 79578.37367611202,
+                "delay_minutes": 111.53638491027921,
+                "processed_teu": 37910.472414837495,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 586329.6164505224,
+                "carbon_kg": 91828.9733823115,
+                "delay_minutes": 27.163424048368515,
+                "processed_teu": 36486.318137125,
+                "peak_kw": 14297.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 675366.5075793751,
+                "carbon_kg": 121148.34296635728,
+                "delay_minutes": 4.635719686891897,
+                "processed_teu": 34153.8097662875,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 513430.8935772226,
+                "carbon_kg": 129166.58711498098,
+                "delay_minutes": 3.05480549537325,
+                "processed_teu": 32623.5526353625,
+                "peak_kw": 16936.978094594502,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 661603.4269933486,
+                "carbon_kg": 76234.01635805362,
+                "delay_minutes": 6.0737451461148595,
+                "processed_teu": 31918.860887124996,
+                "peak_kw": 16972.0751715265,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "cost_only-17-8192": {
+          "mean": {
+            "cost": 646408.7663465365,
+            "carbon_kg": 85542.45507233552,
+            "delay_minutes": 3324.7211106212494,
+            "processed_teu": 28424.68927207584,
+            "peak_kw": 15355.065439429258,
+            "safety_violations": 10.916666666666666,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 647129.5418014246,
+                "carbon_kg": 116626.47865768336,
+                "delay_minutes": 4889.905042534013,
+                "processed_teu": 28656.102697849274,
+                "peak_kw": 15369.910697829724,
+                "safety_violations": 21.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 551595.6976459213,
+                "carbon_kg": 106086.50411666205,
+                "delay_minutes": 4042.804008037755,
+                "processed_teu": 28567.045614123344,
+                "peak_kw": 15365.67163697481,
+                "safety_violations": 17.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 591946.1782302179,
+                "carbon_kg": 90695.44005169418,
+                "delay_minutes": 1538.374278831122,
+                "processed_teu": 28147.72090461925,
+                "peak_kw": 15308.316008855403,
+                "safety_violations": 2.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 605819.8704688227,
+                "carbon_kg": 51433.3559986823,
+                "delay_minutes": 3041.973493426082,
+                "processed_teu": 28531.03643476963,
+                "peak_kw": 15354.172127103804,
+                "safety_violations": 8.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 578780.1425398686,
+                "carbon_kg": 46205.9925474815,
+                "delay_minutes": 805.0191968246921,
+                "processed_teu": 26417.21534830477,
+                "peak_kw": 15306.969771407545,
+                "safety_violations": 1.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 713294.3347647806,
+                "carbon_kg": 54370.14092537659,
+                "delay_minutes": 4163.270772764925,
+                "processed_teu": 28707.110897898674,
+                "peak_kw": 15383.314968641102,
+                "safety_violations": 14.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 793480.6578557136,
+                "carbon_kg": 88080.51197137694,
+                "delay_minutes": 6403.996537004326,
+                "processed_teu": 28837.935034036636,
+                "peak_kw": 15384.279466365278,
+                "safety_violations": 22.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 791423.2340199096,
+                "carbon_kg": 74202.8427080739,
+                "delay_minutes": 4927.293245853137,
+                "processed_teu": 28857.526785731316,
+                "peak_kw": 15398.957940103113,
+                "safety_violations": 20.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 621649.36107064,
+                "carbon_kg": 86450.44447528933,
+                "delay_minutes": 3878.4815206590556,
+                "processed_teu": 28782.905139923096,
+                "peak_kw": 15397.317432232201,
+                "safety_violations": 11.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 676962.640450763,
+                "carbon_kg": 115702.4634767452,
+                "delay_minutes": 2462.72062486472,
+                "processed_teu": 28564.189635515213,
+                "peak_kw": 15346.682060493527,
+                "safety_violations": 7.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 524649.1728013732,
+                "carbon_kg": 123285.38194004138,
+                "delay_minutes": 2086.788038435433,
+                "processed_teu": 28522.390803694725,
+                "peak_kw": 15325.527662813663,
+                "safety_violations": 5.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 660174.3645090025,
+                "carbon_kg": 73369.90399891952,
+                "delay_minutes": 1656.0265682197332,
+                "processed_teu": 28505.091968444176,
+                "peak_kw": 15319.665500330924,
+                "safety_violations": 3.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "cost_only-37-8192": {
+          "mean": {
+            "cost": 634385.3891193888,
+            "carbon_kg": 84701.0306083342,
+            "delay_minutes": 2973.7676676983297,
+            "processed_teu": 28852.682346085658,
+            "peak_kw": 15209.248115230599,
+            "safety_violations": 9.083333333333334,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 634703.0507345183,
+                "carbon_kg": 115363.03227191171,
+                "delay_minutes": 4540.781574124256,
+                "processed_teu": 29029.201068878174,
+                "peak_kw": 15200.766633963583,
+                "safety_violations": 21.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 539620.7637195175,
+                "carbon_kg": 104991.09716026769,
+                "delay_minutes": 3655.002932290273,
+                "processed_teu": 29001.83915257454,
+                "peak_kw": 15195.081815421581,
+                "safety_violations": 14.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 582773.9063098878,
+                "carbon_kg": 89805.8175040357,
+                "delay_minutes": 1327.802428561581,
+                "processed_teu": 28399.499476224933,
+                "peak_kw": 15185.21328845024,
+                "safety_violations": 2.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 592609.386152999,
+                "carbon_kg": 50966.46742061167,
+                "delay_minutes": 2589.304811129825,
+                "processed_teu": 29115.783747434616,
+                "peak_kw": 15206.709648633003,
+                "safety_violations": 7.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 571396.2489594581,
+                "carbon_kg": 45805.68129904302,
+                "delay_minutes": 655.8366965872375,
+                "processed_teu": 26739.703809441588,
+                "peak_kw": 15206.147959685324,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 699040.4450837943,
+                "carbon_kg": 53885.27363353459,
+                "delay_minutes": 3694.909577722505,
+                "processed_teu": 29268.733409047127,
+                "peak_kw": 15237.863110363483,
+                "safety_violations": 9.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 779040.760915673,
+                "carbon_kg": 87231.56377726985,
+                "delay_minutes": 5974.637871886158,
+                "processed_teu": 29294.920611977577,
+                "peak_kw": 15235.008368873596,
+                "safety_violations": 21.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 777080.4184154294,
+                "carbon_kg": 73492.07350587394,
+                "delay_minutes": 4514.087454132169,
+                "processed_teu": 29317.136447429657,
+                "peak_kw": 15245.896420562267,
+                "safety_violations": 15.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 609259.3323297073,
+                "carbon_kg": 85593.49038967492,
+                "delay_minutes": 3496.562778714533,
+                "processed_teu": 29218.91330897808,
+                "peak_kw": 15226.044013738632,
+                "safety_violations": 9.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 663568.807426739,
+                "carbon_kg": 114593.77453613059,
+                "delay_minutes": 2058.574869226357,
+                "processed_teu": 29095.989167690277,
+                "peak_kw": 15197.652148032188,
+                "safety_violations": 6.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 513030.23017068795,
+                "carbon_kg": 122063.225271305,
+                "delay_minutes": 1707.9943814066812,
+                "processed_teu": 29032.404724359512,
+                "peak_kw": 15182.489630448817,
+                "safety_violations": 3.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 650501.3192142533,
+                "carbon_kg": 72620.87053035172,
+                "delay_minutes": 1469.7166365983812,
+                "processed_teu": 28718.063228991814,
+                "peak_kw": 15192.104344594478,
+                "safety_violations": 2.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "cost_only-59-8192": {
+          "mean": {
+            "cost": 655994.1344819241,
+            "carbon_kg": 83155.16921600333,
+            "delay_minutes": 4768.464416020807,
+            "processed_teu": 26577.12443208113,
+            "peak_kw": 14965.064631109437,
+            "safety_violations": 15.666666666666666,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 660893.7364272699,
+                "carbon_kg": 113283.929551567,
+                "delay_minutes": 6549.573216406081,
+                "processed_teu": 26640.0,
+                "peak_kw": 14961.455389213563,
+                "safety_violations": 22.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 565478.3470555741,
+                "carbon_kg": 103106.17372391235,
+                "delay_minutes": 5567.241569783108,
+                "processed_teu": 26640.0,
+                "peak_kw": 14961.789056015015,
+                "safety_violations": 22.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 597249.3830991929,
+                "carbon_kg": 88318.98049561775,
+                "delay_minutes": 2656.394816735811,
+                "processed_teu": 26640.0,
+                "peak_kw": 14959.712445092202,
+                "safety_violations": 7.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 616679.6646368285,
+                "carbon_kg": 50012.436458969896,
+                "delay_minutes": 4491.221379564188,
+                "processed_teu": 26640.0,
+                "peak_kw": 14963.397338342667,
+                "safety_violations": 15.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 572547.9256675757,
+                "carbon_kg": 45058.88220913738,
+                "delay_minutes": 1248.8340947513511,
+                "processed_teu": 25629.499111225,
+                "peak_kw": 14961.081846904755,
+                "safety_violations": 3.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 724370.3451378961,
+                "carbon_kg": 52833.31153799674,
+                "delay_minutes": 5791.65798121071,
+                "processed_teu": 26672.89607644081,
+                "peak_kw": 14968.461992049217,
+                "safety_violations": 21.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 807527.951257111,
+                "carbon_kg": 85528.8791155317,
+                "delay_minutes": 8284.660158645758,
+                "processed_teu": 26704.390043616295,
+                "peak_kw": 14965.522825074197,
+                "safety_violations": 22.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 802480.3589534061,
+                "carbon_kg": 72062.21831774423,
+                "delay_minutes": 6679.347131733255,
+                "processed_teu": 26736.595044732094,
+                "peak_kw": 14975.621230268478,
+                "safety_violations": 22.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 635473.74172404,
+                "carbon_kg": 83970.22209211304,
+                "delay_minutes": 5525.5585036417215,
+                "processed_teu": 26702.11290895939,
+                "peak_kw": 14976.329025352,
+                "safety_violations": 21.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 685440.4725529464,
+                "carbon_kg": 112473.021887279,
+                "delay_minutes": 3910.954848222972,
+                "processed_teu": 26640.0,
+                "peak_kw": 14963.903724503518,
+                "safety_violations": 10.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 536284.8359690165,
+                "carbon_kg": 119869.77646562135,
+                "delay_minutes": 3490.1660179067567,
+                "processed_teu": 26640.0,
+                "peak_kw": 14961.828901720048,
+                "safety_violations": 13.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 667502.8513022315,
+                "carbon_kg": 71344.19873654949,
+                "delay_minutes": 3025.9632736479734,
+                "processed_teu": 26640.0,
+                "peak_kw": 14961.671798777581,
+                "safety_violations": 10.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "joint-17-8192": {
+          "mean": {
+            "cost": 643503.694439129,
+            "carbon_kg": 92797.3548827899,
+            "delay_minutes": 139.65279824428325,
+            "processed_teu": 34396.63933186564,
+            "peak_kw": 16627.11172265074,
+            "safety_violations": 0.0,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 618282.7716666635,
+                "carbon_kg": 126956.79164612661,
+                "delay_minutes": 208.61865068086485,
+                "processed_teu": 36548.71151289134,
+                "peak_kw": 16650.811295175554,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 528073.9267728557,
+                "carbon_kg": 115551.01808197614,
+                "delay_minutes": 82.37626831563728,
+                "processed_teu": 35581.76785903182,
+                "peak_kw": 16642.268409001827,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 615933.8301273136,
+                "carbon_kg": 97509.04796818679,
+                "delay_minutes": 0.45495411325938356,
+                "processed_teu": 31357.830507175,
+                "peak_kw": 16598.926407098385,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 603512.9239918632,
+                "carbon_kg": 55792.59221401882,
+                "delay_minutes": 40.02772006948279,
+                "processed_teu": 34784.84783369561,
+                "peak_kw": 16645.186577808858,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 612410.36263639,
+                "carbon_kg": 49984.03374529842,
+                "delay_minutes": 0.0,
+                "processed_teu": 28895.9112903,
+                "peak_kw": 16551.393850710738,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 702142.6763276134,
+                "carbon_kg": 58981.568202963594,
+                "delay_minutes": 185.20584742791473,
+                "processed_teu": 36130.79396550388,
+                "peak_kw": 16640.749135100843,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 751915.1532012468,
+                "carbon_kg": 95871.70423463406,
+                "delay_minutes": 634.7256397654364,
+                "processed_teu": 38164.97145395642,
+                "peak_kw": 16643.210960686207,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 775418.945941704,
+                "carbon_kg": 80638.23134989027,
+                "delay_minutes": 341.33952976646907,
+                "processed_teu": 36881.99517727383,
+                "peak_kw": 16638.421990525723,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 602897.8068800819,
+                "carbon_kg": 93756.42778235536,
+                "delay_minutes": 155.0415325378495,
+                "processed_teu": 35896.34612421162,
+                "peak_kw": 16634.158967888354,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 691233.3796673042,
+                "carbon_kg": 125214.68816327004,
+                "delay_minutes": 18.648328345907807,
+                "processed_teu": 33974.082735860684,
+                "peak_kw": 16641.064209353925,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 532747.4604993167,
+                "carbon_kg": 133854.53424388054,
+                "delay_minutes": 6.739459676743486,
+                "processed_teu": 32623.552635362492,
+                "peak_kw": 16630.49224570369,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 687475.0955571946,
+                "carbon_kg": 79457.62096087821,
+                "delay_minutes": 2.6556482318335277,
+                "processed_teu": 31918.860887124996,
+                "peak_kw": 16608.656622754803,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "joint-37-8192": {
+          "mean": {
+            "cost": 644230.0040544365,
+            "carbon_kg": 93463.36027051332,
+            "delay_minutes": 106.50442904784866,
+            "processed_teu": 34518.84810889231,
+            "peak_kw": 16715.854516597206,
+            "safety_violations": 0.0,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 618479.1500461614,
+                "carbon_kg": 128054.78516369422,
+                "delay_minutes": 149.3402812341817,
+                "processed_teu": 36756.945393292,
+                "peak_kw": 16750.18912721276,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 527925.6223629217,
+                "carbon_kg": 116299.7851075564,
+                "delay_minutes": 53.25794992108821,
+                "processed_teu": 35640.56663679089,
+                "peak_kw": 16740.6895798862,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 616345.4620955391,
+                "carbon_kg": 98583.54815783304,
+                "delay_minutes": 0.0,
+                "processed_teu": 31357.830507175,
+                "peak_kw": 16670.11782228908,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 603932.6791223541,
+                "carbon_kg": 56173.637583734264,
+                "delay_minutes": 23.620046500159354,
+                "processed_teu": 34843.489062744986,
+                "peak_kw": 16731.228855621815,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 612733.1077500122,
+                "carbon_kg": 50150.10647524404,
+                "delay_minutes": 0.0,
+                "processed_teu": 28895.9112903,
+                "peak_kw": 16614.48271986519,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 701989.445805064,
+                "carbon_kg": 59365.13330790115,
+                "delay_minutes": 133.11817600761125,
+                "processed_teu": 36375.142634555996,
+                "peak_kw": 16726.715459668638,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 753965.6350206156,
+                "carbon_kg": 96544.86980763677,
+                "delay_minutes": 546.0429883587042,
+                "processed_teu": 38425.876808277426,
+                "peak_kw": 16733.533624100684,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 775527.2037136174,
+                "carbon_kg": 81194.43243649491,
+                "delay_minutes": 265.27547798006356,
+                "processed_teu": 37178.271798496324,
+                "peak_kw": 16735.814031362534,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 605473.6232040777,
+                "carbon_kg": 94484.4649511981,
+                "delay_minutes": 96.45559221205431,
+                "processed_teu": 36170.801112750836,
+                "peak_kw": 16732.20262064934,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 692670.7930156272,
+                "carbon_kg": 126248.05940325177,
+                "delay_minutes": 9.715226181368472,
+                "processed_teu": 34038.92853983674,
+                "peak_kw": 16745.326614558697,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 533049.0463520571,
+                "carbon_kg": 134520.77123031285,
+                "delay_minutes": 1.2274101789528888,
+                "processed_teu": 32623.552635362492,
+                "peak_kw": 16714.720318466178,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 688668.2801651902,
+                "carbon_kg": 79940.72962130242,
+                "delay_minutes": 0.0,
+                "processed_teu": 31918.860887124996,
+                "peak_kw": 16695.233425485363,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "joint-59-8192": {
+          "mean": {
+            "cost": 641874.7876571121,
+            "carbon_kg": 92970.03470722683,
+            "delay_minutes": 116.22181173631839,
+            "processed_teu": 34491.123529355784,
+            "peak_kw": 16668.787652718638,
+            "safety_violations": 0.0,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 615181.9283787407,
+                "carbon_kg": 127020.69083078895,
+                "delay_minutes": 207.25752511502185,
+                "processed_teu": 36516.39640166311,
+                "peak_kw": 16657.15829242468,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 524784.7367369002,
+                "carbon_kg": 115330.27193991462,
+                "delay_minutes": 88.53471250804074,
+                "processed_teu": 35538.72965343314,
+                "peak_kw": 16625.198736226557,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 612518.8375278392,
+                "carbon_kg": 97828.25162267419,
+                "delay_minutes": 0.1426814414471943,
+                "processed_teu": 31357.830507175,
+                "peak_kw": 16594.968559443565,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 601822.2597981369,
+                "carbon_kg": 55919.78684299193,
+                "delay_minutes": 33.88025281257338,
+                "processed_teu": 34819.47336401404,
+                "peak_kw": 16694.901393675806,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 610855.3055913053,
+                "carbon_kg": 49985.96753788383,
+                "delay_minutes": 0.0,
+                "processed_teu": 28895.9112903,
+                "peak_kw": 16592.558641400683,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 701422.0641965537,
+                "carbon_kg": 59286.668361374286,
+                "delay_minutes": 133.52794866274303,
+                "processed_teu": 36391.10981826515,
+                "peak_kw": 16734.535918104648,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 753530.2188361753,
+                "carbon_kg": 96441.47025081456,
+                "delay_minutes": 541.1874299881647,
+                "processed_teu": 38482.93270569211,
+                "peak_kw": 16748.254985022544,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 774672.0739221192,
+                "carbon_kg": 81067.99524505147,
+                "delay_minutes": 264.46081366886233,
+                "processed_teu": 37208.86412442215,
+                "peak_kw": 16738.726386642455,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 603901.0431449312,
+                "carbon_kg": 94178.70693943027,
+                "delay_minutes": 107.82927136214258,
+                "processed_teu": 36125.67506889469,
+                "peak_kw": 16701.954590320587,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 689409.8467266009,
+                "carbon_kg": 125568.28197467049,
+                "delay_minutes": 12.65468337570861,
+                "processed_teu": 34014.14589592252,
+                "peak_kw": 16683.41572316885,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 529892.2347912436,
+                "carbon_kg": 133620.40534208674,
+                "delay_minutes": 4.153601686310917,
+                "processed_teu": 32623.552635362492,
+                "peak_kw": 16626.61678925132,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 684506.9022347999,
+                "carbon_kg": 79391.91959904064,
+                "delay_minutes": 1.032820214805374,
+                "processed_teu": 31918.860887124996,
+                "peak_kw": 16627.161816941967,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "storage-17-8192": {
+          "mean": {
+            "cost": 654776.8114348691,
+            "carbon_kg": 95213.85016994707,
+            "delay_minutes": 49.101540536689186,
+            "processed_teu": 34770.553932031245,
+            "peak_kw": 16964.358390901103,
+            "safety_violations": 0.0,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 626759.5103352561,
+                "carbon_kg": 130306.80492283081,
+                "delay_minutes": 52.08003371513512,
+                "processed_teu": 37132.477660062505,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 535881.8886567039,
+                "carbon_kg": 118412.16604999255,
+                "delay_minutes": 17.566590726486513,
+                "processed_teu": 35724.3334967,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 626535.4753756132,
+                "carbon_kg": 100444.69591391155,
+                "delay_minutes": 0.0,
+                "processed_teu": 31357.830507175,
+                "peak_kw": 16886.7864534255,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 614770.202382633,
+                "carbon_kg": 57267.48966991701,
+                "delay_minutes": 5.660693147027049,
+                "processed_teu": 34992.027921337496,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 624820.1451031938,
+                "carbon_kg": 51152.969413471386,
+                "delay_minutes": 0.0,
+                "processed_teu": 28895.9112903,
+                "peak_kw": 16851.718031730998,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 714070.4953998262,
+                "carbon_kg": 60587.502834400846,
+                "delay_minutes": 34.889944254324305,
+                "processed_teu": 36831.110643575004,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 764906.9155485218,
+                "carbon_kg": 98521.94086447534,
+                "delay_minutes": 340.73702942391895,
+                "processed_teu": 39219.941824487505,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 787964.8936817464,
+                "carbon_kg": 82826.20056644721,
+                "delay_minutes": 110.86525872567556,
+                "processed_teu": 37910.472414837495,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 615584.9757900458,
+                "carbon_kg": 96319.48910428921,
+                "delay_minutes": 25.56614508445948,
+                "processed_teu": 36486.318137124996,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 704493.4145225636,
+                "carbon_kg": 128551.0456777786,
+                "delay_minutes": 1.8527913632432476,
+                "processed_teu": 34153.8097662875,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 541795.3316417059,
+                "carbon_kg": 136844.23147157603,
+                "delay_minutes": 0.0,
+                "processed_teu": 32623.552635362492,
+                "peak_kw": 16928.51403370475,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 699738.4887806185,
+                "carbon_kg": 81331.66555027422,
+                "delay_minutes": 0.0,
+                "processed_teu": 31918.860887124996,
+                "peak_kw": 16905.282171952,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "storage-37-8192": {
+          "mean": {
+            "cost": 654776.8114348691,
+            "carbon_kg": 95213.85016994707,
+            "delay_minutes": 49.101540536689186,
+            "processed_teu": 34770.553932031245,
+            "peak_kw": 16964.358390901103,
+            "safety_violations": 0.0,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 626759.5103352561,
+                "carbon_kg": 130306.80492283081,
+                "delay_minutes": 52.08003371513512,
+                "processed_teu": 37132.477660062505,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 535881.8886567039,
+                "carbon_kg": 118412.16604999255,
+                "delay_minutes": 17.566590726486513,
+                "processed_teu": 35724.3334967,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 626535.4753756132,
+                "carbon_kg": 100444.69591391155,
+                "delay_minutes": 0.0,
+                "processed_teu": 31357.830507175,
+                "peak_kw": 16886.7864534255,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 614770.202382633,
+                "carbon_kg": 57267.48966991701,
+                "delay_minutes": 5.660693147027049,
+                "processed_teu": 34992.027921337496,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 624820.1451031938,
+                "carbon_kg": 51152.969413471386,
+                "delay_minutes": 0.0,
+                "processed_teu": 28895.9112903,
+                "peak_kw": 16851.718031730998,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 714070.4953998262,
+                "carbon_kg": 60587.502834400846,
+                "delay_minutes": 34.889944254324305,
+                "processed_teu": 36831.110643575004,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 764906.9155485218,
+                "carbon_kg": 98521.94086447534,
+                "delay_minutes": 340.73702942391895,
+                "processed_teu": 39219.941824487505,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 787964.8936817464,
+                "carbon_kg": 82826.20056644721,
+                "delay_minutes": 110.86525872567556,
+                "processed_teu": 37910.472414837495,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 615584.9757900458,
+                "carbon_kg": 96319.48910428921,
+                "delay_minutes": 25.56614508445948,
+                "processed_teu": 36486.318137124996,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 704493.4145225636,
+                "carbon_kg": 128551.0456777786,
+                "delay_minutes": 1.8527913632432476,
+                "processed_teu": 34153.8097662875,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 541795.3316417059,
+                "carbon_kg": 136844.23147157603,
+                "delay_minutes": 0.0,
+                "processed_teu": 32623.552635362492,
+                "peak_kw": 16928.51403370475,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 699738.4887806185,
+                "carbon_kg": 81331.66555027422,
+                "delay_minutes": 0.0,
+                "processed_teu": 31918.860887124996,
+                "peak_kw": 16905.282171952,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        },
+        "storage-59-8192": {
+          "mean": {
+            "cost": 654776.8114348691,
+            "carbon_kg": 95213.85016994707,
+            "delay_minutes": 49.101540536689186,
+            "processed_teu": 34770.553932031245,
+            "peak_kw": 16964.358390901103,
+            "safety_violations": 0.0,
+            "ending_battery_soc": 0.5
+          },
+          "windows": [
+            {
+              "start": 0,
+              "period": "2025-01",
+              "metrics": {
+                "cost": 626759.5103352561,
+                "carbon_kg": 130306.80492283081,
+                "delay_minutes": 52.08003371513512,
+                "processed_teu": 37132.477660062505,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 744,
+              "period": "2025-02",
+              "metrics": {
+                "cost": 535881.8886567039,
+                "carbon_kg": 118412.16604999255,
+                "delay_minutes": 17.566590726486513,
+                "processed_teu": 35724.3334967,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 1488,
+              "period": "2025-03",
+              "metrics": {
+                "cost": 626535.4753756132,
+                "carbon_kg": 100444.69591391155,
+                "delay_minutes": 0.0,
+                "processed_teu": 31357.830507175,
+                "peak_kw": 16886.7864534255,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 2232,
+              "period": "2025-04",
+              "metrics": {
+                "cost": 614770.202382633,
+                "carbon_kg": 57267.48966991701,
+                "delay_minutes": 5.660693147027049,
+                "processed_teu": 34992.027921337496,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3168,
+              "period": "2025-05",
+              "metrics": {
+                "cost": 624820.1451031938,
+                "carbon_kg": 51152.969413471386,
+                "delay_minutes": 0.0,
+                "processed_teu": 28895.9112903,
+                "peak_kw": 16851.718031730998,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 3912,
+              "period": "2025-06",
+              "metrics": {
+                "cost": 714070.4953998262,
+                "carbon_kg": 60587.502834400846,
+                "delay_minutes": 34.889944254324305,
+                "processed_teu": 36831.110643575004,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 4656,
+              "period": "2025-07",
+              "metrics": {
+                "cost": 764906.9155485218,
+                "carbon_kg": 98521.94086447534,
+                "delay_minutes": 340.73702942391895,
+                "processed_teu": 39219.941824487505,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 5400,
+              "period": "2025-08",
+              "metrics": {
+                "cost": 787964.8936817464,
+                "carbon_kg": 82826.20056644721,
+                "delay_minutes": 110.86525872567556,
+                "processed_teu": 37910.472414837495,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 6312,
+              "period": "2025-09",
+              "metrics": {
+                "cost": 615584.9757900458,
+                "carbon_kg": 96319.48910428921,
+                "delay_minutes": 25.56614508445948,
+                "processed_teu": 36486.318137124996,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7056,
+              "period": "2025-10",
+              "metrics": {
+                "cost": 704493.4145225636,
+                "carbon_kg": 128551.0456777786,
+                "delay_minutes": 1.8527913632432476,
+                "processed_teu": 34153.8097662875,
+                "peak_kw": 17000.0,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 7800,
+              "period": "2025-11",
+              "metrics": {
+                "cost": 541795.3316417059,
+                "carbon_kg": 136844.23147157603,
+                "delay_minutes": 0.0,
+                "processed_teu": 32623.552635362492,
+                "peak_kw": 16928.51403370475,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            },
+            {
+              "start": 8736,
+              "period": "2025-12",
+              "metrics": {
+                "cost": 699738.4887806185,
+                "carbon_kg": 81331.66555027422,
+                "delay_minutes": 0.0,
+                "processed_teu": 31918.860887124996,
+                "peak_kw": 16905.282171952,
+                "safety_violations": 0.0,
+                "ending_battery_soc": 0.5
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "weights": {
+    "cost_only-17-8192": "a35ffc61aa616758322fc8804db3ad5cb88ff19ec50468c211b0f3ddaec8758c",
+    "cost_only-37-8192": "930e3db44cb012ed395565c55a9c1dd9c8f4b71d810638ca1b4b619c4e8b3cba",
+    "cost_only-59-8192": "029bc9b9c2570888661b6487b99c251b055e58ac4279ab3436b571dece0e3661",
+    "joint-17-8192": "a8171f06798d496f584f3bada2ef6835e016c9b54550ffacb0a30b7ffb730bbe",
+    "joint-37-8192": "8399cad064c191731a0db17772dbbaecd8597f7e8ea5e0a239db98af2c924b08",
+    "joint-59-8192": "2e175963c5c24c24d5c32c7235a304610308a8264e2b6166872a6582e506c033",
+    "storage-17-8192": "eb9ead6a8fbf0c07a1c6b745bb70ebf3251f5de94cb24dd2373254a288b9e97c",
+    "storage-37-8192": "a475a9e141005069c9f4a78da973bcd1cbadba7dc5ab892aff26f07b95289921",
+    "storage-59-8192": "04c46b93255d02f8bf4e43e42197df6e5fc47419650837539ddbdc092e853834"
+  }
+}

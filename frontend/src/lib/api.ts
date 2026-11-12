@@ -6,6 +6,10 @@ export interface DashboardRequest {
   carbon_price_cny_per_ton: number;
 }
 
+export interface FetchJsonOptions extends RequestInit {
+  timeoutMs?: number;
+}
+
 function responseError(data: unknown, fallback: string): string {
   if (!data || typeof data !== 'object') return fallback;
   const detail = (data as { detail?: unknown; error?: unknown }).detail
@@ -22,30 +26,31 @@ function responseError(data: unknown, fallback: string): string {
   return detail ? JSON.stringify(detail) : fallback;
 }
 
-export async function fetchJson(path: string, options: RequestInit = {}): Promise<any> {
+export async function fetchJson(path: string, options: FetchJsonOptions = {}): Promise<any> {
+  const { timeoutMs = 60_000, ...requestOptions } = options;
   const controller = new AbortController();
-  const abort = () => controller.abort(options.signal?.reason);
-  if (options.signal?.aborted) abort();
-  else options.signal?.addEventListener('abort', abort, { once: true });
+  const abort = () => controller.abort(requestOptions.signal?.reason);
+  if (requestOptions.signal?.aborted) abort();
+  else requestOptions.signal?.addEventListener('abort', abort, { once: true });
   let timedOut = false;
   const timeout = window.setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, 60_000);
+  }, timeoutMs);
   try {
-    const headers = new Headers(options.headers);
-    if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-    const response = await fetch(path, { ...options, headers, signal: controller.signal });
+    const headers = new Headers(requestOptions.headers);
+    if (requestOptions.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+    const response = await fetch(path, { ...requestOptions, headers, signal: controller.signal });
     const data = await response.json().catch(() => null);
     if (!response.ok) throw new Error(responseError(data, `HTTP ${response.status} ${response.statusText}`));
     if (data === null) throw new Error('接口未返回有效 JSON 数据，请检查服务连接。');
     return data;
   } catch (error) {
-    if (timedOut) throw new Error('接口请求超过 60 秒，请重试并检查后端状态。');
+    if (timedOut) throw new Error(`接口请求超过 ${(timeoutMs / 1000).toFixed(1)} 秒，已自动释放，可重试或使用演示保底。`);
     throw error;
   } finally {
     window.clearTimeout(timeout);
-    options.signal?.removeEventListener('abort', abort);
+    requestOptions.signal?.removeEventListener('abort', abort);
   }
 }
 

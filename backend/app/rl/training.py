@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import hashlib
+import importlib.metadata
 import json
 import logging
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import platform
 import re
 import sys
@@ -38,10 +39,222 @@ RUNS_DIR.mkdir(parents=True, exist_ok=True)
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 RUN_ID_PATTERN = re.compile(r"^rl-\d{8}-\d{6}-[0-9a-f]{6}$")
 logger = logging.getLogger(__name__)
+HISTORY_CACHE_VERSION = 3
+CAPABILITIES_CACHE_VERSION = 1
+REGISTRY_CACHE_VERSION = 2
+
+
+OBJECTIVE_HISTORY_SPECS: tuple[dict[str, str], ...] = (
+    {
+        "id": "carbon_min",
+        "label": "碳排最低",
+        "algorithm": "SAC",
+        "metric_label": "月度碳排降低",
+        "unit": "%",
+        "business_scope": "岸电、储能和作业负荷协同，优先降低测试集碳排。",
+        "accent": "#50edcb",
+    },
+    {
+        "id": "cost_carbon_balance",
+        "label": "成本·碳排均衡",
+        "algorithm": "TD3",
+        "metric_label": "综合减排节费指数",
+        "unit": "%",
+        "business_scope": "联合优化电费、碳成本与资源投入，避免单指标偏移。",
+        "accent": "#f7b538",
+    },
+    {
+        "id": "shore_power_priority",
+        "label": "岸电优先",
+        "algorithm": "SAC",
+        "metric_label": "岸电机会覆盖率",
+        "unit": "%",
+        "business_scope": "将船舶靠泊窗口与岸电可用时段匹配，降低靠港燃油排放。",
+        "accent": "#42a5ff",
+    },
+    {
+        "id": "peak_smoothing",
+        "label": "峰值负荷平滑",
+        "algorithm": "PPO",
+        "metric_label": "峰值负荷降低",
+        "unit": "%",
+        "business_scope": "错峰安排岸桥、岸电和储能，降低叠加功率峰值。",
+        "accent": "#c987ff",
+    },
+    {
+        "id": "low_risk_validation",
+        "label": "低风险试运行",
+        "algorithm": "PPO",
+        "metric_label": "约束成功率",
+        "unit": "%",
+        "business_scope": "先满足安全、延误和负荷护栏，再追求能碳收益。",
+        "accent": "#7ef29a",
+    },
+)
+
+
+def objective_business_history(
+    policy_rows: list[dict[str, Any]],
+    fixed_rows: list[dict[str, Any]],
+    metrics: dict[str, Any],
+    policy_totals: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Build auditable objective lenses from the same held-out evaluation.
+
+    These are five views of one registered policy, not five independent learner runs.
+    """
+
+    def saving(baseline: float, policy: float) -> float:
+        return round((baseline - policy) / max(abs(baseline), 1e-9) * 100.0, 3)
+
+    grouped: dict[str, dict[str, list[dict[str, Any]]]] = {}
+    for index, policy_row in enumerate(policy_rows):
+        period = str(policy_row.get("period") or f"window-{index + 1:02d}")
+        group = grouped.setdefault(period, {"policy": [], "fixed": []})
+        group["policy"].append(policy_row)
+        if index < len(fixed_rows):
+            group["fixed"].append(fixed_rows[index])
+
+    series_by_objective: dict[str, list[dict[str, Any]]] = {
+        item["id"]: [] for item in OBJECTIVE_HISTORY_SPECS
+    }
+    for period, rows in grouped.items():
+        policy = rows["policy"]
+        fixed = rows["fixed"]
+        policy_carbon = sum(float(item.get("carbon_kg") or 0.0) for item in policy)
+        fixed_carbon = sum(float(item.get("carbon_kg") or 0.0) for item in fixed)
+        policy_cost = sum(float(item.get("cost") or 0.0) for item in policy)
+        fixed_cost = sum(float(item.get("cost") or 0.0) for item in fixed)
+        policy_peak = max((float(item.get("peak_kw") or 0.0) for item in policy), default=0.0)
+        fixed_peak = max((float(item.get("peak_kw") or 0.0) for item in fixed), default=0.0)
+        shore_energy = sum(float(item.get("shore_power_kwh") or 0.0) for item in policy)
+        shore_opportunity = sum(
+            float(item.get("shore_power_opportunity_kwh") or 0.0) for item in policy
+        )
+        safety_violations = sum(
+            float(item.get("safety_violations") or 0.0) for item in policy
+        )
+        carbon_value = saving(fixed_carbon, policy_carbon) if fixed else 0.0
+        cost_value = saving(fixed_cost, policy_cost) if fixed else 0.0
+        peak_value = saving(fixed_peak, policy_peak) if fixed else 0.0
+        balance_value = round(carbon_value * 0.48 + cost_value * 0.52, 3)
+        shore_value = round(shore_energy / max(shore_opportunity, 1.0) * 100.0, 3)
+        safety_value = 100.0 if safety_violations == 0 else 0.0
+        values = {
+            "carbon_min": carbon_value,
+            "cost_carbon_balance": balance_value,
+            "shore_power_priority": shore_value,
+            "peak_smoothing": peak_value,
+            "low_risk_validation": safety_value,
+        }
+        for objective_id, value in values.items():
+            series_by_objective[objective_id].append(
+                {"period": period, "value": value, "windows": len(policy)}
+            )
+
+    carbon_reduction = float(metrics.get("fixed_baseline_carbon_reduction_pct") or 0.0)
+    cost_saving = float(metrics.get("fixed_baseline_cost_saving_pct") or 0.0)
+    peak_reduction = round(-float(metrics.get("fixed_baseline_peak_change_pct") or 0.0), 3)
+    aggregate_values = {
+        "carbon_min": carbon_reduction,
+        "cost_carbon_balance": round(carbon_reduction * 0.48 + cost_saving * 0.52, 3),
+        "shore_power_priority": round(
+            float(policy_totals.get("shore_power_kwh") or 0.0)
+            / max(float(policy_totals.get("shore_power_opportunity_kwh") or 0.0), 1.0)
+            * 100.0,
+            3,
+        ),
+        "peak_smoothing": peak_reduction,
+        "low_risk_validation": float(metrics.get("constraint_success_rate_pct") or 0.0),
+    }
+    supporting = {
+        "carbon_min": [
+            {"label": "碳排降低", "value": carbon_reduction, "unit": "%"},
+            {"label": "安全违规", "value": metrics.get("safety_violations"), "unit": " 次"},
+        ],
+        "cost_carbon_balance": [
+            {"label": "成本节省", "value": cost_saving, "unit": "%"},
+            {"label": "碳排降低", "value": carbon_reduction, "unit": "%"},
+        ],
+        "shore_power_priority": [
+            {"label": "岸电电量", "value": round(float(policy_totals.get("shore_power_kwh") or 0.0), 1), "unit": " kWh"},
+            {"label": "岸电机会量", "value": round(float(policy_totals.get("shore_power_opportunity_kwh") or 0.0), 1), "unit": " kWh"},
+        ],
+        "peak_smoothing": [
+            {"label": "峰值降低", "value": peak_reduction, "unit": "%"},
+            {"label": "测试窗口", "value": metrics.get("test_episodes"), "unit": " 个"},
+        ],
+        "low_risk_validation": [
+            {"label": "约束成功率", "value": metrics.get("constraint_success_rate_pct"), "unit": "%"},
+            {"label": "安全违规", "value": metrics.get("safety_violations"), "unit": " 次"},
+        ],
+    }
+    return [
+        {
+            **spec,
+            "value": aggregate_values[spec["id"]],
+            "series": series_by_objective[spec["id"]],
+            "supporting_metrics": supporting[spec["id"]],
+            "evidence_scope": "same_registered_policy_multi_objective_lens",
+        }
+        for spec in OBJECTIVE_HISTORY_SPECS
+    ]
+
+
+def dataset_source_evidence(dataset_id: str) -> dict[str, Any]:
+    metadata_path = RUNS_DIR.parent / "datasets" / f"{dataset_id}.metadata.json"
+    if not metadata_path.exists():
+        return {"dataset_id": dataset_id, "official_sources": []}
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    source_urls = list(metadata.get("source_urls") or [])
+
+    def source(label: str, role: str, needle: str) -> dict[str, str] | None:
+        url = next((value for value in source_urls if needle in str(value)), None)
+        return {"publisher": label, "role": role, "url": str(url)} if url else None
+
+    official_sources = [
+        source("Port of Los Angeles", "官方集装箱吞吐量与船舶活动", "portoflosangeles.org"),
+        source("U.S. EIA", "电价锚点与 EIA-930 小时电网数据", "eia.gov"),
+        source("U.S. EPA eGRID", "CAMX 电网碳因子校准", "epa.gov/egrid"),
+        source("LADWP", "商业分时电价时段", "ladwp.com"),
+    ]
+    quality = dict(metadata.get("quality") or {})
+    split_policy = dict(metadata.get("split_policy") or {})
+    if not split_policy and dataset_id == "port_la_2020_2025_hourly":
+        split_policy = {
+            "train": "2020-01 through 2023-12",
+            "validation": "2024-01 through 2024-12",
+            "test": "2025-01 through 2025-12",
+        }
+    return {
+        "dataset_id": dataset_id,
+        "name": metadata.get("name"),
+        "version": metadata.get("version"),
+        "attribution": metadata.get("attribution"),
+        "scope_note": metadata.get("scope_note"),
+        "official_sources": [item for item in official_sources if item],
+        "source_urls": source_urls,
+        "quality": quality,
+        "split_policy": split_policy,
+    }
 
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def load_run_record(path: Path) -> dict:
+    """Bind a portable archived run to its own directory on this host."""
+    record = json.loads(path.read_text(encoding="utf-8"))
+    if record.get("job_id") != path.parent.name:
+        return record
+    record["run_dir"] = str(path.parent)
+    raw = record.get("artifact_path")
+    if raw:
+        parts = PureWindowsPath(str(raw)).parts
+        if len(parts) >= 2 and parts[-2] == path.parent.name and parts[-1] not in {".", ".."}:
+            record["artifact_path"] = str(path.parent / parts[-1])
+    return record
 
 
 def public_artifact_path(value: object) -> str | None:
@@ -50,6 +263,9 @@ def public_artifact_path(value: object) -> str | None:
         return None
     path = Path(str(value))
     if not path.is_absolute():
+        for foreign_path in (PurePosixPath(str(value)), PureWindowsPath(str(value))):
+            if foreign_path.is_absolute():
+                return f"external-artifact/{foreign_path.name}"
         return path.as_posix()
     try:
         return path.resolve().relative_to(PROJECT_ROOT.resolve()).as_posix()
@@ -66,14 +282,96 @@ class TrainingService:
 
     def __init__(self) -> None:
         self._lock = threading.RLock()
+        self._history_build_lock = threading.Lock()
+        self._capabilities_build_lock = threading.Lock()
+        self._registry_build_lock = threading.Lock()
         self._job: dict[str, Any] | None = None
         self._thread: threading.Thread | None = None
         self._pause = threading.Event()
         self._stop = threading.Event()
         self._digest_cache: dict[str, tuple[int, int, str]] = {}
+        self._history_cache_signature: str | None = None
+        self._history_cache_value: dict[str, Any] | None = None
+        self._capabilities_cache_signature: str | None = None
+        self._capabilities_cache_value: dict[str, Any] | None = None
+        self._registry_cache_signature: str | None = None
+        self._registry_cache_value: dict[str, Any] | None = None
         self._load_latest_state()
 
     def capabilities(self) -> dict[str, Any]:
+        entries = [
+            f"capabilities-v{CAPABILITIES_CACHE_VERSION}",
+            platform.python_version(),
+            platform.machine(),
+            sys.platform,
+        ]
+        for package in ("numpy", "torch", "gymnasium", "stable-baselines3"):
+            try:
+                entries.append(f"{package}={importlib.metadata.version(package)}")
+            except importlib.metadata.PackageNotFoundError:
+                entries.append(f"{package}=missing")
+        for path in sorted((RUNS_DIR.parent / "datasets").glob("*")):
+            if not path.is_file():
+                continue
+            try:
+                stat = path.stat()
+            except OSError:
+                continue
+            entries.append(f"{path.name}:{stat.st_mtime_ns}:{stat.st_size}")
+        signature = hashlib.sha256("\n".join(entries).encode("utf-8")).hexdigest()
+        with self._lock:
+            if (
+                self._capabilities_cache_signature == signature
+                and self._capabilities_cache_value is not None
+            ):
+                return self._capabilities_cache_value
+
+        cache_path = RUNS_DIR / ".capabilities_cache.json"
+        with self._capabilities_build_lock:
+            with self._lock:
+                if (
+                    self._capabilities_cache_signature == signature
+                    and self._capabilities_cache_value is not None
+                ):
+                    return self._capabilities_cache_value
+            try:
+                cached = json.loads(cache_path.read_text(encoding="utf-8"))
+                if (
+                    cached.get("version") == CAPABILITIES_CACHE_VERSION
+                    and cached.get("signature") == signature
+                    and isinstance(cached.get("result"), dict)
+                ):
+                    result = cached["result"]
+                    with self._lock:
+                        self._capabilities_cache_signature = signature
+                        self._capabilities_cache_value = result
+                    return result
+            except (OSError, ValueError, TypeError):
+                pass
+
+            result = self._build_capabilities()
+            try:
+                temp_path = RUNS_DIR / ".capabilities_cache.tmp"
+                temp_path.write_text(
+                    json.dumps(
+                        {
+                            "version": CAPABILITIES_CACHE_VERSION,
+                            "signature": signature,
+                            "result": result,
+                        },
+                        ensure_ascii=False,
+                    ),
+                    encoding="utf-8",
+                )
+                temp_path.replace(cache_path)
+            except OSError:
+                logger.warning("Unable to persist RL capabilities cache", exc_info=True)
+            with self._lock:
+                self._capabilities_cache_signature = signature
+                self._capabilities_cache_value = result
+            return result
+
+    def _build_capabilities(self) -> dict[str, Any]:
         try:
             runtime = {"available": True, **self._runtime_versions(), "device": "cpu"}
         except Exception:
@@ -322,7 +620,7 @@ class TrainingService:
         items: list[dict[str, Any]] = []
         for manifest_path in sorted(RUNS_DIR.glob("*/manifest.json"), reverse=True):
             try:
-                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                manifest = load_run_record(manifest_path)
             except Exception:
                 continue
             items.append(
@@ -342,12 +640,93 @@ class TrainingService:
             )
         return items
 
+    def _registry_source_signature(self) -> str:
+        entries = [f"registry-v{REGISTRY_CACHE_VERSION}", str(RUNS_DIR.resolve())]
+        for pattern in (
+            "*/manifest.json",
+            "*/evaluation.json",
+            "*/verification.json",
+            "*/model.zip",
+            "*/mpc_policy.json",
+        ):
+            for path in sorted(RUNS_DIR.glob(pattern)):
+                try:
+                    stat = path.stat()
+                except OSError:
+                    continue
+                entries.append(
+                    f"{path.relative_to(RUNS_DIR)}:{stat.st_mtime_ns}:{stat.st_size}"
+                )
+        for path in sorted((RUNS_DIR.parent / "datasets").glob("*")):
+            if not path.is_file():
+                continue
+            try:
+                stat = path.stat()
+            except OSError:
+                continue
+            entries.append(f"dataset/{path.name}:{stat.st_mtime_ns}:{stat.st_size}")
+        return hashlib.sha256("\n".join(entries).encode("utf-8")).hexdigest()
+
     def registry(self) -> dict[str, Any]:
+        signature = self._registry_source_signature()
+        with self._lock:
+            if (
+                self._registry_cache_signature == signature
+                and self._registry_cache_value is not None
+            ):
+                return self._registry_cache_value
+
+        cache_path = RUNS_DIR / ".registry_summary_cache.json"
+        with self._registry_build_lock:
+            with self._lock:
+                if (
+                    self._registry_cache_signature == signature
+                    and self._registry_cache_value is not None
+                ):
+                    return self._registry_cache_value
+            try:
+                cached = json.loads(cache_path.read_text(encoding="utf-8"))
+                if (
+                    cached.get("version") == REGISTRY_CACHE_VERSION
+                    and cached.get("signature") == signature
+                    and isinstance(cached.get("result"), dict)
+                ):
+                    result = cached["result"]
+                    with self._lock:
+                        self._registry_cache_signature = signature
+                        self._registry_cache_value = result
+                    return result
+            except (OSError, ValueError, TypeError):
+                pass
+
+            result = self._build_registry()
+            try:
+                temp_path = RUNS_DIR / ".registry_summary_cache.tmp"
+                temp_path.write_text(
+                    json.dumps(
+                        {
+                            "version": REGISTRY_CACHE_VERSION,
+                            "signature": signature,
+                            "result": result,
+                        },
+                        ensure_ascii=False,
+                    ),
+                    encoding="utf-8",
+                )
+                temp_path.replace(cache_path)
+            except OSError:
+                logger.warning("Unable to persist model registry cache", exc_info=True)
+            with self._lock:
+                self._registry_cache_signature = signature
+                self._registry_cache_value = result
+            return result
+
+    def _build_registry(self) -> dict[str, Any]:
         policies: list[dict[str, Any]] = []
         dataset_evidence_cache: dict[str, dict[str, Any]] = {}
         for manifest_path in sorted(RUNS_DIR.glob("*/manifest.json"), reverse=True):
             try:
-                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                manifest = load_run_record(manifest_path)
                 config = manifest["config"]
             except Exception:
                 continue
@@ -601,14 +980,37 @@ class TrainingService:
                 {
                     "period": item["period"],
                     "steps": item["steps"],
+                    "energy_kwh": item["energy_kwh"],
                     "carbon_kg": item["carbon_kg"],
                     "cost": item["cost"],
                     "peak_kw": item["peak_kw"],
                     "processed_teu": item["processed_teu"],
+                    "shore_power_kwh": item["shore_power_kwh"],
+                    "shore_power_opportunity_kwh": item[
+                        "shore_power_opportunity_kwh"
+                    ],
                     "delay_minutes": item["delay_minutes"],
                     "safety_violations": item["safety_violations"],
                 }
                 for item in learned_totals
+            ],
+            "fixed_baseline_per_episode_metrics": [
+                {
+                    "period": item["period"],
+                    "steps": item["steps"],
+                    "energy_kwh": item["energy_kwh"],
+                    "carbon_kg": item["carbon_kg"],
+                    "cost": item["cost"],
+                    "peak_kw": item["peak_kw"],
+                    "processed_teu": item["processed_teu"],
+                    "shore_power_kwh": item["shore_power_kwh"],
+                    "shore_power_opportunity_kwh": item[
+                        "shore_power_opportunity_kwh"
+                    ],
+                    "delay_minutes": item["delay_minutes"],
+                    "safety_violations": item["safety_violations"],
+                }
+                for item in fixed_totals
             ],
             "policy_totals": policy,
             "control_baseline_totals": control,
@@ -648,7 +1050,93 @@ class TrainingService:
         path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
         return path
 
+    def _history_source_signature(self) -> str:
+        """Fingerprint history inputs without rereading large metric files."""
+        entries = [f"history-cache-v{HISTORY_CACHE_VERSION}"]
+        patterns = (
+            "*/manifest.json",
+            "*/metrics.jsonl",
+            "*/evaluation.json",
+            "*/checkpoints/step-*.zip",
+        )
+        for pattern in patterns:
+            for path in sorted(RUNS_DIR.glob(pattern)):
+                try:
+                    stat = path.stat()
+                except OSError:
+                    continue
+                entries.append(
+                    f"{path.relative_to(RUNS_DIR)}:{stat.st_mtime_ns}:{stat.st_size}"
+                )
+        datasets_dir = RUNS_DIR.parent / "datasets"
+        for path in sorted(datasets_dir.glob("*.metadata.json")):
+            try:
+                stat = path.stat()
+            except OSError:
+                continue
+            entries.append(
+                f"dataset/{path.name}:{stat.st_mtime_ns}:{stat.st_size}"
+            )
+        return hashlib.sha256("\n".join(entries).encode("utf-8")).hexdigest()
+
     def history(self) -> dict[str, Any]:
+        """Return convergence evidence with a restart-safe summary cache.
+
+        The first calculation after evidence changes may scan the persisted runs.
+        Normal demo reads are served from memory or the hidden on-disk cache.
+        """
+        signature = self._history_source_signature()
+        with self._lock:
+            if (
+                self._history_cache_signature == signature
+                and self._history_cache_value is not None
+            ):
+                return self._history_cache_value
+
+        cache_path = RUNS_DIR / ".history_summary_cache.json"
+        with self._history_build_lock:
+            with self._lock:
+                if (
+                    self._history_cache_signature == signature
+                    and self._history_cache_value is not None
+                ):
+                    return self._history_cache_value
+            try:
+                cached = json.loads(cache_path.read_text(encoding="utf-8"))
+                if (
+                    cached.get("version") == HISTORY_CACHE_VERSION
+                    and cached.get("signature") == signature
+                    and isinstance(cached.get("result"), dict)
+                ):
+                    result = cached["result"]
+                    with self._lock:
+                        self._history_cache_signature = signature
+                        self._history_cache_value = result
+                    return result
+            except (OSError, ValueError, TypeError):
+                pass
+
+            result = self._build_history()
+            payload = {
+                "version": HISTORY_CACHE_VERSION,
+                "signature": signature,
+                "generated_at": utc_now(),
+                "result": result,
+            }
+            try:
+                temp_path = RUNS_DIR / ".history_summary_cache.tmp"
+                temp_path.write_text(
+                    json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+                )
+                temp_path.replace(cache_path)
+            except OSError:
+                logger.warning("Unable to persist RL history summary cache", exc_info=True)
+            with self._lock:
+                self._history_cache_signature = signature
+                self._history_cache_value = result
+            return result
+
+    def _build_history(self) -> dict[str, Any]:
         items = self.strategies()
         if not items:
             return {
@@ -659,11 +1147,22 @@ class TrainingService:
                 "title": "No completed training runs",
             }
         selected_strategy_id = items[0]["strategy_id"]
+        selected_metric_count = 0
         for item in items:
             candidate_metrics = RUNS_DIR / item["strategy_id"] / "metrics.jsonl"
-            if candidate_metrics.exists() and candidate_metrics.read_text(encoding="utf-8").strip():
+            metric_count = 0
+            if candidate_metrics.exists():
+                metric_count = sum(
+                    1
+                    for line in candidate_metrics.read_text(encoding="utf-8").splitlines()
+                    if line.strip()
+                )
+            # The history dialog exists to demonstrate convergence. A newly-created
+            # one-point run is valid evidence, but it cannot draw a meaningful line,
+            # so prefer the persisted run with the richest callback trace.
+            if metric_count > selected_metric_count:
                 selected_strategy_id = item["strategy_id"]
-                break
+                selected_metric_count = metric_count
         manifest = self._resolve_manifest(selected_strategy_id)
         metric_path = Path(manifest["run_dir"]) / "metrics.jsonl"
         series: list[dict[str, Any]] = []
@@ -706,12 +1205,99 @@ class TrainingService:
                     "validation_safety_violations": validation.get("validation_safety_violations"),
                 }
             )
+        business_evidence: dict[str, Any] = {}
+        objective_training_runs: dict[str, dict[str, Any]] = {}
+        for item in items:
+            candidate_dir = RUNS_DIR / item["strategy_id"]
+            candidate_manifest_path = candidate_dir / "manifest.json"
+            candidate_manifest = (
+                load_run_record(candidate_manifest_path)
+                if candidate_manifest_path.exists()
+                else {}
+            )
+            candidate_config = dict(candidate_manifest.get("config") or {})
+            objective_id = str(candidate_config.get("objective_id") or "")
+            candidate_metric_path = candidate_dir / "metrics.jsonl"
+            candidate_series: list[dict[str, Any]] = []
+            if (
+                objective_id
+                and candidate_metric_path.exists()
+                and candidate_manifest.get("status") == "completed"
+            ):
+                candidate_series = [
+                    json.loads(line)
+                    for line in candidate_metric_path.read_text(encoding="utf-8").splitlines()
+                    if line.strip()
+                ]
+                previous = objective_training_runs.get(objective_id)
+                if len(candidate_series) >= 2 and (
+                    not previous or len(candidate_series) > len(previous["series"])
+                ):
+                    objective_training_runs[objective_id] = {
+                        "objective_id": objective_id,
+                        "objective_label": candidate_config.get("objective_label")
+                        or objective_id,
+                        "run_id": item["strategy_id"],
+                        "algorithm": str(candidate_config.get("algorithm") or "unknown").upper(),
+                        "total_steps": candidate_manifest.get("step", 0),
+                        "status": candidate_manifest.get("status"),
+                        "series": candidate_series,
+                    }
+            candidate_evaluation_path = candidate_dir / "evaluation.json"
+            if not candidate_evaluation_path.exists():
+                continue
+            candidate_evaluation = json.loads(
+                candidate_evaluation_path.read_text(encoding="utf-8")
+            )
+            candidate_metrics = dict(candidate_evaluation.get("metrics") or {})
+            if (
+                not business_evidence
+                and candidate_evaluation.get("status") == "tested"
+                and "fixed_baseline_carbon_reduction_pct" in candidate_metrics
+                and "fixed_baseline_cost_saving_pct" in candidate_metrics
+            ):
+                policy = dict(candidate_evaluation.get("policy") or {})
+                config = candidate_config
+                policy_totals = dict(candidate_evaluation.get("policy_totals") or {})
+                per_episode = list(candidate_evaluation.get("per_episode_metrics") or [])
+                fixed_per_episode = list(
+                    candidate_evaluation.get("fixed_baseline_per_episode_metrics") or []
+                )
+                business_evidence = {
+                    "strategy_id": item["strategy_id"],
+                    "policy_version": policy.get("policy_version")
+                    or candidate_manifest.get("policy_version"),
+                    "algorithm": str(
+                        policy.get("algorithm") or config.get("algorithm") or "unknown"
+                    ).upper(),
+                    "dataset_id": policy.get("dataset_id") or config.get("dataset_id"),
+                    "dataset_sha256": policy.get("dataset_sha256")
+                    or config.get("dataset_sha256"),
+                    "dataset_evidence": dataset_source_evidence(
+                        str(policy.get("dataset_id") or config.get("dataset_id") or "")
+                    ),
+                    "split": "test",
+                    "baseline": "fixed-resource full-shore-power comparator",
+                    "metrics": candidate_metrics,
+                    "uncertainty": dict(candidate_evaluation.get("uncertainty") or {}),
+                    "objective_history": objective_business_history(
+                        per_episode,
+                        fixed_per_episode,
+                        candidate_metrics,
+                        policy_totals,
+                    ),
+                    "history_windows": len(per_episode),
+                    "production_dispatch_enabled": False,
+                }
         return {
             "available": True,
             "run_id": manifest["job_id"],
             "title": f"{manifest['config']['algorithm'].upper()} real training run",
             "title_en": "Persisted callback metrics from the actual learner",
             "source": manifest["config"]["data_file"],
+            "training_dataset_evidence": dataset_source_evidence(
+                str(manifest["config"].get("dataset_id") or manifest["config"]["data_file"])
+            ),
             "evidence_level": "dataset hash + measured callback metrics + saved model",
             "environment": manifest["config"].get("environment_id", "PortEnergyDispatchEnv-v1"),
             "algorithm": manifest["config"]["algorithm"].upper(),
@@ -725,6 +1311,9 @@ class TrainingService:
             "metrics": evaluation_metrics,
             "checkpoints": checkpoints,
             "series": series,
+            "recorded_callback_points": len(series),
+            "business_evidence": business_evidence,
+            "objective_training_runs": list(objective_training_runs.values()),
         }
 
     def _run_training(self) -> None:
@@ -1033,7 +1622,7 @@ class TrainingService:
         path = RUNS_DIR / strategy_id / "manifest.json"
         if not path.exists():
             raise FileNotFoundError(f"Strategy manifest not found: {strategy_id}")
-        manifest = json.loads(path.read_text(encoding="utf-8"))
+        manifest = load_run_record(path)
         if manifest["status"] not in {"completed", "stopped"}:
             raise RuntimeError(f"Strategy is not testable: {manifest['status']}")
         return manifest
@@ -1072,7 +1661,7 @@ class TrainingService:
         if not paths:
             return
         try:
-            state = json.loads(paths[0].read_text(encoding="utf-8"))
+            state = load_run_record(paths[0])
             if state.get("status") in {"running", "paused", "stopping"}:
                 state["status"] = "interrupted"
                 state["error"] = "Backend restarted before the learner completed"

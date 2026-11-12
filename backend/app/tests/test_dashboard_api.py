@@ -314,6 +314,34 @@ def test_recompute_uses_request_parameters_without_changing_test_horizon() -> No
     assert len(payload["timeseries"]) == 24
 
 
+def test_xiaoyi_recompute_records_visible_bounded_linkage_receipt() -> None:
+    response = client.post(
+        "/api/optimization/recompute",
+        headers={
+            "X-Xiaoyi-Trace-Id": "lar-demo-cross-system-001",
+            "X-Xiaoyi-Origin": "xiaoyi-ai",
+        },
+        json={
+            "scenario_id": "port_la_2025_public_benchmark",
+            "green_preference": 0.82,
+            "carbon_price_cny_per_ton": 100,
+        },
+    )
+    assert response.status_code == 200
+
+    receipt_response = client.get("/api/optimization/linkage-receipt")
+    assert receipt_response.status_code == 200
+    receipt = receipt_response.json()["latest"]
+    assert receipt["trace_id"] == "lar-demo-cross-system-001"
+    assert receipt["source_system"] == "xiaoyi-ai"
+    assert receipt["target_system"] == "energy-cockpit"
+    assert receipt["action_id"] == "energy.compare"
+    assert receipt["parameters"]["green_preference"] == 0.82
+    assert receipt["result"]["dataset_id"]
+    assert len(receipt["result"]["dataset_sha256"]) == 64
+    assert receipt["production_authority"] is False
+
+
 def test_dataset_validation_endpoint_records_public_provenance() -> None:
     response = client.post(
         "/api/rl/datasets/validate",
@@ -494,7 +522,7 @@ def test_xiaoyi_training_preview_preserves_nested_ui_configuration() -> None:
     response = client.post(
         "/api/assistant/actions/execute",
         json={
-            "instruction": "小懿，开始训练碳排最低目标",
+            "instruction": "舷鸥，开始训练碳排最低目标",
             "action_id": "start_rl_training",
             "dry_run": True,
             "objective_id": "carbon_min",
@@ -529,7 +557,7 @@ def test_xiaoyi_training_preview_defaults_to_hybrid_rl_v6() -> None:
     response = client.post(
         "/api/assistant/actions/execute",
         json={
-            "instruction": "小懿，开始训练碳排最低目标",
+            "instruction": "舷鸥，开始训练碳排最低目标",
             "action_id": "start_rl_training",
             "dry_run": True,
             "objective_id": "carbon_min",
@@ -651,7 +679,7 @@ def test_xiaoyi_summary_uses_new_strategy_names() -> None:
         "/api/assistant/actions/execute",
         json={
             "action_id": "set_low_carbon_priority",
-            "instruction": "小懿，切到低碳优先",
+            "instruction": "舷鸥，切到低碳优先",
             "dry_run": False,
             "confirm": True,
             "carbon_price_cny_per_ton": 120,

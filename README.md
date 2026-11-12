@@ -95,9 +95,9 @@
 
 ![Five-algorithm training matrix](docs/assets/cockpit-training-matrix.png)
 
-小懿训练顾问保留项目原有 Q 版海事形象，并把五算法、增强数据集、训练配置、真实进度与策略测试入口放在同一个联动中枢。浏览器验收实际点击“小懿 → 低碳”，动作网关返回成功并同步高亮对应按钮；执行详情保留识别、按钮/接口、确认、执行和结果证据。
+舷鸥训练顾问保留项目原有 Q 版海事形象，并把五算法、增强数据集、训练配置、真实进度与策略测试入口放在同一个联动中枢。浏览器验收实际点击“舷鸥 → 低碳”，动作网关返回成功并同步高亮对应按钮；执行详情保留识别、按钮/接口、确认、执行和结果证据。
 
-![Xiaoyi system and button linkage](docs/assets/xiaoyi-system-linkage.png)
+![GullMate system and button linkage](docs/assets/xiaoyi-system-linkage.png)
 
 ## 项目定位 / Project position
 
@@ -142,8 +142,8 @@ This project places port energy use, shore power, equipment allocation, delay, c
 
 ![API and model governance panel](docs/assets/governance-panel.jpg)
 
-治理面板区分驾驶舱、真实 learner 运行时、小懿 AI、本地航行模拟器和 Godot 执行环境。首次克隆时，只有仓库内能力显示就绪；未配置的外部桌面项目会明确离线。<br>
-The governance panel separates the cockpit, real learner runtime, Xiaoyi AI, the local sailing simulator, and the Godot runtime. On a clean clone, only repository-owned capabilities report ready; unconfigured desktop integrations remain explicitly offline.
+治理面板区分驾驶舱、真实 learner 运行时、舷鸥 · GullMate、本地航行模拟器和 Godot 执行环境。首次克隆时，只有仓库内能力显示就绪；未配置的外部桌面项目会明确离线。<br>
+The governance panel separates the cockpit, real learner runtime, GullMate, the local sailing simulator, and the Godot runtime. On a clean clone, only repository-owned capabilities report ready; unconfigured desktop integrations remain explicitly offline.
 
 ## 系统架构 / Architecture
 
@@ -182,7 +182,7 @@ flowchart LR
   subgraph Product["Product plane / 产品平面"]
     API["FastAPI + role gates + audit"]
     UI["React bilingual cockpit"]
-    OPT["Optional Xiaoyi and Godot connectors"]
+    OPT["Optional GullMate and Godot connectors"]
     REG --> API --> UI
     OPT -. "explicitly optional" .-> API
   end
@@ -527,7 +527,7 @@ cd backend
 | 业务—能量联合计划 | 可执行八源具名数据合同、逐源签名、具名资源排程、堆场库存守恒、集卡与冷藏箱约束、岸电和储能联合优化、12 项门禁与哈希回执；默认 0/8 和 0/12 / executable eight-domain named-data contract, per-source signatures, named-resource scheduling, yard conservation, truck/reefer constraints, shore-power/storage co-optimization, 12 gates and hash receipts; 0/8 and 0/12 by default | 已获得现场八源凭证、TOS 回写或设备调度权限 / possession of live eight-source credentials, TOS writeback, or equipment dispatch authority |
 | 配电数字孪生 | 可执行六源具名数据合同、辐射潮流、电压/无功/谐波、变压器热老化、N-1、孤岛、Erlang-C 充电队列、储能质保、14 项门禁与哈希回执；默认 0/6 和 0/14 / executable six-domain named-data contract, radial power flow, voltage/reactive/harmonics, transformer thermal aging, N-1, islanding, Erlang-C charging queues, storage warranty, 14 gates and hash receipts; 0/6 and 0/14 by default | 已完成短路、保护配合、弧闪、暂态研究，或已取得倒闸、保护整定和孤岛控制权限 / completion of short-circuit, protection-coordination, arc-flash and transient studies, or switching, relay-setting and island-control authority |
 | 策略验证 | 离线、留出集 / offline and held-out | 安全认证、型式认可或法规核证 / safety certification or regulatory assurance |
-| 小懿 AI | 可选 HTTP 本地连接器 / optional local HTTP connector | 仓库自带外部知识库或云服务 / bundled external knowledge or cloud service |
+| 舷鸥 · GullMate | 可选 HTTP 本地连接器 / optional local HTTP connector | 仓库自带外部知识库或云服务 / bundled external knowledge or cloud service |
 | Godot 航行模拟器 | 可选桌面进程连接器 / optional desktop process connector | 训练证据或生产控制通道 / training evidence or a production control channel |
 | 调度执行 | `dry_run=true`，生产资格恒为 false / dry-run only, eligibility always false | 自主设备控制 / autonomous equipment control |
 
@@ -584,7 +584,7 @@ backend/app/
   rl/           数据契约、环境与训练服务 / contract, environment, training
   services/     能碳、市场、KPI与调度 / carbon, market, KPI, dispatch
   tests/        API、核算、环境与smoke测试 / API, accounting, environment, smoke
-frontend/src/   双语React驾驶舱与小懿联动 / bilingual cockpit and Xiaoyi UI
+frontend/src/   双语React驾驶舱与舷鸥联动 / bilingual cockpit and GullMate UI
 configs/        能碳、KPI与港口默认参数 / declared carbon, KPI, port defaults
 docs/           数据/模型卡、威胁与门禁 / cards, pipeline, threat, production gate
 scripts/        安装、运行、校验与数据准备 / bootstrap, run, validation, data prep

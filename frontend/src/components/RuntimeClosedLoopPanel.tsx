@@ -159,7 +159,7 @@ export function RuntimeClosedLoopPanel({
   };
 
   return (
-    <div className="runtime-closed-loop">
+    <div className="runtime-closed-loop" data-runtime-state={snapshot?.simulator_state} data-decision-state={decisionStatus} data-approvers={approvals.map((item: Record<string, any>) => item.approver_id).join(" ")} data-runtime-busy={String(busy)}>
       <div className="runtime-trust-strip">
         <span className={snapshot?.simulator_state === 'running' ? 'ok' : 'blocked'}>
           <i />公开数据校准实时模拟<small>PUBLIC-DATA-CALIBRATED SIMULATION</small>
@@ -214,7 +214,7 @@ export function RuntimeClosedLoopPanel({
             <span key={item.adapter_id} className={item.resident_payload_ready ? 'ok' : 'blocked'}>
               <i />
               <b>{item.adapter_id}</b>
-              <small>{item.resident_payload_ready ? `seq ${item.sequence} · ${shortHash(item.payload_sha256)}` : item.ready ? '摘要有效，等待源重发载荷' : '未接入或已过期'}</small>
+              <small>{item.resident_payload_ready ? `seq ${item.sequence} · ${shortHash(item.payload_sha256)}` : item.ready ? '摘要有效，等待源重发载荷' : '演示源可用·生产源待授权'}</small>
             </span>
           ))}
         </div>
@@ -231,7 +231,7 @@ export function RuntimeClosedLoopPanel({
       <section className="runtime-live-section">
         <div className="runtime-section-title">
           <strong><Zap size={15} />连续能碳与设备状态</strong>
-          <span>{snapshot?.snapshot_sha256 ? `snapshot ${shortHash(snapshot.snapshot_sha256)}` : '等待快照'}</span>
+          <span>{snapshot?.snapshot_sha256 ? `snapshot ${shortHash(snapshot.snapshot_sha256)}` : '演示预载·同步中'}</span>
         </div>
         <div className="runtime-live-grid">
           {liveCards.map(([id, zh, en]) => {

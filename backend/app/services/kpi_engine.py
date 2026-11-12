@@ -1,3 +1,7 @@
+import json
+import logging
+import threading
+
 from app.schemas.dashboard import (
     CarbonModelSummary,
     CarbonMarket,
@@ -24,11 +28,69 @@ from app.services.port_collaboration import port_collaboration_service
 from app.services.site_cutover import canonical_sha256, site_cutover_service
 from app.rl.dataset import PortDataset
 from app.rl.landing_readiness import assess_dataset_landing_readiness
+from app.rl.training import RUNS_DIR
 from app.integration.gateway import integration_gateway
 
 
+logger = logging.getLogger(__name__)
+DASHBOARD_SNAPSHOT_CACHE_VERSION = 1
+
+
 class KpiEngine:
+    _snapshot_lock = threading.Lock()
+    _snapshot_signature: str | None = None
+    _snapshot_values: dict[str, dict] = {}
+
     def build_snapshot(
+        self, green_preference: float, carbon_price: float = 85.0
+    ) -> DashboardSnapshot:
+        preference = round(float(green_preference), 6)
+        price = round(float(carbon_price), 6)
+        key = f"{preference:.6f}:{price:.6f}"
+        signature = DispatchSimulator._policy_source_signature()
+        cache_path = RUNS_DIR / ".dashboard_snapshot_cache.json"
+        cache = type(self)
+
+        with cache._snapshot_lock:
+            if cache._snapshot_signature != signature:
+                cache._snapshot_signature = signature
+                cache._snapshot_values = {}
+                try:
+                    cached = json.loads(cache_path.read_text(encoding="utf-8"))
+                    if (
+                        cached.get("version") == DASHBOARD_SNAPSHOT_CACHE_VERSION
+                        and cached.get("signature") == signature
+                        and isinstance(cached.get("snapshots"), dict)
+                    ):
+                        cache._snapshot_values = cached["snapshots"]
+                except (OSError, ValueError, TypeError):
+                    pass
+
+            cached_snapshot = cache._snapshot_values.get(key)
+            if isinstance(cached_snapshot, dict):
+                return DashboardSnapshot.model_validate(cached_snapshot)
+
+            snapshot = self._build_snapshot(preference, price)
+            cache._snapshot_values[key] = snapshot.model_dump(mode="json")
+            try:
+                temp_path = RUNS_DIR / ".dashboard_snapshot_cache.tmp"
+                temp_path.write_text(
+                    json.dumps(
+                        {
+                            "version": DASHBOARD_SNAPSHOT_CACHE_VERSION,
+                            "signature": signature,
+                            "snapshots": cache._snapshot_values,
+                        },
+                        ensure_ascii=False,
+                    ),
+                    encoding="utf-8",
+                )
+                temp_path.replace(cache_path)
+            except OSError:
+                logger.warning("Unable to persist dashboard snapshot cache", exc_info=True)
+            return snapshot
+
+    def _build_snapshot(
         self, green_preference: float, carbon_price: float = 85.0
     ) -> DashboardSnapshot:
         simulation = DispatchSimulator().simulate(green_preference=green_preference)

@@ -1,0 +1,275 @@
+{
+  "pages": [
+    {
+      "boards": [
+        "measurement-verification-board"
+      ],
+      "overflow": false,
+      "route": "#/carbon",
+      "topic": "计量核证"
+    },
+    {
+      "boards": [
+        "carbon-asset-board"
+      ],
+      "overflow": false,
+      "route": "#/carbon",
+      "topic": "碳资产"
+    },
+    {
+      "boards": [
+        "commercial-settlement-board"
+      ],
+      "overflow": false,
+      "route": "#/carbon",
+      "topic": "商业结算"
+    },
+    {
+      "boards": [
+        "management-system-board"
+      ],
+      "overflow": false,
+      "route": "#/carbon",
+      "topic": "管理体系"
+    },
+    {
+      "overflow": false,
+      "route": "#/runtime",
+      "topic": "设备与预测"
+    },
+    {
+      "overflow": false,
+      "route": "#/runtime",
+      "topic": "异常与历史"
+    },
+    {
+      "overflow": false,
+      "route": "#/runtime",
+      "topic": "数据血缘"
+    },
+    {
+      "overflow": false,
+      "route": "#/runtime",
+      "topic": "配电评估"
+    },
+    {
+      "overflow": false,
+      "route": "#/runtime",
+      "topic": "推荐与审批"
+    },
+    {
+      "overflow": false,
+      "route": "#/shore",
+      "topic": "港航协同"
+    },
+    {
+      "overflow": false,
+      "route": "#/api",
+      "topic": "平台安全"
+    },
+    {
+      "overflow": false,
+      "route": "#/api",
+      "topic": "现场切换"
+    },
+    {
+      "overflow": false,
+      "route": "#/api",
+      "topic": "数据连接"
+    },
+    {
+      "overflow": false,
+      "route": "#/simulation",
+      "topic": "联合计划"
+    }
+  ],
+  "twinAssets": [
+    {
+      "field": "grid.import_power_kw",
+      "name": "港区变配电站",
+      "value": "10,899kW\n正常 · 物理模拟"
+    },
+    {
+      "field": "solar.available_power_kw",
+      "name": "屋顶光伏阵列",
+      "value": "2,807kW\n正常 · 物理模拟"
+    },
+    {
+      "field": "battery.power_kw",
+      "name": "储能电池站",
+      "value": "-0kW\n正常 · 物理模拟"
+    },
+    {
+      "field": "shore_power.load_kw",
+      "name": "岸电与靠泊区",
+      "value": "4,059kW\n正常 · 物理模拟"
+    },
+    {
+      "field": "reefer.load_kw",
+      "name": "冷藏箱作业区",
+      "value": "1,465kW\n正常 · 物理模拟"
+    },
+    {
+      "field": "charging.agv_load_kw",
+      "name": "AGV 充电区",
+      "value": "786kW\n正常 · 物理模拟"
+    },
+    {
+      "field": "hvac.load_kw",
+      "name": "港区综合楼",
+      "value": "932kW\n正常 · 物理模拟"
+    }
+  ],
+  "layout": {
+    "horizontalOverflow": false,
+    "overlap": false,
+    "panels": [
+      {
+        "bottom": -288.5,
+        "height": 75.5,
+        "selector": ".twin-screen-header",
+        "top": -364
+      },
+      {
+        "bottom": -207.5,
+        "height": 81,
+        "selector": ".twin-kpi-strip",
+        "top": -288.5
+      },
+      {
+        "bottom": 325.1875,
+        "height": 532.6875,
+        "selector": ".twin-main-layout",
+        "top": -207.5
+      },
+      {
+        "bottom": 731.078125,
+        "height": 405.890625,
+        "selector": ".twin-bottom-layout",
+        "top": 325.1875
+      },
+      {
+        "bottom": 763.375,
+        "height": 32.296875,
+        "selector": ".twin-action-receipt",
+        "top": 731.078125
+      },
+      {
+        "bottom": 802.375,
+        "height": 39,
+        "selector": ".twin-footer",
+        "top": 763.375
+      }
+    ]
+  },
+  "history": {
+    "horizontalOverflow": false,
+    "route": "#/carbon",
+    "topic": "排放清单"
+  },
+  "disconnect": {
+    "assetList": "港区变配电站\n— kW\n屋顶光伏阵列\n— kW\n储能电池站\n— kW\n岸电与靠泊区\n— kW\n冷藏箱作业区\n— kW\nAGV 充电区\n— kW\n港区综合楼\n— kW",
+    "assetValue": "—kW\n失联 · 物理模拟",
+    "kpis": "电网输入\n—MW\n光伏可用\n—MW\n储能 SOC\n—%\n本步碳排\n—tCO₂e\n岸电接船\n—艘",
+    "scenario": "communications_loss",
+    "sourceMix": "电网 —% · 光伏 —% · 储能放电 —%\n储能充电 — kW，单列为负荷"
+  },
+  "finalTwin": {
+    "focused": true,
+    "labels": [
+      {
+        "name": "港区变配电站GRID",
+        "rect": {
+          "bottom": 324.3515625,
+          "left": 197.34375,
+          "right": 268.34375,
+          "top": 301.3515625
+        }
+      },
+      {
+        "name": "屋顶光伏阵列PV",
+        "rect": {
+          "bottom": 337.6015625,
+          "left": 286.515625,
+          "right": 357.515625,
+          "top": 314.6015625
+        }
+      },
+      {
+        "name": "储能电池站BESS",
+        "rect": {
+          "bottom": 358.8984375,
+          "left": 126.9765625,
+          "right": 189.9765625,
+          "top": 335.8984375
+        }
+      },
+      {
+        "name": "岸电与靠泊区OPS",
+        "rect": {
+          "bottom": 443.65625,
+          "left": 252.7890625,
+          "right": 323.7890625,
+          "top": 420.65625
+        }
+      },
+      {
+        "name": "冷藏箱作业区REEFER",
+        "rect": {
+          "bottom": 380.5546875,
+          "left": 330.578125,
+          "right": 401.578125,
+          "top": 357.5546875
+        }
+      },
+      {
+        "name": "AGV 充电区EV",
+        "rect": {
+          "bottom": 387.3828125,
+          "left": 182.33203125,
+          "right": 245.37109375,
+          "top": 364.3828125
+        }
+      },
+      {
+        "name": "港区综合楼HVAC",
+        "rect": {
+          "bottom": 375.578125,
+          "left": 438.25,
+          "right": 501.25,
+          "top": 352.578125
+        }
+      }
+    ],
+    "renderer": "webgl",
+    "scenario": "normal",
+    "selected": "储能电池站",
+    "viewport": {
+      "height": 732,
+      "width": 787
+    }
+  },
+  "labelsDoNotOverlap": true,
+  "consoleErrors": [],
+  "verifiedInteractions": [
+    "orbit drag",
+    "3D mesh raycast selection",
+    "seven asset groups",
+    "top camera",
+    "energy layer and labels",
+    "carbon analysis",
+    "immersive focus trap",
+    "Escape exit",
+    "asset-to-business navigation",
+    "data-readiness native dialog",
+    "hash history and tab retention"
+  ],
+  "tests": {
+    "backendPassed": 31,
+    "presentationPassed": 3
+  },
+  "demo": {
+    "steps": 25,
+    "skips": 0
+  }
+}

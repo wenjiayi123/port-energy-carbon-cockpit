@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes_dashboard import router as dashboard_router
+from app.api.routes_agent_comparisons import router as agent_comparisons_router
 from app.api.routes_evidence import router as evidence_router
 from app.api.routes_health import router as health_router
 from app.api.routes_integration import router as integration_router
@@ -11,6 +12,7 @@ from app.api.routes_rl import router as rl_router
 from app.api.routes_runtime import router as runtime_router
 from app.api.routes_scenarios import router as scenarios_router
 from app.api.routes_security import router as security_router
+from app.api.routes_shanghai_lab import router as shanghai_lab_router
 from app.core.config import settings
 from app.core.security import RequestBodyLimitMiddleware, SecurityObservabilityMiddleware
 
@@ -40,6 +42,8 @@ def create_app() -> FastAPI:
             "X-API-Key",
             "X-Request-ID",
             "X-Tenant-ID",
+            "X-Xiaoyi-Trace-Id",
+            "X-Xiaoyi-Origin",
         ],
         expose_headers=["X-Request-ID"],
     )
@@ -49,12 +53,14 @@ def create_app() -> FastAPI:
     app.include_router(integration_router, prefix="/api")
     app.include_router(dashboard_router, prefix="/api/dashboard")
     app.include_router(optimization_router, prefix="/api/optimization")
+    app.include_router(agent_comparisons_router, prefix="/api")
     app.include_router(scenarios_router, prefix="/api/scenarios")
     # Register the real learner routes before the legacy assistant gateway so
     # duplicate historical paths cannot shadow measured training endpoints.
     app.include_router(rl_router, prefix="/api")
     app.include_router(runtime_router, prefix="/api")
     app.include_router(linkage_router, prefix="/api")
+    app.include_router(shanghai_lab_router, prefix="/api")
     return app
 
 

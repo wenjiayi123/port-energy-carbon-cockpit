@@ -5,7 +5,10 @@ import binascii
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
-import fcntl
+try:
+    import fcntl
+except ImportError:  # Windows
+    from app import windows_flock as fcntl
 import hashlib
 import hmac
 import json

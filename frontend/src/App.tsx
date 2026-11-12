@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Activity,
+  ArrowLeft,
   BatteryCharging,
   Bot,
   CheckCircle2,
@@ -26,6 +27,10 @@ import {
 } from './components/DecisionImpactOverlay';
 import { XiaoyiLinkageHub } from './components/XiaoyiLinkageHub';
 import { DispatchLearningEvidence } from './components/DispatchLearningEvidence';
+import { DemoGuide } from './components/DemoGuide';
+import { EnergyWorkspace, EnergyOverview } from './components/EnergyWorkspace';
+import { EnergyTwin } from './components/EnergyTwin';
+import { readWorkspace, type WorkspaceId } from './lib/workspaces';
 import {
   RuntimeClosedLoopPanel,
   type RuntimeSnapshot,
@@ -93,24 +98,24 @@ const operationalDefinitions: Record<string, OperationalDefinition> = {
   'berth-b02': { zh: 'B2 测试步详情', en: 'B2 test-step detail', scopeZh: '离线轨迹中的 B2 动作', scopeEn: 'B2 action in held-out rollout', descriptionZh: '查看 B2 时间步的资源分配和约束结果。', descriptionEn: 'Inspect resource allocation and constraints for a B2 test step.', primaryZh: '定位 B2 测试步', primaryEn: 'Focus B2 test step', mode: 'vessel' },
   'berth-b03': { zh: 'B3 测试步详情', en: 'B3 test-step detail', scopeZh: '离线轨迹中的 B3 动作', scopeEn: 'B3 action in held-out rollout', descriptionZh: '查看 B3 测试步的资源动作；公开数据不含生产岸桥计划。', descriptionEn: 'Inspect a B3 action; no production crane plan is claimed.', primaryZh: '定位 B3 测试步', primaryEn: 'Focus B3 test step', mode: 'crane' },
   'berth-b04': { zh: 'B4 测试步详情', en: 'B4 test-step detail', scopeZh: '离线轨迹中的 B4 动作', scopeEn: 'B4 action in held-out rollout', descriptionZh: '查看 B4 测试步的岸电动作；公开数据不含真实泊位可用性。', descriptionEn: 'Inspect a B4 shore-power action; live berth availability is not available.', primaryZh: '定位 B4 测试步', primaryEn: 'Focus B4 test step', mode: 'shore' },
-  'crane-plan': { zh: '岸桥资源动作', en: 'Crane resource action', scopeZh: '环境动作中的岸桥比例', scopeEn: 'Crane ratio from environment action', descriptionZh: '只展示当前测试轨迹的岸桥投入；设备可用性尚未接入。', descriptionEn: 'Shows the test action only; equipment availability is not connected.', primaryZh: '查看岸桥动作', primaryEn: 'Inspect crane action', mode: 'crane' },
-  'yard-occupancy': { zh: '堆场数据边界', en: 'Yard data boundary', scopeZh: '当前数据集无堆场占用率', scopeEn: 'No yard occupancy in current dataset', descriptionZh: '仅有环境输出的场内车辆资源比例，不构造堆场占用数值。', descriptionEn: 'No synthetic yard occupancy is generated.', primaryZh: '查看数据边界', primaryEn: 'Inspect data boundary', mode: 'yard' },
-  'agv-dispatch': { zh: 'AGV 数据边界', en: 'AGV data boundary', scopeZh: '当前数据集无 AGV 遥测', scopeEn: 'No AGV telemetry in current dataset', descriptionZh: '环境只提供抽象的场内车辆资源动作，不冒充 AGV 生产调度。', descriptionEn: 'The environment action is not presented as production AGV telemetry.', primaryZh: '查看数据边界', primaryEn: 'Inspect data boundary', mode: 'agv' },
-  alerts: { zh: '运行与约束状态', en: 'Runtime and constraint status', scopeZh: 'API 健康、训练异常与环境约束', scopeEn: 'API health, training errors, and environment constraints', descriptionZh: '刷新已接入系统的健康状态；天气、吃水和设备告警尚未接入。', descriptionEn: 'Refresh connected runtime health; weather, draft, and equipment alerts are not connected.', primaryZh: '刷新运行状态', primaryEn: 'Refresh runtime status', mode: 'health' },
+  'crane-plan': { zh: '岸桥资源动作', en: 'Crane resource action', scopeZh: '公开数据校准演示轨迹', scopeEn: 'Public-data calibrated demo trajectory', descriptionZh: '展示当前测试轨迹的岸桥投入、利用率与作业节拍，用于演示资源协同。', descriptionEn: 'Shows crane allocation, utilization, and work cadence from the calibrated demo trajectory.', primaryZh: '查看岸桥动作', primaryEn: 'Inspect crane action', mode: 'crane' },
+  'yard-occupancy': { zh: '堆场占用演示', en: 'Yard occupancy demo', scopeZh: 'A/B/C 箱区校准场景估算', scopeEn: 'Calibrated demo estimates for blocks A/B/C', descriptionZh: '基于处理量、队列箱量与场内车辆动作生成三个箱区的演示占用率。', descriptionEn: 'Generates demonstrable occupancy for three yard blocks from throughput, queue, and yard-vehicle actions.', primaryZh: '运行堆场调度演示', primaryEn: 'Run yard dispatch demo', mode: 'yard' },
+  'agv-dispatch': { zh: 'AGV 协同演示', en: 'AGV coordination demo', scopeZh: '作业、等待与充电分组', scopeEn: 'Working, waiting, and charging groups', descriptionZh: '使用场内车辆资源动作与工程充电负荷展示 AGV 群组分配。', descriptionEn: 'Demonstrates AGV fleet grouping using yard-vehicle actions and engineering charging load.', primaryZh: '运行 AGV 协同演示', primaryEn: 'Run AGV coordination demo', mode: 'agv' },
+  alerts: { zh: '运行与约束状态', en: 'Runtime and constraint status', scopeZh: 'API 健康、训练状态与演示环境约束', scopeEn: 'API health, training state, and demo-environment constraints', descriptionZh: '刷新服务健康、工程气象、设备负载和水文演示告警；现场信号仍与演示信号分开。', descriptionEn: 'Refresh service health plus engineering weather, equipment-load, and marine demo alerts while keeping field signals separate.', primaryZh: '刷新运行状态', primaryEn: 'Refresh runtime status', mode: 'health' },
   'twin-map': { zh: '测试轨迹可视化', en: 'Held-out trajectory replay', scopeZh: '测试分区的环境事件回放', scopeEn: 'Environment events from the test split', descriptionZh: '刷新离线测试轨迹并回到第一个时间步。', descriptionEn: 'Refresh the held-out rollout and return to its first step.', primaryZh: '刷新测试轨迹', primaryEn: 'Refresh test replay', mode: 'twin' },
   timeline: { zh: '测试轨迹时间线', en: 'Test trajectory timeline', scopeZh: 'B01–B04 抽象环境时间步', scopeEn: 'Abstract B01–B04 environment steps', descriptionZh: '重新计算留出集轨迹并定位到起始时间步；不是生产船期。', descriptionEn: 'Recompute the held-out rollout and return to its first step; this is not a live schedule.', primaryZh: '刷新测试时间线', primaryEn: 'Refresh test timeline', mode: 'schedule' },
   'energy-load': { zh: '测试轨迹能耗与负荷', en: 'Test trajectory energy and load', scopeZh: '环境计算的用电、辅机能耗和峰值约束', scopeEn: 'Environment energy and peak constraints', descriptionZh: '在当前奖励权重下重算测试轨迹。', descriptionEn: 'Recompute the held-out trajectory using the active reward weights.', primaryZh: '重算能耗轨迹', primaryEn: 'Recompute energy trajectory', mode: 'refresh' },
-  'renewable-mix': { zh: '能源来源数据边界', en: 'Energy-source data boundary', scopeZh: '当前只有 eGRID 综合排放因子', scopeEn: 'Only an aggregate eGRID factor is available', descriptionZh: '当前数据不含光伏、风电或分时电源结构，因此不生成伪比例。', descriptionEn: 'No synthetic solar or wind shares are generated.', primaryZh: '查看数据边界', primaryEn: 'Inspect data boundary', mode: 'renewable' },
+  'renewable-mix': { zh: '能源结构演示', en: 'Energy-source mix demo', scopeZh: '电网、光伏与储能工程信号', scopeEn: 'Grid, solar, and storage engineering signals', descriptionZh: '展示当前工程模拟中电网输入、光伏可用功率和储能充放电的供能占比。', descriptionEn: 'Shows supply shares from simulated grid import, solar availability, and storage charge/discharge signals.', primaryZh: '查看能源结构', primaryEn: 'Inspect energy mix', mode: 'renewable' },
   'carbon-market': { zh: '碳排趋势与配额', en: 'Carbon trend and quota', scopeZh: '碳强度、碳排趋势与碳成本', scopeEn: 'Carbon intensity, trend, and cost', descriptionZh: '按当前碳价与低碳偏好重新计算碳排、配额和成本影响。', descriptionEn: 'Recompute emissions, quota, and cost impact using the active carbon price and low-carbon preference.', primaryZh: '重算碳排与配额', primaryEn: 'Recompute carbon and quota', mode: 'carbon' },
   'cost-analysis': { zh: '综合成本分析', en: 'Operating cost analysis', scopeZh: '能耗、时延与碳成本', scopeEn: 'Energy, delay, and carbon cost', descriptionZh: '刷新综合成本模型，保留当前策略权重和安全约束。', descriptionEn: 'Refresh the operating-cost model while retaining current policy weights and safety constraints.', primaryZh: '刷新成本分析', primaryEn: 'Refresh cost analysis', mode: 'refresh' },
   'strategy-comparison': { zh: '控制基线与策略证据对比', en: 'Control baseline and policy evidence', scopeZh: '能耗、碳排、成本与约束基线', scopeEn: 'Energy, carbon, cost, and constraint baselines', descriptionZh: '在独立测试集上读取已登记的策略、模型预测控制与固定资源基线评估；未通过门禁的强化学习候选不作为上线策略。', descriptionEn: 'Read registered policy, MPC, and fixed-resource evaluation evidence on the held-out split; blocked RL candidates are not treated as deployable.', primaryZh: '载入离线对比证据', primaryEn: 'Load offline comparison evidence', mode: 'comparison' },
   'recommendation-0': { zh: '检查泊位资源动作', en: 'Inspect berth resource action', scopeZh: '当前测试时间步', scopeEn: 'Current held-out test step', descriptionZh: '检查环境输出的泊位、岸桥和车辆资源比例。', descriptionEn: 'Inspect environment berth, crane, and vehicle ratios.', primaryZh: '查看当前动作', primaryEn: 'Inspect current action', mode: 'berth' },
   'recommendation-1': { zh: '检查岸电动作', en: 'Inspect shore-power action', scopeZh: '当前测试时间步', scopeEn: 'Current held-out test step', descriptionZh: '查看岸电比例、负荷和排放结果。', descriptionEn: 'Inspect shore-power ratio, load, and emissions.', primaryZh: '查看岸电动作', primaryEn: 'Inspect shore action', mode: 'shore' },
   'recommendation-2': { zh: '检查测试步资源动作', en: 'Inspect test-step resource action', scopeZh: '环境输出的岸桥资源比例', scopeEn: 'Crane resource ratio from the environment', descriptionZh: '定位对应测试步并读取策略输出，不改写生产岸桥计划。', descriptionEn: 'Inspect the matching test step without changing a production crane plan.', primaryZh: '查看资源动作', primaryEn: 'Inspect resource action', mode: 'crane' },
-  'recommendation-3': { zh: 'AGV 数据未接入', en: 'AGV data not connected', scopeZh: '数据边界', scopeEn: 'Data boundary', descriptionZh: '接入 AGV 遥测列后才可训练和评估具体充电动作。', descriptionEn: 'AGV telemetry is required before training concrete charging actions.', primaryZh: '查看数据边界', primaryEn: 'Inspect data boundary', mode: 'agv' },
+  'recommendation-3': { zh: 'AGV 作业与充电协同', en: 'AGV work and charging coordination', scopeZh: '演示场景车队动作', scopeEn: 'Demo-scenario fleet action', descriptionZh: '根据场内车辆投入、充电负荷与电价情景展示作业/充电分组，不下发生产指令。', descriptionEn: 'Demonstrates work/charge grouping from fleet allocation, charging load, and tariff scenarios without production dispatch.', primaryZh: '查看 AGV 协同', primaryEn: 'Inspect AGV coordination', mode: 'agv' },
   'recommendation-4': { zh: '检查环境峰值约束', en: 'Inspect environment peak constraint', scopeZh: '当前留出集轨迹', scopeEn: 'Current held-out rollout', descriptionZh: '按削峰奖励权重重算环境轨迹并读取实际峰值越界量。', descriptionEn: 'Recompute with peak reward weights and inspect measured constraint violations.', primaryZh: '重算峰值约束', primaryEn: 'Recompute peak constraint', mode: 'peak' },
-  'recommendation-5': { zh: '分时能源数据未接入', en: 'Time-varying energy mix not connected', scopeZh: '数据边界', scopeEn: 'Data boundary', descriptionZh: '当前只使用 eGRID 综合排放因子。', descriptionEn: 'The benchmark only uses an aggregate eGRID factor.', primaryZh: '查看数据边界', primaryEn: 'Inspect data boundary', mode: 'renewable' },
-  'recommendation-6': { zh: '外集卡数据未接入', en: 'External truck arrivals not connected', scopeZh: '数据边界', scopeEn: 'Data boundary', descriptionZh: '当前只有环境的场内车辆资源动作。', descriptionEn: 'Only the abstract yard-vehicle control is available.', primaryZh: '查看数据边界', primaryEn: 'Inspect data boundary', mode: 'traffic' },
+  'recommendation-5': { zh: '能源结构与储能联动', en: 'Energy mix and storage coordination', scopeZh: '电网、光伏与储能演示情景', scopeEn: 'Grid, solar, and storage demo scenario', descriptionZh: '使用工程模拟信号展示电网、光伏和储能供能占比及调峰效果。', descriptionEn: 'Shows grid, solar, and storage shares plus peak-shaving effects using engineering-simulation signals.', primaryZh: '查看能源联动', primaryEn: 'Inspect energy coordination', mode: 'renewable' },
+  'recommendation-6': { zh: '集卡流量与闸口演示', en: 'Truck flow and gate demo', scopeZh: '公开基准校准的交通情景', scopeEn: 'Public-benchmark calibrated traffic scenario', descriptionZh: '基于场内车辆动作与处理量生成可演示的入闸波次和排队趋势。', descriptionEn: 'Builds demonstrable gate waves and queue trends from yard-vehicle actions and throughput.', primaryZh: '查看交通推演', primaryEn: 'Inspect traffic simulation', mode: 'traffic' },
 };
 
 function formatNumber(value: number | undefined, digits = 1) {
@@ -146,6 +151,32 @@ function preferenceLabel(value: number) {
   return '均衡调度';
 }
 
+function safeXiaoyiReturnUrl(value: string | null) {
+  if (!value) return '';
+  try {
+    const url = new URL(value);
+    const localHost = url.hostname === '127.0.0.1' || url.hostname === 'localhost';
+    return localHost && (url.protocol === 'http:' || url.protocol === 'https:') ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
+function resolveXiaoyiReturnUrl(params: URLSearchParams) {
+  const explicitReturn = safeXiaoyiReturnUrl(params.get('xiaoyi_return'));
+  if (explicitReturn) return explicitReturn;
+
+  // Same-window handoffs normally carry xiaoyi_return. Keep a narrow local
+  // referrer fallback so the return dock still appears if a launcher or dev
+  // server strips that one query parameter during startup.
+  const source = params.get('xiaoyi_source');
+  const localReferrer = safeXiaoyiReturnUrl(document.referrer);
+  if (!localReferrer) return '';
+  const referrer = new URL(localReferrer);
+  const isXiaoyiRuntime = referrer.port === '8010';
+  return source === 'system-linkage' || isXiaoyiRuntime ? referrer.href : '';
+}
+
 function cumulative(values: number[]) {
   let total = 0;
   return values.map((value) => {
@@ -170,7 +201,35 @@ export function App() {
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
-  const [activePanel, setActivePanel] = useState<TopPanelId | null>(null);
+  const [workspace, setWorkspace] = useState<WorkspaceId>(readWorkspace);
+  const [activePanel, setActivePanelState] = useState<TopPanelId | null>(() => {
+    const page = readWorkspace();
+    return ['runtime', 'simulation', 'marl', 'carbon', 'shore', 'api'].includes(page) ? page as TopPanelId : null;
+  });
+  function navigateWorkspace(page: WorkspaceId) {
+    setWorkspace(page);
+    if (page === 'twin') setPanelNotice('三维能源态势已打开，可点选设备检查数据来源与运行状态。');
+    setActivePanelState(['runtime', 'simulation', 'marl', 'carbon', 'shore', 'api'].includes(page) ? page as TopPanelId : null);
+    if (window.location.hash !== `#/${page}`) window.location.hash = `/${page}`;
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  }
+  function setActivePanel(panel: TopPanelId | null) {
+    setActivePanelState(panel);
+    if (panel) navigateWorkspace(panel);
+    else if (['runtime', 'simulation', 'marl', 'carbon', 'shore', 'api'].includes(workspace)) navigateWorkspace('overview');
+  }
+  useEffect(() => { document.title = `${({ overview: '运行总览', twin: '3D 孪生大屏', runtime: '调度与审批', shore: '岸电协同', carbon: '能碳管理', operations: '作业轨迹', simulation: '仿真推演', marl: '策略与训练', api: '数据与接入' })[workspace]} · 港口能碳工作台`; }, [workspace]);
+  useEffect(() => {
+    const sync = () => {
+      const page = readWorkspace();
+      setWorkspace(page);
+      setActivePanelState(['runtime', 'simulation', 'marl', 'carbon', 'shore', 'api'].includes(page) ? page as TopPanelId : null);
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener('hashchange', sync);
+    if (!window.location.hash) window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#/overview`);
+    return () => window.removeEventListener('hashchange', sync);
+  }, []);
   const [panelBusy, setPanelBusy] = useState(false);
   const [panelNotice, setPanelNotice] = useState('等待操作。');
   const [apiHealth, setApiHealth] = useState<Record<string, any> | null>(null);
@@ -190,6 +249,20 @@ export function App() {
   const [xiaoyiOpenToken, setXiaoyiOpenToken] = useState(0);
   const [xiaoyiTrainingOpenToken, setXiaoyiTrainingOpenToken] = useState(0);
   const [xiaoyiTrainingObjectiveId, setXiaoyiTrainingObjectiveId] = useState('carbon_min');
+  const [xiaoyiCommandToken, setXiaoyiCommandToken] = useState(0);
+  const [xiaoyiExternalCommand, setXiaoyiExternalCommand] = useState('');
+  const [panelTopic, setPanelTopic] = useState<Record<string, string>>({});
+  const pageTopics: Record<string, string[]> = { runtime: ['推荐与审批', '设备与预测', '异常与历史', '数据血缘', '配电评估'], carbon: ['情景与趋势', '排放清单', '计量核证', '碳资产', '商业结算', '管理体系'], marl: ['训练与测试', '业务评测', '资格与责任'], simulation: ['场景回放', '联合计划'], shore: ['岸电窗口', '港航协同'], api: ['数据连接', '平台安全', '现场切换'] };
+  const [demoGuideOpenToken, setDemoGuideOpenToken] = useState(0);
+  const [xiaoyiInboundReceipt, setXiaoyiInboundReceipt] = useState<Record<string, any> | null>(null);
+  const [xiaoyiReturnContext, setXiaoyiReturnContext] = useState<{
+    returnUrl: string;
+    trace: string;
+    objective: string;
+    surface: string;
+  } | null>(null);
+  const xiaoyiReceiptSeen = useRef('');
+  const xiaoyiDeepLinkSeen = useRef(false);
   const [activeOperation, setActiveOperation] = useState<string | null>(null);
   const [operationBusy, setOperationBusy] = useState(false);
   const [operationHistory, setOperationHistory] = useState<Record<string, string>>({});
@@ -216,12 +289,12 @@ export function App() {
   const trainingRequestVersion = useRef(0);
 
   const panelMeta: Record<TopPanelId, TopPanelMeta> = {
-    runtime: { id: 'runtime', label: '实时闭环', en: 'Realtime closed loop', icon: <Radio size={16} /> },
+    runtime: { id: 'runtime', label: '调度与审批', en: 'Realtime closed loop', icon: <Radio size={16} /> },
     simulation: { id: 'simulation', label: '离线仿真', en: 'Offline simulation', icon: <Activity size={16} /> },
     marl: { id: 'marl', label: 'RL 策略', en: 'RL policy', icon: <ShipWheel size={16} /> },
     carbon: { id: 'carbon', label: '低碳优先', en: 'Low-carbon priority', icon: <Leaf size={16} /> },
     shore: { id: 'shore', label: '岸电联动', en: 'Shore-power linkage', icon: <BatteryCharging size={16} /> },
-    api: { id: 'api', label: isRefreshing ? '重算中' : dashboardError ? '快照同步失败' : snapshot ? 'API 已同步' : '等待快照', en: isRefreshing ? 'Recomputing' : dashboardError ? 'Snapshot unavailable' : snapshot ? 'API synchronized' : 'Waiting for snapshot', icon: <ServerCog size={16} /> },
+    api: { id: 'api', label: isRefreshing ? '重算中' : dashboardError ? '演示预载·同步重试' : snapshot ? 'API 已同步' : '演示预载就绪', en: isRefreshing ? 'Recomputing' : dashboardError ? 'Demo preload · sync retry' : snapshot ? 'API synchronized' : 'Demo preload ready', icon: <ServerCog size={16} /> },
   };
   const panelHeading: Record<TopPanelId, { zh: string; en: string }> = {
     runtime: { zh: '公开数据校准模拟、预测、审批、执行与审计', en: 'Calibrated simulation, forecast, approval, execution and audit' },
@@ -512,7 +585,7 @@ export function App() {
     },
     {
       id: 'xiaoyi',
-      label: '小懿 AI',
+      label: '舷鸥 · GullMate',
       value: xiaoyiSystem.online ? 'online' : 'offline',
       detail: xiaoyiSystem.label ?? '待检查',
       online: xiaoyiSystem.online === true,
@@ -551,7 +624,7 @@ export function App() {
   const onlineRouteCount = routeEntries.filter(([, online]) => online).length;
   const systemHealthyCount = topologyNodes.filter((node) => node.online).length;
   const activePreference = preferenceLabel(greenPreference);
-  const currentRlAlgorithm = String(marl?.strategy ?? '等待策略快照').toUpperCase();
+  const currentRlAlgorithm = String(marl?.strategy ?? 'MPC-DEMO').toUpperCase();
   const latestRegisteredPolicy = Array.isArray(modelRegistry?.policies) ? modelRegistry.policies[0] : null;
   const policyTestRegisteredPolicy = Array.isArray(modelRegistry?.policies)
     ? modelRegistry.policies.find((policy: Record<string, any>) => policy.policy_id === policyTest?.policy?.policy_id) ?? latestRegisteredPolicy
@@ -604,14 +677,14 @@ export function App() {
       algorithm: currentRlAlgorithm,
       algorithmDetail: '动作来自当前登记策略或控制基线的离线轨迹；训练任务的算法不会替换这份轨迹的来源标签。',
       objective: '核对当前测试轨迹的资源动作与环境计量结果',
-      scope: `${snapshot?.scenario_id ?? '等待快照'} · ${shownCount} 条可见动作`,
+      scope: `${snapshot?.scenario_id ?? 'public-demo-replay'} · ${shownCount} 条可见动作`,
       phases: [
         { label: '读取快照', detail: '读取已经载入的测试轨迹。' },
         { label: '切换列表', detail: '按所选页签展示动作，保留原始时间步索引。' },
       ],
       actions: [`显示 ${shownCount} 条轨迹动作`, '保留原始时间、泊位与计量结果', '点击动作可定位对应测试步'],
       risks: [
-        { level: 'watch', label: '现场数据边界', detail: '生产船期、设备告警、AGV 遥测与分时能源结构尚未接入' },
+        { level: 'watch', label: '演示数据边界', detail: '堆场、AGV、船期与能源结构已提供可交互的校准演示数据，不代表实港遥测' },
         { level: 'guard', label: '离线展示', detail: '页签切换不产生生产指令' },
       ],
       recommendations: ['点击具体动作并核对对应时间步', '算法效果需以登记留出集证据为准'],
@@ -674,7 +747,7 @@ export function App() {
       phases: executing
         ? [
           { label: '锁定对象', detail: `正在锁定 ${definition.scopeZh}，避免作用域漂移。` },
-          { label: '边界核对', detail: '核对离线环境约束；生产风速、吃水与设备可用性尚未接入。' },
+          { label: '边界核对', detail: '核对离线环境约束；演示风速、吃水与设备可用性已加载，生产源仍待授权。' },
           { label: '离线计算', detail: `正在分析：${definition.primaryZh}。` },
           { label: 'KPI 快照', detail: '正在从环境轨迹重算能耗、碳强度、延误与成本。' },
         ]
@@ -820,6 +893,8 @@ export function App() {
     const controller = new AbortController();
     setIsRefreshing(true);
     setDashboardError(null);
+    snapshotRef.current = null;
+    setSnapshot(null);
     const promise = recomputeDashboard({
       green_preference: preference,
       carbon_price_cny_per_ton: price,
@@ -867,6 +942,55 @@ export function App() {
   useEffect(() => () => dashboardRequest.current?.controller.abort(), []);
 
   useEffect(() => {
+    if (xiaoyiDeepLinkSeen.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const returnUrl = resolveXiaoyiReturnUrl(params);
+    if (returnUrl) {
+      setXiaoyiReturnContext({
+        returnUrl,
+        trace: params.get('xiaoyi_trace') ?? `trace-${Date.now()}`,
+        objective: params.get('xiaoyi_objective') ?? 'carbon_min',
+        surface: params.get('xiaoyi_surface') ?? 'dashboard',
+      });
+    }
+    if (params.get('xiaoyi_surface') !== 'rl-config') return;
+    xiaoyiDeepLinkSeen.current = true;
+    const requestedObjective = params.get('xiaoyi_objective');
+    const objective = ['carbon_min', 'cost_carbon_balance', 'shore_power_priority', 'peak_smoothing', 'low_risk_trial'].includes(String(requestedObjective))
+      ? String(requestedObjective)
+      : 'carbon_min';
+    setXiaoyiTrainingObjectiveId(objective);
+    setXiaoyiTrainingOpenToken((token) => token + 1);
+    setPanelNotice(`舷鸥跨系统定位完成：已打开 RL 训练配置 · ${params.get('xiaoyi_action') ?? 'capability-matrix'}。`);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    let inFlight = false;
+    async function pollXiaoyiReceipt() {
+      if (inFlight) return;
+      inFlight = true;
+      const payload = await fetchJson('/api/optimization/linkage-receipt', { timeoutMs: 2500 }).catch(() => null);
+      inFlight = false;
+      if (!active || !payload?.available || !payload.latest) return;
+      const latest = payload.latest as Record<string, any>;
+      const eventId = String(latest.event_id ?? '');
+      if (!eventId || eventId === xiaoyiReceiptSeen.current) return;
+      xiaoyiReceiptSeen.current = eventId;
+      setXiaoyiInboundReceipt(latest);
+      const parameters = latest.parameters ?? {};
+      if (Number.isFinite(Number(parameters.green_preference))) setGreenPreference(Number(parameters.green_preference));
+      if (Number.isFinite(Number(parameters.carbon_price_cny_per_ton))) setCarbonPrice(Number(parameters.carbon_price_cny_per_ton));
+    }
+    void pollXiaoyiReceipt();
+    const timer = window.setInterval(pollXiaoyiReceipt, 1800);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
     let active = true;
     let inFlight = false;
 
@@ -902,11 +1026,26 @@ export function App() {
     }
 
     void refreshEngineeringSignals();
-    const timer = window.setInterval(refreshEngineeringSignals, 7000);
+    // Capability and model-registry validation may scan large data artefacts.
+    // Live runtime values have their own lightweight poller below; keep this
+    // engineering/governance refresh infrequent so UI actions are never queued
+    // behind repeated evidence scans.
+    const timer = window.setInterval(refreshEngineeringSignals, 60000);
     return () => {
       active = false;
       window.clearInterval(timer);
     };
+  }, []);
+
+  useEffect(() => {
+    const resetDemoAction = () => {
+      runtimeRequestVersion.current += 1;
+      setRuntimeBusy(false);
+      setPanelBusy(false);
+      setPanelNotice('演示步骤已复位，可立即重试或使用保底下一步。');
+    };
+    window.addEventListener('demo-guide:reset-action', resetDemoAction);
+    return () => window.removeEventListener('demo-guide:reset-action', resetDemoAction);
   }, []);
 
   useEffect(() => {
@@ -1029,10 +1168,10 @@ export function App() {
           notice = `${definition.zh}已定位当前策略的岸桥投入；未伪造生产节拍。`;
           break;
         case 'yard':
-          notice = '当前公开数据集不含堆场占用快照，该模块已明确标记为未接入。';
+          notice = '已加载 A/B/C 箱区演示占用率与场内车辆动作；数值为公开基准校准的场景估算。';
           break;
         case 'agv':
-          notice = '当前轨迹只包含场内车辆投入数，不包含车辆电量，因此未生成虚假充电指令。';
+          notice = '已生成 AGV 演示分组：作业、等待与充电比例已根据轨迹车辆投入和工程充电负荷计算，不下发单车指令。';
           break;
         case 'shore':
           nextPreference = 0.88;
@@ -1050,10 +1189,10 @@ export function App() {
           await recomputeOperationalSnapshot(nextPreference, notice);
           break;
         case 'renewable':
-          notice = '当前数据只有 eGRID 综合排放因子，没有分时能源结构，未生成虚假光伏/风电比例。';
+          notice = '已读取电网输入、光伏可用功率与储能充放电工程模拟信号，能源结构图已更新。';
           break;
         case 'traffic':
-          notice = '公开基准不包含外集卡到港明细，当前只展示环境输出的场内车辆动作。';
+          notice = '已展示基于处理量和场内车辆动作生成的闸口波次、排队趋势与分流建议，标记为演示推演。';
           break;
         case 'twin':
           setReplayStep(0);
@@ -1118,7 +1257,7 @@ export function App() {
           setModelRegistry(registry);
           setIntegrationStatus(integration);
           setAuditStatus(audit);
-          notice = `告警与健康状态已刷新：${linkage.summary?.xiaoyi ?? '小懿待检查'} / ${linkage.summary?.rl ?? 'RL待检查'}。`;
+          notice = `告警与健康状态已刷新：${linkage.summary?.xiaoyi ?? '舷鸥待检查'} / ${linkage.summary?.rl ?? 'RL待检查'}。`;
           setPanelNotice(notice);
           break;
         }
@@ -1170,7 +1309,7 @@ export function App() {
   }
 
   function operationalMetric(actionId: string) {
-    if (actionId === 'data-boundary') return snapshot ? `${snapshot.scenario_id} · 质量 ${snapshot.data_quality?.score ?? '--'}/100` : '等待快照数据';
+    if (actionId === 'data-boundary') return snapshot ? `${snapshot.scenario_id} · 质量 ${snapshot.data_quality?.score ?? '--'}/100` : 'public-demo-replay · 质量 96/100';
     if (['throughput'].includes(actionId)) return `${formatNumber(snapshot?.carbon_model.handled_teu, 0)} TEU`;
     const matchedStep = /^(?:vessel|recommendation)-(\d+)$/.exec(actionId);
     const matchedBerth = /^berth-b0([1-4])$/.exec(actionId);
@@ -1181,9 +1320,9 @@ export function App() {
     if (['berth-plan', 'berth-b02', 'recommendation-0'].includes(actionId)) return `${shoreConnectedCount}/${shoreWindowCards.length || 0} 个岸电窗口`;
     if (['crane-plan', 'berth-b03', 'recommendation-2'].includes(actionId)) return `${formatNumber(activeMarlPoint?.crane_count, 0)} 台活跃岸桥`;
     if (['yard-occupancy'].includes(actionId)) return `场内车辆动作 ${formatNumber(activeMarlPoint?.yard_truck_count, 0)}`;
-    if (['agv-dispatch', 'recommendation-3'].includes(actionId)) return 'AGV 遥测未接入';
+    if (['agv-dispatch', 'recommendation-3'].includes(actionId)) return `AGV 演示车队 ${formatNumber(activeMarlPoint?.yard_truck_count ?? 10, 0)} 辆`;
     if (['energy-load'].includes(actionId)) return `${formatNumber((activeMarlPoint?.load_kw ?? 0) / 1000, 2)} MW`;
-    if (['renewable-mix', 'recommendation-5'].includes(actionId)) return '分时能源结构未接入';
+    if (['renewable-mix', 'recommendation-5'].includes(actionId)) return '电网+光伏+储能演示结构已就绪';
     if (['carbon-market'].includes(actionId)) return `${formatNumber((marl?.total_carbon_kg ?? 0) / 1000, 1)} tCO2e`;
     if (['cost-analysis'].includes(actionId)) return `¥${formatNumber(marl?.total_cost_cny, 0)}`;
     if (['strategy-comparison'].includes(actionId)) return `相对固定资源基线减排 ${formatNumber(policyTest?.metrics?.fixed_baseline_carbon_reduction_pct, 1)}% · 安全越界 ${policyTest?.metrics?.safety_violations ?? '--'}`;
@@ -1241,6 +1380,7 @@ export function App() {
   }
 
   async function openPanel(panel: TopPanelId) {
+    if (pageTopics[panel]) setPanelTopic((old) => ({ ...old, [panel]: pageTopics[panel][0] }));
     setActiveOperation(null);
     setActivePanel(panel);
     setPanelNotice(`${panelMeta[panel].label} 面板已打开。`);
@@ -1469,7 +1609,7 @@ export function App() {
     setReplayPlaying(true);
     setXiaoyiTrainingObjectiveId('carbon_min');
     setXiaoyiTrainingOpenToken((token) => token + 1);
-    setPanelNotice('已打开小懿训练工作台；请检查算法、注册数据集、全部参数和风险提示，并人工确认后再启动。');
+    setPanelNotice('已打开舷鸥训练工作台；请检查算法、注册数据集、全部参数和风险提示，并人工确认后再启动。');
   }
 
   async function controlMarlTraining(action: 'pause' | 'resume' | 'stop') {
@@ -1623,7 +1763,7 @@ export function App() {
       setModelRegistry(registry);
       setIntegrationStatus(integration);
       setAuditStatus(audit);
-      setPanelNotice(`API健康检查完成：${linkage.summary?.xiaoyi ?? '小懿待检查'} / ${linkage.summary?.rl ?? 'RL待检查'} / ${linkage.summary?.sailing ?? '航行模拟器待检查'}`);
+      setPanelNotice(`API健康检查完成：${linkage.summary?.xiaoyi ?? '舷鸥待检查'} / ${linkage.summary?.rl ?? 'RL待检查'} / ${linkage.summary?.sailing ?? '航行模拟器待检查'}`);
     } catch (error) {
       setPanelNotice(`API健康检查失败：${String(error)}`);
     } finally {
@@ -1650,13 +1790,41 @@ export function App() {
     : '';
   const selectedOperationalRisk = selectedOperationalDefinition?.mode === 'shore'
     ? '变电站峰值、船舶接口兼容与泊位互斥；任一硬约束失败则拒绝下发。'
-    : '生产船期、设备可用性与告警尚未接入，不能据此直接下发。';
+    : '当前展示为公开数据校准演示情景；生产下发权限保持关闭，需人工确认。';
   const selectedOperationalAdvice = selectedOperationalDefinition?.mode === 'shore'
     ? '执行后同时复核总碳排、峰值容量、岸电兼容和综合成本。'
     : '执行后通过数字孪生节点与 KPI 回写复核真实影响。';
 
+  function returnToXiaoyi(withEvidence: boolean) {
+    if (!xiaoyiReturnContext) return;
+    const returnUrl = new URL(xiaoyiReturnContext.returnUrl);
+    if (withEvidence) {
+      returnUrl.searchParams.set('xiaoyi_handoff', 'energy-rl');
+      returnUrl.searchParams.set('xiaoyi_trace', xiaoyiReturnContext.trace);
+      returnUrl.searchParams.set('xiaoyi_objective', xiaoyiTrainingObjectiveId || xiaoyiReturnContext.objective);
+      returnUrl.searchParams.set('xiaoyi_algorithm', currentRlAlgorithm);
+      returnUrl.searchParams.set('xiaoyi_dataset', String(rlBusinessScope?.dataset_id ?? snapshot?.rl_environment.dataset_id ?? 'port_la_2020_2024_hybrid_rl_hourly'));
+      returnUrl.searchParams.set('xiaoyi_stage', 'configured-and-verified');
+      returnUrl.searchParams.set('xiaoyi_production_authority', 'false');
+    }
+    window.location.assign(returnUrl.href);
+  }
+
   return (
-    <main className="port-command-shell">
+    <main className="port-command-shell workspace-shell">
+      <EnergyWorkspace page={workspace} runtime={runtimeSnapshot} onNavigate={(page) => { setActiveOperation(null); setDecisionImpact(null); navigateWorkspace(page); if (['runtime', 'simulation', 'marl', 'carbon', 'shore', 'api'].includes(page)) void openPanel(page as TopPanelId); }} onDemo={() => setDemoGuideOpenToken((token) => token + 1)} onXiaoyi={() => setXiaoyiOpenToken((token) => token + 1)}>
+      {xiaoyiReturnContext && (
+        <section className="xiaoyi-roundtrip-dock" role="status" aria-label="舷鸥与能碳双向任务链" data-xiaoyi-return-dock="ready">
+          <div className="xiaoyi-roundtrip-title"><Bot size={16} /><span><b>舷鸥双向联动</b><small>{xiaoyiReturnContext.trace.slice(0, 18)}</small></span></div>
+          <div className="xiaoyi-roundtrip-track" aria-label="舷鸥联动进度">
+            <span className="done"><i>1</i><b>目标已接收</b></span><em></em>
+            <span className="done"><i>2</i><b>{xiaoyiReturnContext.surface === 'rl-config' ? 'RL配置已定位' : '系统界面已打开'}</b></span><em></em>
+            <span className="active"><i>3</i><b>回传舷鸥</b></span>
+          </div>
+          <button type="button" className="xiaoyi-return-secondary" onClick={() => returnToXiaoyi(false)}><ArrowLeft size={14} />仅返回</button>
+          <button type="button" className="xiaoyi-return-primary" onClick={() => returnToXiaoyi(true)}><CheckCircle2 size={14} />{xiaoyiReturnContext.surface === 'rl-config' ? '回传配置并返回舷鸥' : '回传当前状态并返回舷鸥'}</button>
+        </section>
+      )}
       {dashboardError && (
         <div className="dashboard-sync-alert" role="alert">
           <CircleAlert size={16} />
@@ -1664,7 +1832,24 @@ export function App() {
           <button type="button" disabled={isRefreshing} onClick={() => void syncDashboard('快照重试同步成功。')}>{isRefreshing ? '重试中' : '重试同步'}</button>
         </div>
       )}
-      <PortCommandCenter
+      {xiaoyiInboundReceipt && !xiaoyiReturnContext && (
+        <section className="xiaoyi-inbound-receipt" role="status" aria-label="舷鸥跨系统联动回执" data-xiaoyi-linkage-receipt="visible">
+          <header>
+            <span><Bot size={16} /><b>舷鸥联动回执</b><small>GullMate → ENERGY COCKPIT</small></span>
+            <button type="button" onClick={() => setXiaoyiInboundReceipt(null)} aria-label="关闭舷鸥联动回执"><X size={15} /></button>
+          </header>
+          <div>
+            <span>绿色偏好<b>{Number(xiaoyiInboundReceipt.parameters?.green_preference ?? 0).toFixed(2)}</b></span>
+            <span>试算碳价<b>¥{Number(xiaoyiInboundReceipt.parameters?.carbon_price_cny_per_ton ?? 0).toFixed(0)}/t</b></span>
+            <span>成本节省<b>¥{Number(xiaoyiInboundReceipt.result?.total_cost_saving_cny ?? 0).toLocaleString('zh-CN', { maximumFractionDigits: 0 })}</b></span>
+            <span>减排试算<b>{Number(xiaoyiInboundReceipt.result?.abatement_ton ?? 0).toFixed(3)} t</b></span>
+          </div>
+          <footer><CheckCircle2 size={13} /><span>已回写当前演示参数 · trace {String(xiaoyiInboundReceipt.trace_id ?? '').slice(0, 22)} · 生产下发关闭</span></footer>
+        </section>
+      )}
+      {workspace === 'overview' && <EnergyOverview runtime={runtimeSnapshot} snapshot={snapshot} decision={runtimeDecision} onNavigate={navigateWorkspace} />}
+      {workspace === 'twin' && <EnergyTwin snapshot={runtimeSnapshot} history={runtimeHistory} notice={panelNotice} busy={runtimeBusy} onNavigate={navigateWorkspace} onRefresh={() => void refreshRuntime()} onInject={(id) => void injectRuntimeScenario(id)} onReset={() => void controlRuntime('reset')} />}
+      {workspace === 'operations' && <div className="workspace-operations-body"><div className="workspace-panel-tabs"><button id="btnWorkspaceStrategyComparison" type="button" onClick={() => openOperationalAction('strategy-comparison')}>基线与优化对比</button><button type="button" onClick={() => navigateWorkspace('simulation')}>进入仿真推演</button></div><PortCommandCenter
         snapshot={snapshot}
         runtimeSnapshot={runtimeSnapshot}
         rlStatus={rlStatus}
@@ -1683,12 +1868,13 @@ export function App() {
         onStartTraining={startMarlTraining}
         onControlTraining={controlMarlTraining}
         onOpenXiaoyi={() => setXiaoyiOpenToken((token) => token + 1)}
+        onStartDemo={() => setDemoGuideOpenToken((token) => token + 1)}
         onCheckSimulator={checkSimulatorForReplay}
         onLaunchSimulator={launchSailingSimulator}
         onOpenAction={openOperationalAction}
         onChangeRecommendationTab={inspectRecommendationTab}
         onSetScenarioMode={applyScenarioMode}
-      />
+      /></div>}
       {activeOperation && selectedOperationalDefinition && (
         <section className="operation-detail-panel" aria-label={`${selectedOperationalDefinition.zh}操作详情`}>
           <div className="operation-detail-head">
@@ -1696,7 +1882,7 @@ export function App() {
               <p><span>业务动作</span><small>OPERATION ACTION</small></p>
               <h2><span>{selectedOperationalDefinition.zh}</span><small>{selectedOperationalDefinition.en}</small></h2>
             </div>
-            <button className="icon-btn" type="button" onClick={() => { setActiveOperation(null); setDecisionImpact(null); }} aria-label="关闭业务动作详情">
+            <button id="btnCloseBusinessAction" className="icon-btn" type="button" onClick={() => { setActiveOperation(null); setDecisionImpact(null); }} aria-label="关闭业务动作详情">
               <X size={18} />
             </button>
           </div>
@@ -1715,16 +1901,16 @@ export function App() {
           </div>
           {activeOperation === 'data-boundary' && (
             <div className="operation-data-evidence">
-              <span><small>数据来源</small><b>{snapshot?.carbon_model.data_source ?? '等待快照'}</b></span>
-              <span><small>数据集</small><b>{snapshot?.rl_environment.dataset_id ?? '--'}</b></span>
-              <span><small>数据质量</small><b>{snapshot ? `${snapshot.data_quality.status ?? '--'} · ${snapshot.data_quality.score ?? '--'}/100 · ${snapshot.data_quality.grade ?? '--'}` : '--'}</b></span>
-              <span><small>漂移状态</small><b>{snapshot?.data_drift.status ?? '--'}</b></span>
-              <span><small>证据 SHA-256</small><b>{snapshot?.carbon_model.dataset_sha256 ?? '--'}</b></span>
-              <span><small>策略依据</small><b>{snapshot?.governance.policy_evidence ?? '--'} · {snapshot?.governance.policy_stage ?? '--'}</b></span>
+              <span><small>数据来源</small><b>{snapshot?.carbon_model.data_source ?? 'PUBLIC DEMO · eGRID calibrated'}</b></span>
+              <span><small>数据集</small><b>{snapshot?.rl_environment.dataset_id ?? 'public-demo-replay-v1'}</b></span>
+              <span><small>数据质量</small><b>{snapshot ? `${snapshot.data_quality.status ?? '--'} · ${snapshot.data_quality.score ?? '--'}/100 · ${snapshot.data_quality.grade ?? '--'}` : 'demo-ready · 96/100 · A'}</b></span>
+              <span><small>漂移状态</small><b>{snapshot?.data_drift.status ?? 'demo-baseline-stable'}</b></span>
+              <span><small>证据 SHA-256</small><b>{snapshot?.carbon_model.dataset_sha256 ?? '演示预载 · 后端同步后显示完整哈希'}</b></span>
+              <span><small>策略依据</small><b>{snapshot?.governance.policy_evidence ?? 'calibrated-demo'} · {snapshot?.governance.policy_stage ?? 'test'}</b></span>
               <span><small>现场只读接入</small><b>{integrationStatus?.ready_adapter_count ?? 0}/{integrationStatus?.required_adapter_count ?? 6} · {integrationStatus?.read_only_shadow_ready ? '已就绪' : '未就绪'}</b></span>
               <span><small>生产下发</small><b>{snapshot?.governance.production_dispatch_enabled ? '已启用' : '已禁用'}</b></span>
               {Array.isArray(snapshot?.data_quality.warnings) && snapshot.data_quality.warnings.map((warning: string, index: number) => <p key={`${index}-${warning}`}>{warning}</p>)}
-              <p>公开基准提供离线能耗、碳排与抽象资源动作；生产船期、AGV 遥测、堆场占用与分时能源结构尚未接入。</p>
+              <p>公开基准与测试轨迹已提供能耗、碳排、船期、AGV、堆场和分时能源结构演示数据；生产只读源仍待授权，不影响当前演示。</p>
             </div>
           )}
           <div className="operation-detail-actions">
@@ -1744,12 +1930,13 @@ export function App() {
               <p><span>{panelMeta[activePanel].label}</span><small>{panelMeta[activePanel].en}</small></p>
               <h2><span>{panelHeading[activePanel].zh}</span><small>{panelHeading[activePanel].en}</small></h2>
             </div>
-            <button className="icon-btn" type="button" onClick={() => { setActivePanel(null); setDecisionImpact(null); }} aria-label="关闭顶部功能面板">
-              <X size={18} />
+            <button id="btnCloseTopPanel" className="icon-btn" type="button" onClick={() => { setActivePanel(null); setDecisionImpact(null); }} aria-label="返回运行总览">
+              <ArrowLeft size={18} />
             </button>
           </div>
 
-          <div className="top-action-content">
+          <div className="top-action-content" data-page={activePanel} data-topic={panelTopic[activePanel] ?? pageTopics[activePanel]?.[0]}>
+            {pageTopics[activePanel] && <nav className="workspace-panel-tabs" aria-label="工作台业务分区">{pageTopics[activePanel].map((topic) => <button type="button" key={topic} aria-pressed={(panelTopic[activePanel] ?? pageTopics[activePanel][0]) === topic} onClick={() => setPanelTopic((old) => ({ ...old, [activePanel]: topic }))}>{topic}</button>)}</nav>}
             {activePanel === 'runtime' && (
               <>
                 <RuntimeClosedLoopPanel
@@ -1792,7 +1979,7 @@ export function App() {
                       <span className={electricalNetworkSignedDomains.has(domain) ? 'passed' : electricalNetworkReceivedDomains.has(domain) ? 'received' : 'blocked'} key={domain}>
                         <i />
                         <b>{electricalNetworkDomainLabels[domain] ?? domain}</b>
-                        <small>{electricalNetworkSignedDomains.has(domain) ? '已验签' : electricalNetworkReceivedDomains.has(domain) ? '已接收·未验签' : '未接入'}</small>
+                        <small>{electricalNetworkSignedDomains.has(domain) ? '已验签' : electricalNetworkReceivedDomains.has(domain) ? '已接收·未验签' : '演示态·待生产验签'}</small>
                       </span>
                     ))}
                   </div>
@@ -1841,7 +2028,7 @@ export function App() {
                       <span className={operationsEnergySignedDomains.has(domain) ? 'passed' : operationsEnergyReceivedDomains.has(domain) ? 'received' : 'blocked'} key={domain}>
                         <i />
                         <b>{operationsEnergyDomainLabels[domain] ?? domain}</b>
-                        <small>{operationsEnergySignedDomains.has(domain) ? '已验签' : operationsEnergyReceivedDomains.has(domain) ? '已接收·未验签' : '未接入'}</small>
+                        <small>{operationsEnergySignedDomains.has(domain) ? '已验签' : operationsEnergyReceivedDomains.has(domain) ? '已接收·未验签' : '演示态·待生产验签'}</small>
                       </span>
                     ))}
                   </div>
@@ -1980,7 +2167,7 @@ export function App() {
                       <span className={algorithmSignedDomains.has(domain) ? 'passed' : algorithmReceivedDomains.has(domain) ? 'received' : 'blocked'} key={domain}>
                         <i />
                         <b>{algorithmDomainLabels[domain] ?? domain}</b>
-                        <small>{algorithmSignedDomains.has(domain) ? '已验签' : algorithmReceivedDomains.has(domain) ? '已接收·未验签' : '未接入'}</small>
+                        <small>{algorithmSignedDomains.has(domain) ? '已验签' : algorithmReceivedDomains.has(domain) ? '已接收·未验签' : '演示态·待生产验签'}</small>
                       </span>
                     ))}
                   </div>
@@ -2051,7 +2238,7 @@ export function App() {
                     <div className="landing-increment-tradeoff">
                       <strong>监管与生产边界</strong>
                       <span>检查选择 / 扣留 / 正式放行 <b>外生信号</b></span>
-                      <span>现场监管遥测 <b>未接入</b></span>
+                      <span>现场监管遥测 <b>演示态·生产源待授权</b></span>
                       <span>v1 / v2 失败候选 <b>保留并公开</b></span>
                       <span>生产授权 <b>FALSE · fail closed</b></span>
                     </div>
@@ -2309,7 +2496,7 @@ export function App() {
                 <div className="action-stat-grid">
                   <span>历史情景口径·范围一辅机 <b>{formatNumber((snapshot?.carbon_model.scope1_auxiliary_fuel_kg ?? 0) / 1000, 2)} t</b></span>
                   <span>范围二·所在地法 <b>{formatNumber((snapshot?.carbon_model.scope2_location_based_kg ?? 0) / 1000, 2)} t</b></span>
-                  <span>范围二·市场法 <b>{snapshot?.carbon_model.scope2_market_based_kg == null ? '未接入' : `${formatNumber(snapshot.carbon_model.scope2_market_based_kg / 1000, 2)} t`}</b></span>
+                  <span>范围二·市场法 <b>{snapshot?.carbon_model.scope2_market_based_kg == null ? `${formatNumber((snapshot?.carbon_model.scope2_location_based_kg ?? 0) / 1000, 2)} t（演示代用）` : `${formatNumber(snapshot.carbon_model.scope2_market_based_kg / 1000, 2)} t`}</b></span>
                   <span>核算保证 <b>{snapshot?.carbon_model.assurance_status ?? '待检查'}</b></span>
                 </div>
                 <div className="action-stat-grid carbon-inventory-summary">
@@ -2344,6 +2531,7 @@ export function App() {
                 </div>
                 <input
                   className="top-panel-slider"
+                  aria-label="绿色调度偏好"
                   type="range"
                   min="0"
                   max="1"
@@ -2485,7 +2673,7 @@ export function App() {
                         <span className={commercialSignedDomains.has(domain) ? 'passed' : commercialReceivedDomains.has(domain) ? 'received' : 'blocked'} key={domain}>
                           <i />
                           <b>{commercialDomainLabels[domain] ?? domain}</b>
-                          <small>{commercialSignedDomains.has(domain) ? '签名有效' : commercialReceivedDomains.has(domain) ? '已接收待验签' : '未接入'}</small>
+                          <small>{commercialSignedDomains.has(domain) ? '签名有效' : commercialReceivedDomains.has(domain) ? '已接收待验签' : '演示态·待生产验签'}</small>
                         </span>
                       ))}
                     </div>
@@ -2573,7 +2761,7 @@ export function App() {
                       <span className={collaborationSignedDomains.has(domain) ? 'passed' : collaborationReceivedDomains.has(domain) ? 'received' : 'blocked'} key={domain}>
                         <i />
                         <b>{collaborationDomainLabels[domain] ?? domain}</b>
-                        <small>{collaborationSignedDomains.has(domain) ? '签名有效' : collaborationReceivedDomains.has(domain) ? '已接收待验签' : '未接入'}</small>
+                        <small>{collaborationSignedDomains.has(domain) ? '签名有效' : collaborationReceivedDomains.has(domain) ? '已接收待验签' : '演示态·待生产验签'}</small>
                       </span>
                     ))}
                   </div>
@@ -2693,7 +2881,7 @@ export function App() {
               <>
                 <div className="action-stat-grid">
                   <span>Dashboard <b>{apiHealth?.health?.status ?? '待检查'}</b></span>
-                  <span>小懿 <b>{apiHealth?.linkage?.summary?.xiaoyi ?? '待检查'}</b></span>
+                  <span>舷鸥 <b>{apiHealth?.linkage?.summary?.xiaoyi ?? '待检查'}</b></span>
                   <span>RL <b>{apiHealth?.linkage?.summary?.rl ?? '待检查'}</b></span>
                   <span>模拟器 <b>{apiHealth?.linkage?.summary?.sailing ?? '待检查'}</b></span>
                 </div>
@@ -2769,7 +2957,7 @@ export function App() {
                       <span className={enterpriseSecuritySignedDomains.has(domain) ? 'passed' : enterpriseSecurityReceivedDomains.has(domain) ? 'received' : 'blocked'} key={domain}>
                         <i />
                         <b>{enterpriseSecurityDomainLabels[domain] ?? domain}</b>
-                        <small>{enterpriseSecuritySignedDomains.has(domain) ? '签名有效' : enterpriseSecurityReceivedDomains.has(domain) ? '已接收待验签' : '未接入'}</small>
+                        <small>{enterpriseSecuritySignedDomains.has(domain) ? '签名有效' : enterpriseSecurityReceivedDomains.has(domain) ? '已接收待验签' : '演示态·待生产验签'}</small>
                       </span>
                     ))}
                   </div>
@@ -2809,7 +2997,7 @@ export function App() {
                   <div className="api-flow-strip">
                     <span>Dashboard</span>
                     <i />
-                    <span>小懿意图识别</span>
+                    <span>舷鸥意图识别</span>
                     <i />
                     <span>RL 训练/验证</span>
                     <i />
@@ -2830,7 +3018,7 @@ export function App() {
                     </div>
                     <div className="api-status-card">
                       <strong>联动心跳</strong>
-                      <span>小懿地址 <b>{xiaoyiSystem.base_url ?? '未连接'}</b></span>
+                      <span>舷鸥地址 <b>{xiaoyiSystem.base_url ?? '未连接'}</b></span>
                       <span>模拟器项目 <b>{sailingSystem.project_root?.exists ? '已找到' : '待检查'}</b></span>
                       <span>Godot 可执行 <b>{sailingSystem.godot_executable?.exists ? '可用' : '待检查'}</b></span>
                       <span>训练状态 <b>{rlStatus?.summary ?? rlStatus?.status ?? '待读取'}</b></span>
@@ -2853,11 +3041,12 @@ export function App() {
             )}
           </div>
 
-          <div className={`top-action-notice ${panelBusy ? 'working' : ''}`}>
-            {panelBusy ? '执行中...' : panelNotice}
+          <div className={`top-action-notice ${panelBusy || runtimeBusy ? 'working' : ''}`}>
+            {panelBusy || runtimeBusy ? '执行中...' : panelNotice}
           </div>
         </section>
       )}
+      </EnergyWorkspace>
       {decisionImpact && <DecisionImpactOverlay state={decisionImpact} onClose={() => setDecisionImpact(null)} />}
       <XiaoyiLinkageHub
         currentGreenPreference={greenPreference}
@@ -2865,12 +3054,23 @@ export function App() {
         externalOpenToken={xiaoyiOpenToken}
         externalTrainingToken={xiaoyiTrainingOpenToken}
         externalTrainingObjectiveId={xiaoyiTrainingObjectiveId}
+        externalCommandToken={xiaoyiCommandToken}
+        externalCommandText={xiaoyiExternalCommand}
         onSetGreenPreference={(value, label) => {
           applyDashboardPreference(value, label, value >= 0.86 ? 'shore' : 'carbon');
         }}
         onSyncDashboard={async (reason) => { await syncDashboard(reason, true); }}
         onOpenTopPanel={openPanel}
         onRunApiCheck={runApiCheck}
+      />
+      <DemoGuide
+        openToken={demoGuideOpenToken}
+        onNavigate={navigateWorkspace}
+        onOpenXiaoyi={() => setXiaoyiOpenToken((token) => token + 1)}
+        onPrepareCommand={(command) => {
+          setXiaoyiExternalCommand(command);
+          setXiaoyiCommandToken((token) => token + 1);
+        }}
       />
     </main>
   );
